@@ -814,7 +814,7 @@ function getOffLabel(dateStr){
   return '';
 }
 
-var _fbReady=false, _fbSyncing=false, _fbUnsub=null;
+var _fbReady=false, _fbSyncing=false, _fbUnsub=null, _skipRenderCount=0;
 
 var firebaseConfig={
   apiKey:"AIzaSyBhVoh01SUIjL9syfQcxh7CR0_Nl0gTUCY",
@@ -857,7 +857,8 @@ function initFirebase(){
     _fbReady=true;
     /* UI 갱신 */
     renderSidebarToday();
-    if(typeof render==='function') render();
+    if(typeof render==='function'&&_skipRenderCount<=0) render();
+    if(_skipRenderCount>0) _skipRenderCount--;
     _showSyncStatus('✅ 동기화됨');
   },function(err){
     console.error('Firestore 리스너 오류',err);
@@ -942,6 +943,7 @@ window.addEventListener('resize', function(){
 /* go wrapper removed */
 
 document.addEventListener('DOMContentLoaded',function(){
+  if('scrollRestoration' in history) history.scrollRestoration='manual';
   /* 모바일 감지 → body 클래스 */
   function applyMobileClass(){
     if(window.innerWidth<=768){
@@ -966,9 +968,16 @@ function addDays(d,n){var x=new Date(d);x.setDate(x.getDate()+n);return x;}
 
 
 function updateAge(el){
-  var yr=parseInt(el.value);
-  if(!yr||yr<1940||yr>new Date().getFullYear())return;
-  var age=new Date().getFullYear()-yr;
+  var raw=el.value.trim();
+  if(raw===''){var d2=document.getElementById('s-age-display');if(d2)d2.textContent='';return;}
+  var n=parseInt(raw);
+  if(isNaN(n)){var d2b=document.getElementById('s-age-display');if(d2b)d2b.textContent='';return;}
+  /* 2자리: 30~99→1930~1999, 00~29→2000~2029 */
+  var yr=n;
+  if(raw.length<=2) yr=n>=30?1900+n:2000+n;
+  var thisYear=new Date().getFullYear();
+  if(yr<1920||yr>thisYear){var d3=document.getElementById('s-age-display');if(d3)d3.textContent='';return;}
+  var age=thisYear-yr;
   var d=document.getElementById('s-age-display');
   if(d)d.textContent=age+'세 ('+yr+'년생)';
 }
@@ -1444,6 +1453,7 @@ function go(p){
   setTimeout(function(){updateMobileTabBar();},0);
 }
 function render(){
+  if(page==='eval') return; /* 평가지 페이지는 render로 덮어쓰지 않음 */
   if(page==='dashboard'){
     /* 대시보드는 비밀번호 확인 후 진입 */
     askDashboardPw();
@@ -1457,7 +1467,12 @@ function render(){
     /* 변동: weekOvr에 배정 없으면 미배정 */
     var _unassignedFlex=_flexSt.filter(function(s){return !weekOvr[_curWk]||!weekOvr[_curWk][s.id]||weekOvr[_curWk][s.id].length===0;});
     /* 고정: schedDays가 비어있으면 미배정 */
-    var _unassignedFixed=_fixedSt.filter(function(s){return !s.schedDays||s.schedDays.length===0;});
+    /* 고정: s.days 없고 이번 주 weekOvr에도 없으면 미배정 */
+    var _unassignedFixed=_fixedSt.filter(function(s){
+      var hasDays=s.days&&s.days.length>0;
+      var hasWkOvr=weekOvr[_curWk]&&weekOvr[_curWk][s.id]&&weekOvr[_curWk][s.id].length>0;
+      return !hasDays&&!hasWkOvr;
+    });
     var _unassigned=_unassignedFlex.concat(_unassignedFixed);
     var _infoTxt='수강중 '+_activeSt.length+'명';
     if(_unassigned.length)_infoTxt+=' | <span style="color:var(--r);font-weight:700">⚠️ 미배정 '+_unassigned.length+'명: '+_unassigned.map(function(s){return esc(s.name);}).join(', ')+'</span>';
@@ -2068,7 +2083,13 @@ function buildMobileSchedule(){
   var mon=getViewMon(),now=new Date(),todayStr=toDS(now),isThis=wkOfs===0;
   var sched=getWeekSched(mon);
   var flexS=students.filter(function(s){return s.status==='수강중'&&s.schedType==='flex';});
-  var _fixedUnassigned=students.filter(function(s){return s.status==='수강중'&&s.schedType==='fixed'&&(!s.schedDays||s.schedDays.length===0);});
+  var _wkKey=getWK(mon);
+  var _fixedUnassigned=students.filter(function(s){
+    if(s.status!=='수강중'||s.schedType!=='fixed') return false;
+    var hasDays=s.days&&s.days.length>0;
+    var hasWkOvr=weekOvr[_wkKey]&&weekOvr[_wkKey][s.id]&&weekOvr[_wkKey][s.id].length>0;
+    return !hasDays&&!hasWkOvr;
+  });
   var unassignedFlex=flexS.filter(function(s){
     var wk2=getWK(mon);
     return !weekOvr[wk2]||!weekOvr[wk2][s.id]||weekOvr[wk2][s.id].length===0;
@@ -2626,8 +2647,11 @@ function buildStudents(filter, schedFilter){
       var sLogs=logs.filter(function(l){return l.sid===s.id;});
       var att=sLogs.filter(function(l){return l.att==='출석';}).length;
       var attRate=sLogs.length?Math.round(att/sLogs.length*100):0;
-      var _yr=parseInt(s.age)||0;
-      var ageStr=_yr>1900?(_yr+'년생 · '+(new Date().getFullYear()-_yr)+'세'):(_yr>0?_yr+'세':'');
+      var _rawAge=s.age?String(s.age).trim():'';
+      var _n=parseInt(_rawAge)||0;
+      var _yr=_rawAge.length<=2&&_n>=0?(_n>=30?1900+_n:2000+_n):_n;
+      var _ty=new Date().getFullYear();
+      var ageStr=_yr>=1920&&_yr<=_ty?(_yr+'년생 · 만 '+(_ty-_yr)+'세'):(_yr>0?_yr+'세':'');
       var timeStr=s.schedType==='flex'?'🔄 변동 스케줄'
         :(s.days||[]).length
           ?'📌 고정 '+(s.days||[]).map(function(d){return d+'요일'+(s.times&&s.times[d]?' '+s.times[d]:'');}).join(', ')
@@ -2940,7 +2964,7 @@ function openSModal(id){
   ge('mST').textContent=id?'레슨생 수정':'레슨생 추가';
   var s=id?students.find(function(st){return st.id===id;}):null;
   ge('s-nm').value=(s&&s.name)||'';ge('s-cls').value=(s&&s.cls)||'pro';
-  ge('s-gd').value=(s&&s.gd)||'여성';ge('s-age').value=(s&&s.age)||'';
+  ge('s-gd').value=(s&&s.gd)||'여성';ge('s-age').value=(s&&s.age)||'';if(s&&s.age){var _ageEl=ge('s-age');if(_ageEl)updateAge(_ageEl);}
   ge('s-ph').value=(s&&s.ph)||'';ge('s-st').value=(s&&s.st)||toDS(new Date());
   ge('s-memo').value=(s&&s.memo)||'';ge('s-stat').value=(s&&s.status)||'수강중';
   ge('s-fee').value=(s&&s.fee&&s.fee>0)?s.fee:'';if(ge('s-fee'))ge('s-fee').removeAttribute('data-user-edited');
@@ -3137,7 +3161,7 @@ function buildMediaPanel(data,mode){
   o+='</div>';
 
   /* ── 동의 음성 녹음 ── */
-  o+='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(200,114,114,.06);border:1px solid rgba(200,114,114,.18);border-radius:10px;padding:11px 15px;margin-bottom:14px">';
+  o+='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(200,114,114,.06);border:1px solid rgba(200,114,114,.18);border-radius:8px;padding:11px 15px;margin-bottom:14px">';
   o+='<div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">';
   o+='<span style="font-size:13px;font-weight:700;color:var(--r);white-space:nowrap">🎙 동의 녹음</span>';
   if(savedConsent){
@@ -3199,56 +3223,108 @@ function openRecordConsent(did,mode){
 
 /* 출력 */
 function printBeforeSheet(did,mode){
+  /* 출력 전 화면 값 자동 저장 */
   var data=mode==='consult'?consults.find(function(x){return x.id===did;}):students.find(function(x){return x.id===did;});
   if(!data)return;
-  var name=data.name||'';
-  var memo=(data.beforeMemo||'').split('||');
-  var prob=memo[0]||'';
-  var impr=memo[1]||'';
+  /* prob/impr 화면에서 읽기 */
+  if(ge('eval-prob')||ge('eval-impr')){
+    if(ge('eval-prob'))data.prob=ge('eval-prob').value||'';
+    if(ge('eval-impr'))data.impr=ge('eval-impr').value||'';
+    if(ge('eval-song'))data.song=ge('eval-song').value||'';
+    saveAll();
+  }
+  var prob=data.prob||(data.beforeMemo||'').split('||')[0]||'';
+  var impr=data.impr||(data.beforeMemo||'').split('||')[1]||'';
+  var isGroup=(data.cls==='그룹'||data.cls==='group');
   var consentDate=data.consentRec?data.consentRec.date:'';
   var now=new Date();
   var ds=now.getFullYear()+'년 '+(now.getMonth()+1)+'월 '+now.getDate()+'일';
-  var w=window.open('','_blank','width=820,height=1100');
-  var css='*{margin:0;padding:0;box-sizing:border-box;}'
-    +'body{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif;font-size:13px;color:#1a1a1a;background:#fff;padding:28px 36px;max-width:760px;margin:0 auto;}'
-    +'h1{font-size:20px;font-weight:900;text-align:center;letter-spacing:.06em;margin-bottom:4px;}'
-    +'.sub{text-align:center;font-size:11px;color:#666;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #1a1a1a;}'
-    +'.sec{margin-bottom:18px;}.sec-t{font-size:12.5px;font-weight:700;background:#f0f0f0;padding:5px 10px;border-left:4px solid #333;margin-bottom:10px;}'
-    +'.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;}'
-    +'.memo-box{border:1px solid #ccc;border-radius:4px;min-height:80px;padding:8px;font-size:13px;line-height:1.7;}'
-    +'.notice{font-size:12px;line-height:1.95;}'
-    +'.sign-area{display:flex;justify-content:space-between;align-items:flex-end;margin-top:16px;gap:20px;}'
-    +'.sign-box{text-align:center;flex:1;}.sign-line{border-bottom:1.5px solid #333;height:40px;margin-bottom:5px;}.sign-lbl{font-size:11px;color:#555;}'
-    +'@page{margin:14mm 18mm;}'
-    +'@media print{.no-print{display:none!important;}}';
-  w.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>레슨 유의사항 & 평가</title><style>'+css+'</style></head><body>');
-  w.document.write('<h1>Vocal Studio 레슨 유의사항 & 초기 평가</h1>');
-  w.document.write('<div class="sub">수강생: '+name+'&nbsp;&nbsp;|&nbsp;&nbsp;작성일: '+ds+'</div>');
-  w.document.write('<div class="sec"><div class="sec-t">트레이너 초기 평가 메모</div><div class="two-col">');
-  w.document.write('<div><div style="font-size:11px;font-weight:600;color:#555;margin-bottom:5px">발견된 문제점</div><div class="memo-box">'+prob.split('\n').join('<br>')+'</div></div>');
-  w.document.write('<div><div style="font-size:11px;font-weight:600;color:#555;margin-bottom:5px">개선 방향</div><div class="memo-box">'+impr.split('\n').join('<br>')+'</div></div>');
+  var w=window.open('','_blank','width=820,height=1200');
+
+  var css=
+    /* 폰트는 <link> 태그로 로드 */''+ 
+    '*{margin:0;padding:0;box-sizing:border-box;}'+
+    'body{font-family:"Noto Serif KR","Malgun Gothic",serif;font-size:11.5px;color:#1a1a1a;background:#fff;padding:10px 22px;max-width:750px;margin:0 auto;font-weight:400;line-height:1.55;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'+
+    'h1{font-size:18px;font-weight:700;text-align:center;letter-spacing:.06em;margin-bottom:2px;}'+
+    '.studioname{text-align:center;font-size:12px;color:#333;font-weight:500;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #1a1a1a;}'+
+    '.sub{text-align:center;font-size:10.5px;color:#555;margin-bottom:8px;background:#f7f7f7;padding:5px;border-radius:4px;}'+
+    '.sec{margin-bottom:7px;border:1px solid #ccc;border-radius:5px;overflow:hidden;}'+
+    '.sec-t{font-size:11px;font-weight:700;background:#1a1a1a;color:#fff;padding:5px 14px;letter-spacing:.05em;}'+
+    '.two-col{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:7px 10px;}'+
+    '.box{border:1px solid #ddd;border-radius:4px;padding:8px;min-height:80px;font-size:10.5px;line-height:1.5;background:#fafafa;word-break:break-word;}'+
+    '.box-label{font-size:10.5px;font-weight:600;color:#444;margin-bottom:5px;letter-spacing:.03em;border-bottom:1px solid #eee;padding-bottom:3px;}'+
+    '.notice-intro{padding:7px 14px 5px;font-size:10.5px;color:#555;line-height:1.6;border-bottom:1px solid #eee;font-style:italic;}'+
+    '.notice-wrap{padding:4px 10px 5px;}'+
+    '.notice-item{display:flex;gap:6px;padding:3px 0;border-bottom:1px solid #f0f0f0;}'+
+    '.notice-item:last-child{border-bottom:none;}'+
+    '.notice-num{font-weight:700;min-width:18px;flex-shrink:0;font-size:11px;color:#1a1a1a;}'+
+    '.notice-body{font-size:10.5px;line-height:1.5;color:#222;}'+
+    '.notice-body strong{font-weight:700;color:#1a1a1a;font-size:11px;}'+
+    '.motto{margin:8px 12px 4px;padding:8px 12px;background:#f9f6f0;border-left:3px solid #c8a96e;font-size:11px;line-height:1.6;color:#444;font-style:italic;}'+
+    '.account-box{margin:6px 12px 10px;background:#fffdf5;border:1px solid #d4a840;border-radius:5px;padding:8px 12px;}'+
+    '.account-title{font-size:10.5px;font-weight:700;color:#8a6820;margin-bottom:5px;}'+
+    '.account-row{font-size:11.5px;font-weight:600;color:#1a1a1a;margin-bottom:3px;}'+
+    '.sign-area{display:flex;align-items:flex-end;gap:12px;margin-top:8px;padding-top:7px;border-top:2px solid #1a1a1a;}'+
+    '.sign-box{flex:1;text-align:center;}'+
+    '.sign-line{border-bottom:1px solid #888;margin-bottom:4px;height:30px;}'+
+    '.sign-lbl{font-size:10px;color:#555;}'+
+    '@media print{@page{size:A4;margin:8mm 12mm;}body{padding:0;}button{display:none!important;}}';
+
+  w.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>레슨 평가지</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>'+css+'</style></head><body>');
+  w.document.write('<h1>HLB보컬스튜디오</h1>');
+  w.document.write('<div class="studioname">원장 양경렬 &nbsp;·&nbsp; ☎ 010-8804-8903</div>');
+  w.document.write('<div class="sub">수강생: <strong>'+esc(data.name)+'</strong>&nbsp;&nbsp;|&nbsp;&nbsp;레슨 유의사항 &amp; 트레이너 초기 평가&nbsp;&nbsp;|&nbsp;&nbsp;'+ds+'</div>');
+
+  /* ── 트레이너 초기 평가 ── */
+  w.document.write('<div class="sec"><div class="sec-t">트레이너 초기 평가</div><div class="two-col">');
+  w.document.write('<div><div class="box-label">발견된 문제점</div><div class="box">'+((prob||'').split('\n').join('<br>')||'<span style="color:#bbb">—</span>')+'</div></div>');
+  w.document.write('<div><div class="box-label">개선 방향 &amp; 레슨 계획</div><div class="box">'+((impr||'').split('\n').join('<br>')||'<span style="color:#bbb">—</span>')+'</div></div>');
   w.document.write('</div></div>');
-  w.document.write('<div class="sec"><div class="sec-t">개인 레슨 유의사항</div><div class="notice">');
-  w.document.write('1. 레슨 시작 5분 전까지 입실 부탁드립니다.<br>');
-  w.document.write('2. 결석·지각 시 24시간 전 사전 연락 바랍니다 (미연락 결석 → 해당 회차 소멸).<br>');
-  w.document.write('3. 레슨비는 사이클 첫 수업 전까지 납부해 주세요 (주1회: 4회 / 주2회: 8회 기준).<br>');
-  w.document.write('4. 음주 상태 레슨 불가, 수업 전 흡연·자극적 음식 자제 부탁드립니다.<br>');
-  w.document.write('5. 성대 이상(통증·출혈·목 쉼 등) 발생 시 즉시 트레이너에게 알려주세요.<br>');
-  w.document.write('6. 수업 영상·녹음은 개인 연습 목적으로만 사용 가능합니다.<br>');
-  w.document.write('7. 개인 정보는 수업 운영 외 목적으로 사용하지 않습니다.');
-  w.document.write('</div></div>');
+
+  /* ── 유의사항 ── */
+  w.document.write('<div class="sec"><div class="sec-t">개인 레슨 운영 규정 (필독)</div><div class="notice-intro">본 운영 방침은 최상의 수업 몰입도와 체계적인 발성 교정을 위해 설계되었습니다. 효율적인 수업 진행을 위해 아래 내용을 숙지하고 엄격히 준수해 주시기 바랍니다.</div><div class="notice-wrap">');
+    var notices=[
+      ['레슨 시간 준수','정시 시작 및 종료를 원칙으로 합니다. 개인 사정으로 인한 지각 시에도 종료 시간은 동일합니다. (다만, 이전 수강생의 피드백이 길어져 발생하는 수 분 내외의 수업 지연은 최상의 레슨 퀄리티를 위해 제가 직접 조율하는 부분이니 양해 부탁드립니다.)'],
+      ['당일 변경 및 취소 (사유 불문 1회 차감)','예약된 시간은 오직 한 분을 위해 비워둔 기회비용입니다. 갑작스러운 개인 사정, 건강 문제 등 어떠한 사유를 막론하고 당일 취소는 선생님의 준비 시간과 타 수강생의 기회를 박탈하는 행위이므로 예외 없이 차감됩니다.'],
+      ['레슨 이월 및 연기','4회 수업 중 1회만 가능합니다. (발성은 근육의 습관을 형성하는 과정입니다. 수업 간격이 불규칙해지면 신체 감각이 퇴보하여 결국 지난 학습 내용을 반복하게 됩니다. 지체 없는 성장을 위한 최소한의 훈련 루틴임을 이해해 주시기 바랍니다.)'],
+      ['실력 변화를 위한 연습과 질문','수업에서 배운 감각을 내 것으로 만드는 유일한 방법은 연습입니다. (개인 연습을 하시면서 잘 안되는 부분이나 궁금한 점을 꼭 체크해 오세요. 스스로 고민하고 질문을 던질 때 이해도가 높아지며, 그만큼 수업의 깊이와 실력 향상 속도도 눈에 띄게 빨라집니다. 더 정교한 피드백을 주고받을 수 있도록 본인의 실력에 맞는 연습을 꾸준히 소화해 주시기 바랍니다.)'],
+      ['수강료 납부 및 예약 확정','입금 확인은 수업 참여에 대한 상호 간의 가장 기본적인 약속입니다. 수업 전날까지 입금 완료 시 예약이 최종 확정되며, 미입금 시 해당 시간대는 예약 대기자에게 우선권이 부여되어 일정이 자동 취소됩니다.'],
+      ['중도 퇴실 및 환불 정책','2회차 수업 참여 시점부터는 잔여 회차에 대한 반환이 진행되지 않습니다. (1회 수업 후 적성이나 변심에 의한 환불은 가능하나, 2회차부터는 핵심 커리큘럼과 노하우가 본격적으로 전달되는 단계입니다. 교육 콘텐츠의 가치를 보호하고 책임감 있는 학습 분위기를 유지하기 위한 기준이니 신중하게 결정해 주시기 바랍니다.)'],
+      ['개인 준비물 (생수 / 녹음기 / 필기도구)','수분 공급은 성대 부상을 방지하는 필수 요건이며, 녹음과 기록은 휘발되는 감각을 객관화하여 학습 효과를 극대화하는 가장 강력한 도구입니다. 최상의 수업을 위해 반드시 지참해 주세요.']
+    ];
+  notices.forEach(function(n,i){
+    w.document.write('<div class="notice-item"><span class="notice-num">'+(i+1)+'.</span><div class="notice-body"><strong>'+n[0]+'</strong> '+n[1]+'</div></div>');
+  });
+  w.document.write('</div>');
+  w.document.write('<div class="motto">&#8220;모든 규정은 오로지 귀하의 실력 향상에만 초점을 맞추고 있습니다. 프로페셔널한 자세로 수업에 임해주시길 기대합니다.&#8221;</div>');
+
+  /* ── 입금 계좌 ── */
+  w.document.write('<div class="account-box">');
+  w.document.write('<div class="account-title">입금 계좌</div>');
+  w.document.write('<div class="account-row">우리은행 &nbsp; 1002-046-438968 &nbsp; (양경렬)</div>');
+  w.document.write('<div class="account-row">기업은행 &nbsp; 010-8804-8903 &nbsp; (양경렬)</div>');
+  w.document.write('<div style="font-size:10px;color:#888;margin-top:2px">카카오톡 오픈채팅: HLB보컬스튜디오</div>');
+  w.document.write('</div>');
+  w.document.write('</div>');
+
+  /* ── 좌우명 ── */
+  if(!isGroup){
+    w.document.write('<div style="margin:0 0 8px;padding:7px 12px;background:#f9f6f0;border-left:3px solid #c8a96e;font-size:10.5px;line-height:1.5;color:#555;font-style:italic">"모든 규정은 오로지 귀하의 실력 향상에만 초점을 맞추고 있습니다. 프로페셔널한 자세로 수업에 임해주시길 기대합니다."</div>');
+  }
+  /* ── 서명 ── */
   w.document.write('<div class="sign-area">');
   w.document.write('<div class="sign-box"><div class="sign-line"></div><div class="sign-lbl">트레이너 서명</div></div>');
   w.document.write('<div class="sign-box"><div class="sign-line"></div><div class="sign-lbl">위 유의사항에 동의합니다 — 수강생 서명</div></div>');
-  w.document.write('<div style="text-align:right;font-size:11px;color:#888;flex:0.7">년&nbsp;&nbsp; 월&nbsp;&nbsp; 일</div>');
+  w.document.write('<div style="text-align:right;font-size:10px;color:#888;flex:0.6">년&nbsp;&nbsp;&nbsp;월&nbsp;&nbsp;&nbsp;일</div>');
   w.document.write('</div>');
-  if(consentDate)w.document.write('<div style="margin-top:14px;font-size:11px;color:#666;border-top:1px solid #eee;padding-top:10px">✓ 동의 음성 녹음 완료: '+consentDate+'</div>');
-  w.document.write('<div class="no-print" style="text-align:center;margin-top:20px"><button onclick="window.print()" style="padding:10px 28px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit">🖨️ 인쇄 / PDF 저장</button></div>');
+
+  if(consentDate)w.document.write('<div style="margin:6px 12px 0;padding:6px 10px;border:1px solid #ddd;border-radius:4px;font-size:10.5px;color:#555;background:#f8f8f8">동의 녹음 완료일: <strong>'+consentDate+'</strong></div>');
+  w.document.write('<div style="text-align:center;margin-top:12px"><button onclick="window.print()" style="padding:7px 20px;background:#1a1a1a;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer">🖨️ 인쇄</button></div>');
   w.document.write('</body></html>');
   w.document.close();
-  setTimeout(function(){w.print();},400);
 }
 
+/* PROFILE */
 /* PROFILE */
 function pRow(label,val){
   if(!val&&val!=='0')return'';
@@ -3702,7 +3778,17 @@ function saveAndGoEval(){
   if(existIdx>=0){tempData.id=consults[existIdx].id;consults[existIdx]=tempData;}
   else consults.unshift(tempData);
   saveAll();
+  /* 평가지 먼저 표시 */
   showEvalPage(tempData.id);
+  /* Firebase 동기화는 2초 후 - 화면 덮어쓰기 완전 방지 */
+  _skipRenderCount=99;
+  setTimeout(function(){
+    if(typeof _pushToFirestore==='function'&&_fbReady){
+      try{_pushToFirestore(window._fbDocRef);}catch(e){}
+    }
+    /* 2초 후 카운터 해제 */
+    setTimeout(function(){_skipRenderCount=0;},2000);
+  },500);
 }
 
 function showEvalPage(cid){
@@ -3743,46 +3829,43 @@ function showEvalPage(cid){
   o+='<button class="btn bm" data-cid="'+cid+'" onclick="saveEvalMemo(this.dataset.cid)">💾 평가 저장</button>';
   o+='</div>';
   o+='</div>';
-
   /* ── 개인 레슨 유의사항 & 환불 정책 ── */
   o+='<div class="cs">';
-  o+='<div class="cs-title">⚠️ 개인 레슨 유의사항</div>';
-  o+='<div style="font-size:14px;line-height:2">';
-  o+='<div style="display:flex;gap:10px;margin-bottom:11px">';
-  o+='<span style="font-size:13px;font-weight:700;color:var(--a);min-width:20px;flex-shrink:0">1.</span>';
-  o+='<div><div style="font-size:13px;font-weight:700;color:var(--t);margin-bottom:2px">⏰ 시간 준수</div>';
-  o+='<div style="font-size:13px;color:var(--ts);line-height:1.75">레슨은 정시에 시작하며, 정시에 끝납니다. 늦게 오셔도 정시에 끝나니 시간 준수 해주세요 :)</div></div></div>';
-  o+='<div style="display:flex;gap:10px;margin-bottom:11px">';
-  o+='<span style="font-size:13px;font-weight:700;color:var(--a);min-width:20px;flex-shrink:0">2.</span>';
-  o+='<div><div style="font-size:13px;font-weight:700;color:var(--t);margin-bottom:2px">📅 레슨 스케줄 변경</div>';
-  o+='<div style="font-size:13px;color:var(--ts);line-height:1.75">당일 레슨 스케줄 변경은 이유 불문 안 되며, 못 오실 경우 레슨 1회 카운팅 됩니다.</div></div></div>';
-  o+='<div style="display:flex;gap:10px;margin-bottom:11px">';
-  o+='<span style="font-size:13px;font-weight:700;color:var(--a);min-width:20px;flex-shrink:0">3.</span>';
-  o+='<div><div style="font-size:13px;font-weight:700;color:var(--t);margin-bottom:2px">🔄 레슨 스케줄 연기</div>';
-  o+='<div style="font-size:13px;color:var(--ts);line-height:1.75">레슨 커리큘럼에 의해 연기 횟수가 많아지면 수업 분위기와 습관 교정 진도에 영향을 줄 수 있어 4회 수업 중 1회만 가능합니다.</div></div></div>';
-  o+='<div style="display:flex;gap:10px;margin-bottom:11px">';
-  o+='<span style="font-size:13px;font-weight:700;color:var(--a);min-width:20px;flex-shrink:0">4.</span>';
-  o+='<div><div style="font-size:13px;font-weight:700;color:var(--t);margin-bottom:2px">🎤 하루 발성 커리큘럼 연습</div>';
-  o+='<div style="font-size:13px;color:var(--ts);line-height:1.75">레슨 발성 커리큘럼을 시간을 꼭 내어 연습하셔야 실력 향상 및 다음 수업의 이해도를 높이니 반드시 연습해 주시길 바랍니다.</div></div></div>';
-  o+='<div style="display:flex;gap:10px;margin-bottom:11px">';
-  o+='<span style="font-size:13px;font-weight:700;color:var(--a);min-width:20px;flex-shrink:0">5.</span>';
-  o+='<div><div style="font-size:13px;font-weight:700;color:var(--t);margin-bottom:2px">💰 레슨 하루 전까지 입금</div>';
-  o+='<div style="font-size:13px;color:var(--ts);line-height:1.75">레슨 하루 전까지 미입금 시 레슨 일정은 자동 취소되며 이 점 참고해 주시기 바랍니다.</div></div></div>';
-  o+='<div style="display:flex;gap:10px;margin-bottom:11px">';
-  o+='<span style="font-size:13px;font-weight:700;color:var(--a);min-width:20px;flex-shrink:0">6.</span>';
-  o+='<div><div style="font-size:13px;font-weight:700;color:var(--t);margin-bottom:2px">↩️ 환불 규정</div>';
-  o+='<div style="font-size:13px;color:var(--ts);line-height:1.75">전체 수업의 ½을 받으신 경우 환불 불가. ⅓을 받으신 경우 ⅔ 환불. 받지 않은 경우 전액 환불. (4회 중 1회도 받지 않은 경우 전액 환불 / 1회 수업받은 경우 3회 레슨비 환불 / 2회 수업받은 경우 환불 불가)</div></div></div>';
-  o+='<div style="display:flex;gap:10px;margin-bottom:11px">';
-  o+='<span style="font-size:13px;font-weight:700;color:var(--a);min-width:20px;flex-shrink:0">7.</span>';
-  o+='<div><div style="font-size:13px;font-weight:700;color:var(--t);margin-bottom:2px">💧 개인 물 지참</div>';
-  o+='<div style="font-size:13px;color:var(--ts);line-height:1.75">수업 중 마실 만큼의 물은 개인 지참 필히 해주세요.</div></div></div>';
+  o+='<div class="cs-title">📄 개인 레슨 운영 규정 (필독)</div>';
+  o+='<div style="font-size:12px;color:var(--tm);line-height:1.6;margin-bottom:10px;font-style:italic">본 운영 방침은 최상의 수업 몰입도와 체계적인 발성 교정을 위해 설계되었습니다. 효율적인 수업 진행을 위해 아래 내용을 숙지하고 엄격히 준수해 주시기 바랍니다.</div>';
+  o+='<div style="display:flex;gap:10px;margin-bottom:10px">';
+  o+='<div style="font-size:13px;font-weight:700;color:var(--a);min-width:22px;flex-shrink:0">1.</div>';
+  o+='<div><div style="font-size:13px;font-weight:700;color:var(--t);margin-bottom:3px">레슨 시간 준수</div>';
+  o+='<div style="font-size:13px;color:var(--ts);line-height:1.65">정시 시작 및 종료를 원칙으로 합니다. 개인 사정으로 인한 지각 시에도 종료 시간은 동일합니다. (다만, 이전 수강생의 피드백이 길어져 발생하는 수 분 내외의 수업 지연은 최상의 레슨 퀄리티를 위해 제가 직접 조율하는 부분이니 양해 부탁드립니다.)</div></div></div>';
+  o+='<div style="display:flex;gap:10px;margin-bottom:10px">';
+  o+='<div style="font-size:13px;font-weight:700;color:var(--a);min-width:22px;flex-shrink:0">2.</div>';
+  o+='<div><div style="font-size:13px;font-weight:700;color:var(--t);margin-bottom:3px">당일 변경 및 취소 (사유 불문 1회 차감)</div>';
+  o+='<div style="font-size:13px;color:var(--ts);line-height:1.65">예약된 시간은 오직 한 분을 위해 비워둔 기회비용입니다. 갑작스러운 개인 사정, 건강 문제 등 어떠한 사유를 막론하고 당일 취소는 선생님의 준비 시간과 타 수강생의 기회를 박탈하는 행위이므로 예외 없이 차감됩니다.</div></div></div>';
+  o+='<div style="display:flex;gap:10px;margin-bottom:10px">';
+  o+='<div style="font-size:13px;font-weight:700;color:var(--a);min-width:22px;flex-shrink:0">3.</div>';
+  o+='<div><div style="font-size:13px;font-weight:700;color:var(--t);margin-bottom:3px">레슨 이월 및 연기</div>';
+  o+='<div style="font-size:13px;color:var(--ts);line-height:1.65">4회 수업 중 1회만 가능합니다. (발성은 근육의 습관을 형성하는 과정입니다. 수업 간격이 불규칙해지면 신체 감각이 퇴보하여 결국 지난 학습 내용을 반복하게 됩니다. 지체 없는 성장을 위한 최소한의 훈련 루틴임을 이해해 주시기 바랍니다.)</div></div></div>';
+  o+='<div style="display:flex;gap:10px;margin-bottom:10px">';
+  o+='<div style="font-size:13px;font-weight:700;color:var(--a);min-width:22px;flex-shrink:0">4.</div>';
+  o+='<div><div style="font-size:13px;font-weight:700;color:var(--t);margin-bottom:3px">실력 변화를 위한 연습과 질문</div>';
+  o+='<div style="font-size:13px;color:var(--ts);line-height:1.65">수업에서 배운 감각을 내 것으로 만드는 유일한 방법은 연습입니다. (개인 연습을 하시면서 잘 안되는 부분이나 궁금한 점을 꼭 체크해 오세요. 스스로 고민하고 질문을 던질 때 이해도가 높아지며, 그만큼 수업의 깊이와 실력 향상 속도도 눈에 띄게 빨라집니다.)</div></div></div>';
+  o+='<div style="display:flex;gap:10px;margin-bottom:10px">';
+  o+='<div style="font-size:13px;font-weight:700;color:var(--a);min-width:22px;flex-shrink:0">5.</div>';
+  o+='<div><div style="font-size:13px;font-weight:700;color:var(--t);margin-bottom:3px">수강료 납부 및 예약 확정</div>';
+  o+='<div style="font-size:13px;color:var(--ts);line-height:1.65">입금 확인은 수업 참여에 대한 상호 간의 가장 기본적인 약속입니다. 수업 전날까지 입금 완료 시 예약이 최종 확정되며, 미입금 시 해당 시간대는 예약 대기자에게 우선권이 부여되어 일정이 자동 취소됩니다.</div></div></div>';
+  o+='<div style="display:flex;gap:10px;margin-bottom:10px">';
+  o+='<div style="font-size:13px;font-weight:700;color:var(--a);min-width:22px;flex-shrink:0">6.</div>';
+  o+='<div><div style="font-size:13px;font-weight:700;color:var(--t);margin-bottom:3px">중도 퇴실 및 환불 정책</div>';
+  o+='<div style="font-size:13px;color:var(--ts);line-height:1.65">2회차 수업 참여 시점부터는 잔여 회차에 대한 반환이 진행되지 않습니다. (1회 수업 후 적성이나 변심에 의한 환불은 가능하나, 2회차부터는 핵심 커리큘럼과 노하우가 본격적으로 전달되는 단계입니다. 교육 콘텐츠의 가치를 보호하고 책임감 있는 학습 분위기를 유지하기 위한 기준이니 신중하게 결정해 주시기 바랍니다.)</div></div></div>';
+  o+='<div style="display:flex;gap:10px;margin-bottom:10px">';
+  o+='<div style="font-size:13px;font-weight:700;color:var(--a);min-width:22px;flex-shrink:0">7.</div>';
+  o+='<div><div style="font-size:13px;font-weight:700;color:var(--t);margin-bottom:3px">개인 준비물 (생수 / 녹음기 / 필기도구)</div>';
+  o+='<div style="font-size:13px;color:var(--ts);line-height:1.65">수분 공급은 성대 부상을 방지하는 필수 요건이며, 녹음과 기록은 휘발되는 감각을 객관화하여 학습 효과를 극대화하는 가장 강력한 도구입니다. 최상의 수업을 위해 반드시 지참해 주세요.</div></div></div>';
+  o+='<div style="margin-top:12px;padding:10px 14px;background:rgba(200,169,110,.06);border-left:3px solid var(--a);border-radius:0 6px 6px 0;font-size:12px;color:var(--tm);font-style:italic;line-height:1.6">"모든 규정은 오로지 귀하의 실력 향상에만 초점을 맞추고 있습니다. 프로페셔널한 자세로 수업에 임해주시길 기대합니다."</div>';
   o+='</div>';
-  o+='</div>';
-  o+='</div>';
-
   /* ── 동의 음성 녹음 ── */
   var savedConsent=c.consentRec;
-  o+='<div style="display:flex;align-items:center;gap:12px;background:rgba(200,114,114,.06);border:1px solid rgba(200,114,114,.2);border-radius:10px;padding:11px 16px;margin-bottom:8px">';
+  o+='<div style="display:flex;align-items:center;gap:12px;background:rgba(200,114,114,.06);border:1px solid rgba(200,114,114,.2);border-radius:8px;padding:8px 14px;margin-bottom:8px;max-width:420px">';
   o+='<span style="font-size:13px;font-weight:700;color:var(--r);white-space:nowrap;flex-shrink:0">🎙 동의 녹음</span>';
   if(savedConsent){
     o+='<audio controls src="'+savedConsent.data+'" style="flex:1;min-width:0;height:30px"></audio>';
@@ -3797,7 +3880,17 @@ function showEvalPage(cid){
   o+='<button class="btn bp" data-cid="'+cid+'" onclick="printEvalSheet(this.dataset.cid)">🖨️ 평가지 인쇄</button>';
   o+='</div>';
   o+='</div>';
+  page='eval';
   ge('content').innerHTML=o;
+  if(ge('pt'))ge('pt').textContent='트레이너 평가지';
+  requestAnimationFrame(function(){
+    var ct=ge('content');if(ct)ct.scrollTop=0;
+    window.scrollTo({top:0,left:0,behavior:'instant'});
+    requestAnimationFrame(function(){
+      var ct2=ge('content');if(ct2)ct2.scrollTop=0;
+      window.scrollTo({top:0,left:0,behavior:'instant'});
+    });
+  });
 }
 
 function saveEvalMemo(cid){
@@ -3826,52 +3919,123 @@ function startConsentRecForEval(cid){
 }
 
 function printEvalSheet(cid){
+  /* 출력 전 화면 값 자동 저장 */
+  if(ge('eval-prob')||ge('eval-impr')){
+    if(ge('eval-song')){var ec=consults.find(function(x){return x.id===cid;});if(ec){ec.song=ge('eval-song').value||'';}}
+    var ec2=consults.find(function(x){return x.id===cid;});
+    if(ec2){
+      if(ge('eval-prob'))ec2.prob=ge('eval-prob').value||'';
+      if(ge('eval-impr'))ec2.impr=ge('eval-impr').value||'';
+      saveAll();
+    }
+  }
   var c=consults.find(function(x){return x.id===cid;});if(!c)return;
   var prob=c.prob||'';
   var impr=c.impr||'';
+  var isGroup=(c.cls==='그룹'||c.cls==='group');
   var consentDate=c.consentRec?c.consentRec.date:'';
   var now=new Date();
   var ds=now.getFullYear()+'년 '+(now.getMonth()+1)+'월 '+now.getDate()+'일';
-  var w=window.open('','_blank','width=820,height=1100');
-  var css='*{margin:0;padding:0;box-sizing:border-box;}'
-    +'body{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif;font-size:13px;color:#1a1a1a;background:#fff;padding:28px 36px;max-width:760px;margin:0 auto;}'
-    +'h1{font-size:20px;font-weight:900;text-align:center;letter-spacing:.06em;margin-bottom:4px;}'
-    +'.sub{text-align:center;font-size:11px;color:#666;margin-bottom:18px;padding-bottom:10px;border-bottom:2px solid #1a1a1a;}'
-    +'.sec{margin-bottom:18px;}.sec-t{font-size:12.5px;font-weight:700;background:#f0f0f0;padding:5px 10px;border-left:4px solid #333;margin-bottom:10px;}'
-    +'.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;}'
-    +'.box{border:1px solid #ccc;border-radius:4px;min-height:80px;padding:8px;font-size:13px;line-height:1.7;white-space:pre-wrap;}'
-    +'.notice{font-size:12px;line-height:1.95;}'
-    +'.sign-area{display:flex;justify-content:space-between;align-items:flex-end;margin-top:16px;gap:20px;}'
-    +'.sign-box{text-align:center;flex:1;}.sign-line{border-bottom:1.5px solid #333;height:40px;margin-bottom:5px;}.sign-lbl{font-size:11px;color:#555;}'
-    +'@page{margin:14mm 18mm;}'
-    +'@media print{.no-print{display:none!important;}}';
-  w.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>레슨 평가지</title><style>'+css+'</style></head><body>');
-  w.document.write('<h1>Vocal Studio 레슨 유의사항 & 트레이너 평가</h1>');
-  w.document.write('<div class="sub">수강생: <strong>'+esc(c.name)+'</strong>&nbsp;&nbsp;|&nbsp;&nbsp;'+ds+'</div>');
-  if(c.song)w.document.write('<div class="sec"><div class="sec-t">평가 곡</div><div style="font-size:14px;font-weight:600">'+esc(c.song)+'</div></div>');
+  var w=window.open('','_blank','width=820,height=1200');
+
+  var css=
+    /* 폰트는 <link> 태그로 로드 */''+ 
+    '*{margin:0;padding:0;box-sizing:border-box;}'+
+    'body{font-family:"Noto Serif KR","Malgun Gothic",serif;font-size:11.5px;color:#1a1a1a;background:#fff;padding:10px 22px;max-width:750px;margin:0 auto;font-weight:400;line-height:1.55;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'+
+    'h1{font-size:18px;font-weight:700;text-align:center;letter-spacing:.06em;margin-bottom:2px;}'+
+    '.studioname{text-align:center;font-size:12px;color:#333;font-weight:500;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #1a1a1a;}'+
+    '.sub{text-align:center;font-size:10.5px;color:#555;margin-bottom:8px;background:#f7f7f7;padding:5px;border-radius:4px;}'+
+    '.sec{margin-bottom:7px;border:1px solid #ccc;border-radius:5px;overflow:hidden;}'+
+    '.sec-t{font-size:11.5px;font-weight:700;background:#1a1a1a;color:#fff;padding:5px 14px;letter-spacing:.04em;}'+
+    '.sec-body{padding:8px 12px;}'+
+    '.two-col{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:7px 10px;}'+
+    '.box{border:1px solid #ddd;border-radius:4px;padding:8px;min-height:80px;font-size:10.5px;line-height:1.5;background:#fafafa;word-break:break-word;}'+
+    '.box-label{font-size:10.5px;font-weight:600;color:#444;margin-bottom:5px;letter-spacing:.03em;border-bottom:1px solid #eee;padding-bottom:3px;}'+
+    '.notice-intro{padding:7px 14px 5px;font-size:10.5px;color:#555;line-height:1.6;border-bottom:1px solid #eee;font-style:italic;}'+
+    '.notice-wrap{padding:4px 10px 5px;}'+
+    '.sec-body .notice-item{display:flex;gap:8px;padding:5px 0;border-bottom:1px solid #f0f0f0;}'+
+    '.sec-body .notice-item:last-child{border-bottom:none;}'+
+    '.notice-item{display:flex;gap:6px;padding:3px 0;border-bottom:1px solid #f0f0f0;}'+
+    '.notice-item:last-child{border-bottom:none;}'+
+    '.notice-num{font-weight:700;min-width:18px;flex-shrink:0;font-size:11px;}'+
+    '.notice-body{font-size:10.5px;line-height:1.5;color:#222;}'+
+    '.notice-body strong{font-weight:700;font-size:11px;}'+
+    '.motto{margin:8px 12px 4px;padding:8px 12px;background:#f9f6f0;border-left:3px solid #c8a96e;font-size:11px;line-height:1.6;color:#444;font-style:italic;}'+
+    '.account-box{margin:6px 12px 10px;background:#fffdf5;border:1px solid #d4a840;border-radius:5px;padding:8px 12px;}'+
+    '.account-title{font-size:10.5px;font-weight:700;color:#8a6820;margin-bottom:5px;}'+
+    '.account-row{font-size:11.5px;font-weight:600;color:#1a1a1a;margin-bottom:3px;}'+
+    '.sign-area{display:flex;align-items:flex-end;gap:12px;margin-top:8px;padding-top:7px;border-top:2px solid #1a1a1a;}'+
+    '.sign-box{flex:1;text-align:center;}'+
+    '.sign-line{border-bottom:1px solid #888;margin-bottom:4px;height:32px;}'+
+    '.sign-lbl{font-size:10px;color:#555;}'+
+    '@media print{@page{size:A4;margin:8mm 12mm;}body{padding:0;}button{display:none!important;}}';
+
+  w.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>레슨 평가지</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>'+css+'</style></head><body>');
+  w.document.write('<h1>HLB보컬스튜디오</h1>');
+  w.document.write('<div class="studioname">원장 양경렬 &nbsp;·&nbsp; ☎ 010-8804-8903</div>');
+  w.document.write('<div class="sub">수강생: <strong>'+esc(c.name)+'</strong>&nbsp;&nbsp;|&nbsp;&nbsp;레슨 유의사항 &amp; 트레이너 초기 평가&nbsp;&nbsp;|&nbsp;&nbsp;'+ds+'</div>');
+
+  /* ── 트레이너 초기 평가 ── */
   w.document.write('<div class="sec"><div class="sec-t">트레이너 초기 평가</div><div class="two-col">');
-  w.document.write('<div><div style="font-size:11px;font-weight:600;color:#555;margin-bottom:5px">발견된 문제점</div><div class="box">'+prob.split('\n').join('<br>')+'</div></div>');
-  w.document.write('<div><div style="font-size:11px;font-weight:600;color:#555;margin-bottom:5px">개선 방향 &amp; 레슨 계획</div><div class="box">'+impr.split('\n').join('<br>')+'</div></div>');
+  w.document.write('<div><div class="box-label">발견된 문제점</div><div class="box">'+((prob||'').split('\n').join('<br>')||'<span style="color:#bbb">—</span>')+'</div></div>');
+  w.document.write('<div><div class="box-label">개선 방향 &amp; 레슨 계획</div><div class="box">'+((impr||'').split('\n').join('<br>')||'<span style="color:#bbb">—</span>')+'</div></div>');
   w.document.write('</div></div>');
-  w.document.write('<div class="sec"><div class="sec-t">개인 레슨 유의사항</div><div class="notice">');
-  w.document.write('<div style="display:flex;gap:10px;margin-bottom:10px">'+'<span style="font-weight:700;min-width:18px;flex-shrink:0">1.</span>'+'<div><strong>⏰ 시간 준수</strong><br>레슨은 정시에 시작하며, 정시에 끝납니다. 늦게 오셔도 정시에 끝나니 시간 준수 해주세요 :)</div>'+'</div>');
-  w.document.write('<div style="display:flex;gap:10px;margin-bottom:10px">'+'<span style="font-weight:700;min-width:18px;flex-shrink:0">2.</span>'+'<div><strong>📅 레슨 스케줄 변경</strong><br>당일 레슨 스케줄 변경은 이유 불문 안 되며, 못 오실 경우 레슨 1회 카운팅 됩니다.</div>'+'</div>');
-  w.document.write('<div style="display:flex;gap:10px;margin-bottom:10px">'+'<span style="font-weight:700;min-width:18px;flex-shrink:0">3.</span>'+'<div><strong>🔄 레슨 스케줄 연기</strong><br>레슨 커리큘럼에 의해 연기 횟수가 많아지면 수업 분위기와 습관 교정 진도에 영향을 줄 수 있어 4회 수업 중 1회만 가능합니다.</div>'+'</div>');
-  w.document.write('<div style="display:flex;gap:10px;margin-bottom:10px">'+'<span style="font-weight:700;min-width:18px;flex-shrink:0">4.</span>'+'<div><strong>🎤 하루 발성 커리큘럼 연습</strong><br>레슨 발성 커리큘럼을 시간을 꼭 내어 연습하셔야 실력 향상 및 다음 수업의 이해도를 높이니 반드시 연습해 주시길 바랍니다.</div>'+'</div>');
-  w.document.write('<div style="display:flex;gap:10px;margin-bottom:10px">'+'<span style="font-weight:700;min-width:18px;flex-shrink:0">5.</span>'+'<div><strong>💰 레슨 하루 전까지 입금</strong><br>레슨 하루 전까지 미입금 시 레슨 일정은 자동 취소되며 이 점 참고해 주시기 바랍니다.</div>'+'</div>');
-  w.document.write('<div style="display:flex;gap:10px;margin-bottom:10px">'+'<span style="font-weight:700;min-width:18px;flex-shrink:0">6.</span>'+'<div><strong>↩️ 환불 규정</strong><br>전체 수업의 ½을 받으신 경우 환불 불가. ⅓을 받으신 경우 ⅔ 환불. 받지 않은 경우 전액 환불. (4회 중 1회도 받지 않은 경우 전액 환불 / 1회 수업받은 경우 3회 레슨비 환불 / 2회 수업받은 경우 환불 불가)</div>'+'</div>');
-  w.document.write('<div style="display:flex;gap:10px;margin-bottom:10px">'+'<span style="font-weight:700;min-width:18px;flex-shrink:0">7.</span>'+'<div><strong>💧 개인 물 지참</strong><br>수업 중 마실 만큼의 물은 개인 지참 필히 해주세요.</div>'+'</div>');
-  w.document.write('</div></div>');
+
+  /* ── 유의사항 ── */
+  if(isGroup){
+    w.document.write('<div class="sec"><div class="sec-t">📋 그룹 레슨 유의사항</div><div class="sec-body">');
+    var groupNotices=[
+      ['시간 준수','레슨은 정시에 시작하며 정시에 끝납니다. 늦게 오셔도 정시에 종료되니 시간을 꼭 지켜주세요.'],
+      ['스케줄 변경','그룹 레슨 특성상 당일 스케줄 변경은 불가합니다. 불참 시 해당 회차는 소진됩니다.'],
+      ['보강 정책','보강은 그룹 정원 여유가 있을 때만 가능하며, 보강 횟수는 월 1회로 제한됩니다.'],
+      ['연습 권장','그룹 수업의 효율을 위해 개인 연습을 권장합니다. 발성 커리큘럼 복습을 꾸준히 해주세요.'],
+      ['수강료 납부','레슨 시작 하루 전까지 미납 시 수업이 취소될 수 있습니다.'],
+      ['환불 규정','전체 수업의 ½ 이상 수강 시 환불 불가 / ½ 미만 시 남은 횟수 환불 (행정비 차감).'],
+      ['개인 물 지참','수업 중 마실 물은 개인 지참 필수입니다.']
+    ];
+    groupNotices.forEach(function(n,i){
+      w.document.write('<div class="notice-item"><span class="notice-num">'+(i+1)+'.</span><div class="notice-body"><strong>'+n[0]+'</strong><br>'+n[1]+'</div></div>');
+    });
+    w.document.write('</div></div>');
+  } else {
+    w.document.write('<div class="sec"><div class="sec-t">개인 레슨 운영 규정 (필독)</div><div class="notice-intro">본 운영 방침은 최상의 수업 몰입도와 체계적인 발성 교정을 위해 설계되었습니다. 효율적인 수업 진행을 위해 아래 내용을 숙지하고 엄격히 준수해 주시기 바랍니다.</div><div class="notice-wrap">');
+    var soloNotices=[
+      ['레슨 시간 준수','정시 시작 및 종료를 원칙으로 합니다. 개인 사정으로 인한 지각 시에도 종료 시간은 동일합니다. (다만, 이전 수강생의 피드백이 길어져 발생하는 수 분 내외의 수업 지연은 최상의 레슨 퀄리티를 위해 제가 직접 조율하는 부분이니 양해 부탁드립니다.)'],
+      ['당일 변경 및 취소 (사유 불문 1회 차감)','예약된 시간은 오직 한 분을 위해 비워둔 기회비용입니다. 갑작스러운 개인 사정, 건강 문제 등 어떠한 사유를 막론하고 당일 취소는 선생님의 준비 시간과 타 수강생의 기회를 박탈하는 행위이므로 예외 없이 차감됩니다.'],
+      ['레슨 이월 및 연기','4회 수업 중 1회만 가능합니다. (발성은 근육의 습관을 형성하는 과정입니다. 수업 간격이 불규칙해지면 신체 감각이 퇴보하여 결국 지난 학습 내용을 반복하게 됩니다. 지체 없는 성장을 위한 최소한의 훈련 루틴임을 이해해 주시기 바랍니다.)'],
+      ['실력 변화를 위한 연습과 질문','수업에서 배운 감각을 내 것으로 만드는 유일한 방법은 연습입니다. (개인 연습을 하시면서 잘 안되는 부분이나 궁금한 점을 꼭 체크해 오세요. 스스로 고민하고 질문을 던질 때 이해도가 높아지며, 그만큼 수업의 깊이와 실력 향상 속도도 눈에 띄게 빨라집니다. 더 정교한 피드백을 주고받을 수 있도록 본인의 실력에 맞는 연습을 꾸준히 소화해 주시기 바랍니다.)'],
+      ['수강료 납부 및 예약 확정','입금 확인은 수업 참여에 대한 상호 간의 가장 기본적인 약속입니다. 수업 전날까지 입금 완료 시 예약이 최종 확정되며, 미입금 시 해당 시간대는 예약 대기자에게 우선권이 부여되어 일정이 자동 취소됩니다.'],
+      ['중도 퇴실 및 환불 정책','2회차 수업 참여 시점부터는 잔여 회차에 대한 반환이 진행되지 않습니다. (1회 수업 후 적성이나 변심에 의한 환불은 가능하나, 2회차부터는 핵심 커리큘럼과 노하우가 본격적으로 전달되는 단계입니다. 교육 콘텐츠의 가치를 보호하고 책임감 있는 학습 분위기를 유지하기 위한 기준이니 신중하게 결정해 주시기 바랍니다.)'],
+      ['개인 준비물 (생수 / 녹음기 / 필기도구)','수분 공급은 성대 부상을 방지하는 필수 요건이며, 녹음과 기록은 휘발되는 감각을 객관화하여 학습 효과를 극대화하는 가장 강력한 도구입니다. 최상의 수업을 위해 반드시 지참해 주세요.']
+    ];
+    soloNotices.forEach(function(n,i){
+      w.document.write('<div class="notice-item"><span class="notice-num">'+(i+1)+'.</span><div class="notice-body"><strong>'+n[0]+'</strong><br>'+n[1]+'</div></div>');
+    });
+    /* 입금 계좌 */
+    w.document.write('<div class="account-box">');
+    w.document.write('<div class="account-title">입금 계좌</div>');
+    w.document.write('<div class="account-row">우리은행 &nbsp; 1002-046-438968 &nbsp; (양경렬)</div>');
+    w.document.write('<div class="account-row">기업은행 &nbsp; 010-8804-8903 &nbsp; (양경렬)</div>');
+    w.document.write('<div style="font-size:11px;color:#888;margin-top:4px">카카오톡 오픈채팅: HLB보컬스튜디오</div>');
+    w.document.write('</div>');
+    w.document.write('</div></div>');
+  }
+
+  /* ── 좌우명 ── */
+  if(!isGroup){
+    w.document.write('<div style="margin:0 0 8px;padding:7px 12px;background:#f9f6f0;border-left:3px solid #c8a96e;font-size:10.5px;line-height:1.5;color:#555;font-style:italic">"모든 규정은 오로지 귀하의 실력 향상에만 초점을 맞추고 있습니다. 프로페셔널한 자세로 수업에 임해주시길 기대합니다."</div>');
+  }
+  /* ── 서명 ── */
   w.document.write('<div class="sign-area">');
   w.document.write('<div class="sign-box"><div class="sign-line"></div><div class="sign-lbl">트레이너 서명</div></div>');
-  w.document.write('<div class="sign-box"><div class="sign-line"></div><div class="sign-lbl">위 유의사항에 동의합니다 &mdash; 수강생 서명</div></div>');
-  w.document.write('<div style="text-align:right;font-size:11px;color:#888;flex:0.7">년&nbsp;&nbsp; 월&nbsp;&nbsp; 일</div>');
+  w.document.write('<div class="sign-box"><div class="sign-line"></div><div class="sign-lbl">위 유의사항에 동의합니다 — 수강생 서명</div></div>');
+  w.document.write('<div style="text-align:right;font-size:11px;color:#888;flex:0.6">년&nbsp;&nbsp;&nbsp;월&nbsp;&nbsp;&nbsp;일</div>');
   w.document.write('</div>');
-  if(consentDate)w.document.write('<div style="margin-top:12px;font-size:11px;color:#666;border-top:1px solid #eee;padding-top:8px">✓ 동의 음성 녹음 완료: '+consentDate+'</div>');
-  w.document.write('<div class="no-print" style="text-align:center;margin-top:20px"><button onclick="window.print()" style="padding:10px 28px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit">🖨️ 인쇄 / PDF 저장</button></div>');
+
+  if(consentDate)w.document.write('<div style="margin-top:10px;font-size:11px;color:#888;text-align:right">동의 녹음일: '+consentDate+'</div>');
+  w.document.write('<div style="text-align:center;margin-top:18px"><button onclick="window.print()" style="padding:8px 24px;background:#1a1a1a;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer">🖨️ 인쇄</button></div>');
   w.document.write('</body></html>');
   w.document.close();
-  setTimeout(function(){w.print();},400);
 }
 
 function go_page_today(){go('today');}
@@ -3881,13 +4045,19 @@ function go_page_logs(){go('logs');}
 function go_page_students(){go('students');}
 function go_page_consult(){go('consult');}
 function go_page_dashboard(){go('dashboard');}
-function goConsult(){go('consult');}
+function goConsult(){page='consult';go('consult');}
 function goPayment(){go('payment');}
 
 function ciCalcAge(el){
-  var yr=parseInt(el.value);
-  if(!yr||yr<1940||yr>new Date().getFullYear())return;
-  var age=new Date().getFullYear()-yr;
+  var raw=el.value.trim();
+  if(raw===''){var d2=document.getElementById('ci-age-display');if(d2)d2.textContent='';return;}
+  var n=parseInt(raw);
+  if(isNaN(n)){var d2b=document.getElementById('ci-age-display');if(d2b)d2b.textContent='';return;}
+  var yr=n;
+  if(raw.length<=2) yr=n>=30?1900+n:2000+n;
+  var thisYear=new Date().getFullYear();
+  if(yr<1920||yr>thisYear){var d3=document.getElementById('ci-age-display');if(d3)d3.textContent='';return;}
+  var age=thisYear-yr;
   var d=document.getElementById('ci-age-display');
   if(d)d.textContent=age+'세 ('+yr+'년생)';
 }
@@ -4017,7 +4187,13 @@ function closestOv(el){var p=el;while(p&&!p.classList.contains("ov"))p=p.parentE
 function om(id){ge(id).classList.add('open');}
 function cm(id){ge(id).classList.remove('open');}
 document.querySelectorAll('.ov').forEach(function(o){
-  o.addEventListener('click',function(ev){if(ev.target===o&&o.id!=='mCam')o.classList.remove('open');});
+  o.addEventListener('click',function(ev){
+    /* mQS(슬롯배정), mS(레슨생), mLR(레슨기록) 등 중요 모달은 외부 클릭으로 닫히지 않음 */
+    var noAutoClose=['mQS','mS','mLR','mFlexWeek','mWE','mTempReschedule'];
+    if(ev.target===o&&o.id!=='mCam'&&noAutoClose.indexOf(o.id)<0){
+      o.classList.remove('open');
+    }
+  });
 });
 function toast(msg,ic){
   ge('t-msg').textContent=msg;ge('t-ic').textContent=ic||'✓';
