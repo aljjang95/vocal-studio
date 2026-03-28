@@ -1,12 +1,13 @@
 {
   "name": "보컬스튜디오",
   "short_name": "보컬스튜디오",
-  "description": "보컬 레슨 관리 시스템",
+  "description": "HLB 보컬스튜디오 레슨 관리 시스템",
   "start_url": "./vocal-studio.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#10101a",
   "theme_color": "#c8a96e",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "icons": [
     {
       "src": "icon-192.png",
