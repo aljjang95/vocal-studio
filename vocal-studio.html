@@ -884,6 +884,7 @@ function _pushToFirestore(docRef){
     weekOvr:weekOvr,
     consults:consults,
     payments:payments,
+    inquiries:inquiries,
     updatedAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){_showSyncStatus('✅ 동기화됨');})
     .catch(function(e){console.error('Firestore 저장 오류',e);_showSyncStatus('⚠️ 저장 실패');});
@@ -2335,7 +2336,15 @@ function _injectInitialInquiries(){
   inquiries = existing;
   saveAll();
   localStorage.setItem('vsC_iq_injected_v2','1');
-  if(added>0) toast(added+'명 문의자 자동 등록됨 📞');
+  if(added>0){
+    toast(added+'명 문의자 자동 등록됨 📞');
+    /* Firebase에도 즉시 동기화 */
+    try{
+      var db2=firebase.firestore();
+      var ref2=db2.collection('studio').doc('data');
+      ref2.update({inquiries:inquiries});
+    }catch(e){}
+  }
 }
 function calcAgeStr(s){
   var raw=s&&s.age?String(s.age).trim():'';
