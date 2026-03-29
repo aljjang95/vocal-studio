@@ -71,9 +71,9 @@ td.b{color:var(--t);font-weight:600;}
 .pay-ok{background:rgba(109,200,162,.15);color:var(--g);border:1px solid rgba(109,200,162,.25);}
 .pay-no{background:rgba(200,114,114,.12);color:var(--r);border:1px solid rgba(200,114,114,.22);}
 .pay-partial{background:rgba(200,169,110,.14);color:var(--a);border:1px solid rgba(200,169,110,.24);}
-.profile-wrap{display:grid;grid-template-columns:296px 1fr;background:var(--s1);border:1px solid var(--b);border-radius:var(--rad);overflow:hidden;min-height:570px;}
-.profile-left{border-right:1px solid var(--b);display:flex;flex-direction:column;}
-.profile-photo{width:100%;aspect-ratio:1;background:var(--s3);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.profile-wrap{display:grid;grid-template-columns:200px 1fr;background:var(--s1);border:1px solid var(--b);border-radius:var(--rad);overflow:hidden;min-height:570px;}
+.profile-left{border-right:1px solid var(--b);display:flex;flex-direction:column;min-width:0;max-width:240px;}
+.profile-photo{width:100%;height:160px;max-height:160px;background:var(--s3);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .profile-photo img{width:100%;height:100%;object-fit:cover;}
 .profile-photo .no-photo{font-size:80px;font-weight:900;font-family:"Playfair Display",serif;opacity:.12;}
 .profile-photo-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 55%,rgba(8,8,13,.85));display:flex;align-items:flex-end;padding:16px;}
@@ -428,6 +428,12 @@ select option{background:#17172a;}textarea{resize:vertical;min-height:78px;}
 
 /* is-mobile 클래스 기반 (미디어쿼리 보완) */
 body.is-mobile .sb{display:none!important;}
+body.is-mobile .profile-wrap{grid-template-columns:1fr;min-height:auto;}
+body.is-mobile #studentsGrid{grid-template-columns:1fr!important;gap:5px!important;padding:8px!important;}
+body.is-mobile .profile-left{max-width:100%;border-right:none;border-bottom:1px solid var(--b);}
+body.is-mobile .profile-photo{height:120px;max-height:120px;}
+body.is-mobile .modal.xxl{width:96vw;max-height:94vh;}
+body.is-mobile .profile-name-big{font-size:18px;}
 body.is-mobile .main{margin-left:0!important;}
 body.is-mobile .topbar{position:relative!important;height:auto!important;min-height:52px!important;padding:8px 14px!important;flex-wrap:wrap!important;gap:6px!important;}
 body.is-mobile .content{padding:14px 14px!important;}
@@ -688,6 +694,7 @@ if(typeof window!=='undefined'){
 
 var students=ST,logs=LG,weekOvr=WO,consults=CO,payments=PM,inquiries=IQ;
 var currentStudentTab='all';
+var _studentSearch='';
 
 
 var COLORS=['#c8a96e','#6ea3c8','#6dc8a2','#a46ec8','#c87272','#c8be6e','#6ec8c8','#e0906c'];
@@ -853,7 +860,8 @@ function initFirebase(){
     /* 원격 변경사항을 메모리 + localStorage에 반영 */
     try{students=d.students||[];localStorage.setItem('vsC_s',JSON.stringify(students));}catch(e){}
     try{logs=d.logs||[];localStorage.setItem('vsC_l',JSON.stringify(logs));}catch(e){}
-    try{weekOvr=d.weekOvr||{};localStorage.setItem('vsC_wo',JSON.stringify(weekOvr));}catch(e){}
+    /* weekOvr: 첫 로드 시에만 Firebase에서 가져옴 */
+    try{if(!_fbReady){weekOvr=d.weekOvr||{};localStorage.setItem('vsC_wo',JSON.stringify(weekOvr));}}catch(e){}
     try{consults=d.consults||[];localStorage.setItem('vsC_c',JSON.stringify(consults));}catch(e){}
     try{payments=d.payments||[];localStorage.setItem('vsC_p',JSON.stringify(payments));}catch(e){}
     try{if(d.inquiries&&d.inquiries.length>0){inquiries=d.inquiries;localStorage.setItem('vsC_iq',JSON.stringify(inquiries));}}catch(e){}
@@ -1497,8 +1505,14 @@ function render(){
       if(isMobile()){setTimeout(function(){attachMobileEvents();},50);}
     });
   } else if(page==='students'){
-    ge('ta').innerHTML='<button class="btn bp" onclick="openSModal()">＋ 레슨생 추가</button>';
-    ge('content').innerHTML=buildStudents('',currentStudentTab||'all');
+    if(!ge('ta')||!ge('content')) return;
+    ge('ta').innerHTML='<button class="btn bp" onclick="openSModal()">＋ 레슨생 추가</button>'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-top:8px">'+
+      '<input class="fi" placeholder="🔍 이름 / 연락처 검색" value="'+(_studentSearch||'')+
+      '" oninput="_studentSearch=this.value;render()" style="flex:1;max-width:260px;font-size:13px;padding:6px 10px">'+
+      (_studentSearch?'<button class="btn bsm" onclick="_studentSearch=\'\';render()">✕</button>':'')+
+      '</div>';
+    ge('content').innerHTML=buildStudents(_studentSearch||'',currentStudentTab||'all');
   } else if(page==='logs'){
     ge('ta').innerHTML='';
     ge('content').innerHTML=buildLogs('');
@@ -2020,12 +2034,21 @@ function openQuickSlot(){
 function useDeferral(sid){
   var s=students.find(function(x){return x.id===sid;});
   if(!s) return;
-  var max=s.maxDeferrals||1;
+  var max=s.maxDeferrals||2; /* 기본 2회, 설정 가능 */
   var used=s.deferrals||0;
   if(used>=max){toast('이번 사이클 연기 횟수를 모두 사용했습니다 ❌');return;}
   if(!confirm('연기 1회를 사용합니다. ('+esc(s.name)+' / '+used+'/'+max+'회)')) return;
   s.deferrals=(s.deferrals||0)+1;
   saveAll();toast('연기 사용: '+s.name+' ('+s.deferrals+'/'+max+'회)');
+  if(page==='students') render();
+}
+
+function cancelDeferral(sid){
+  var s=students.find(function(x){return x.id===sid;});
+  if(!s||!(s.deferrals>0)) return;
+  if(!confirm(s.name+' 연기 취소. ('+s.deferrals+'회 → '+(s.deferrals-1)+'회)')) return;
+  s.deferrals=Math.max(0,(s.deferrals||0)-1);
+  saveAll();toast('연기 취소: '+s.name+' ('+s.deferrals+'/'+((s.maxDeferrals)||2)+'회)');
   if(page==='students') render();
 }
 function resetDeferral(sid){
@@ -2096,9 +2119,13 @@ function openBulkSchedule(sid){
     html+='<option>'+t+'</option>';
   });
   html+='</select>';
-  html+='<button class="btn bsm bp" onclick="applyBulkTime()">선택 날짜 적용</button>';
   html+='</div>';
-  html+='<div id="bulk-preview" style="font-size:12px;color:var(--tm);min-height:30px;margin-bottom:12px"></div>';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
+  html+='<div style="font-size:12px;color:var(--tm)">날짜를 눌러 선택 · 다시 누르면 취소</div>';
+  html+='<button class="btn bsm" style="font-size:11px;background:rgba(200,80,80,.1);color:var(--r)" onclick="clearAllBulkDates()">전체 취소</button>';
+  html+='</div>';
+  html+='<div id="bulk-selected-list" style="max-height:180px;overflow-y:auto;margin-bottom:8px"></div>';
+  html+='<div id="bulk-preview" style="font-size:12px;color:var(--tm);min-height:20px;margin-bottom:12px"></div>';
   html+='<div style="display:flex;gap:8px;justify-content:flex-end">';
   html+='<button class="btn bg2" onclick="document.getElementById(\'mBulkSched\').remove()">취소</button>';
   html+='<button class="btn bp" data-sid="'+sid+'" onclick="saveBulkSchedule(this.dataset.sid)">💾 일정 저장</button>';
@@ -2108,10 +2135,63 @@ function openBulkSchedule(sid){
   window._bulkSelections={};
 }
 
+
+
+function cancelBulkDate(date){
+  var el=document.querySelector('.bulk-date[data-date="'+date+'"]');
+  if(el) toggleBulkDate(el);
+}
+function clearAllBulkDates(){
+  document.querySelectorAll('.bulk-date.sel').forEach(function(el){
+    el.classList.remove('sel');
+    el.style.background='';
+    el.style.fontWeight='';
+  });
+  window._bulkSelections={};
+  var list=document.getElementById('bulk-selected-list');
+  if(list) list.innerHTML='';
+  updateBulkPreview();
+}
 function toggleBulkDate(el){
-  el.classList.toggle('sel');
-  el.style.background=el.classList.contains('sel')?'rgba(200,169,110,.25)':'';
-  el.style.fontWeight=el.classList.contains('sel')?'700':'';
+  var date=el.dataset.date;
+  if(el.classList.contains('sel')){
+    el.classList.remove('sel');
+    el.style.background='';
+    el.style.fontWeight='';
+    delete window._bulkSelections[date];
+    var row=document.getElementById('brow-'+date);
+    if(row) row.remove();
+  } else {
+    el.classList.add('sel');
+    el.style.background='rgba(200,169,110,.3)';
+    el.style.fontWeight='700';
+    var defT=document.getElementById('bulk-time');
+    var defTime=defT?defT.value:'10:00';
+    window._bulkSelections[date]=defTime;
+    /* 선택 목록에 행 추가 */
+    var list=document.getElementById('bulk-selected-list');
+    if(list){
+      var row=document.createElement('div');
+      row.id='brow-'+date;
+      row.style.cssText='display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(200,169,110,.06);border-radius:6px;margin-bottom:4px;';
+      /* 날짜 표시 */
+      var d=new Date(date);
+      var DAYS=['일','월','화','수','목','금','토'];
+      var dateLabel=d.getMonth()+1+'월 '+d.getDate()+'일 ('+DAYS[d.getDay()]+')';
+      row.innerHTML='<span style="font-size:12px;color:var(--a);flex:1;font-weight:700">'+dateLabel+'</span>'+
+        '<select id="bt-'+date+'" data-date="'+date+'" style="font-size:13px;background:var(--s2);color:var(--t);border:1px solid rgba(200,169,110,.3);border-radius:6px;padding:4px 8px;margin-right:6px">'+
+        ['10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'].map(function(t){
+          return '<option value="'+t+'"'+(t===defTime?' selected':'')+'>'+t+'</option>';
+        }).join('')+
+        '</select>'+
+        '<button style="background:rgba(200,80,80,.15);border:1px solid rgba(200,80,80,.3);color:var(--r);cursor:pointer;font-size:12px;border-radius:5px;padding:3px 8px;white-space:nowrap" data-date="'+date+'" onclick="cancelBulkDate(this.dataset.date)">✕ 취소</button>';
+      row.querySelector('select').onchange=function(){
+        window._bulkSelections[this.dataset.date]=this.value;
+        updateBulkPreview();
+      };
+      list.appendChild(row);
+    }
+  }
   updateBulkPreview();
 }
 
@@ -2121,8 +2201,11 @@ function applyBulkTime(){
   var time=t.value;
   document.querySelectorAll('.bulk-date.sel').forEach(function(el){
     window._bulkSelections[el.dataset.date]=time;
+    var tw=document.getElementById('bt-'+el.dataset.date);
+    if(tw) tw.value=time;
   });
   updateBulkPreview();
+  toast('전체 '+Object.keys(window._bulkSelections).length+'개 날짜에 '+time+' 적용');
 }
 
 function updateBulkPreview(){
@@ -2375,14 +2458,13 @@ function buildMobileWeekView(mon,sched,todayStr,isThis,flexS,unassignedFlex){
   o+='<div style="padding:6px 12px;display:flex;gap:6px;flex-wrap:wrap">';
   if(flexS.length&&isThis) o+='<button class="btn bm bsm" onclick="openFlexWeek()">🔄 변동 배정</button>';
   o+='<button class="btn bg2 bsm" onclick="openWE()">📋 전체 수정</button>';
-  if(isThis){
-    o+='<button class="btn bg2 bsm" onclick="undoAction()">↩️</button>';
-    o+='<button class="btn bsm" style="background:rgba(200,114,114,.1);color:var(--r);border:1px solid rgba(200,114,114,.2)" onclick="resetWeekOvr()">🔄 초기화</button>';
-  }
+  o+='<button class="btn bg2 bsm" onclick="undoAction()">↩️</button>';
+  o+='<button class="btn bsm" style="background:rgba(200,114,114,.1);color:var(--r);border:1px solid rgba(200,114,114,.2)" onclick="resetWeekOvr()">🔄 초기화</button>';
   o+='</div>';
 
   /* 그리드 컨테이너 - 가로 스크롤 */
   o+='<div style="padding-bottom:80px">';
+  o+='<div style="text-align:center;font-size:12px;font-weight:700;color:var(--a);padding:4px 0;letter-spacing:.05em">'+(function(m){var s=m.getMonth()+1,e=addDays(m,6).getMonth()+1;return m.getFullYear()+'년 '+(s===e?s:s+'~'+e)+'월';})(mon)+'</div>';
   o+='<div style="display:grid;grid-template-columns:36px repeat(7,1fr);width:100%">';
 
   /* 헤더 행 */
@@ -2400,7 +2482,7 @@ function buildMobileWeekView(mon,sched,todayStr,isThis,flexS,unassignedFlex){
     o+='<div style="background:var(--s1);border-bottom:2px solid var(--b2);border-left:1px solid var(--b);text-align:center;padding:2px 1px;position:sticky;top:0;z-index:10;background:'+(isHol?'rgba(200,80,80,.1)':isOff?'rgba(255,255,255,.02)':'var(--s1)')+';">';
     o+='<div style="font-size:9px;color:'+dayColor+';font-weight:600">'+d+'</div>';
     o+='<div style="width:24px;height:24px;border-radius:50%;background:'+numBg+';display:flex;align-items:center;justify-content:center;margin:2px auto">';
-    o+='<span style="font-size:12px;font-weight:700;color:'+numColor+'">'+dd.getDate()+'</span></div>';
+    o+='<span style="font-size:12px;font-weight:700;color:'+numColor+'">'+(dd.getDate()===1?(dd.getMonth()+1)+'/':'') +dd.getDate()+'</span></div>';
     if(holName) o+='<div style="font-size:8px;color:'+(isHol?'var(--r)':'var(--tm)')+';font-weight:600;line-height:1.2">'+holName+'</div>';
     o+='</div>';
   });
@@ -2467,7 +2549,7 @@ function buildMobileSchedule(){
   /* 뷰 전환 탭 */
   var vDay=(mobileSchedView==='day');
   /* 뷰 전환 탭 - content 맨 위 */
-  o+='<div style="display:flex;background:var(--s1);border-bottom:2px solid var(--b)">';
+  o+='<div style="display:flex;background:var(--s1);border-bottom:2px solid var(--b);position:sticky;top:0;z-index:20">';
   o+='<div onclick="mSchedDay()" style="flex:1;padding:10px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;border-bottom:3px solid '+(vDay?'var(--a)':'transparent')+';color:'+(vDay?'var(--a)':'var(--tm)')+';margin-bottom:-2px">📅 일별</div>';
   o+='<div onclick="mSchedWeek()" style="flex:1;padding:10px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;border-bottom:3px solid '+(vDay?'transparent':'var(--a)')+';color:'+(vDay?'var(--tm)':'var(--a)')+';margin-bottom:-2px">📊 주간</div>';
   o+='</div>';
@@ -2704,6 +2786,11 @@ function lbClick(el){
     +'<div style="font-size:12px;color:var(--tm)">'+date+' '+time+'</div></div></div>'
     +'<div class="mc" onclick="closeLbOpt()">&#x2715;</div></div>';
   html+='<div class="mb" style="display:flex;flex-direction:column;gap:8px">';
+  /* 같은 슬롯에 추가 배정 버튼 */
+  var day2=new Date(date).getDay();
+  var JSDOW2={0:'일',1:'월',2:'화',3:'수',4:'목',5:'금',6:'토'};
+  var dayStr2=JSDOW2[day2];
+  html+='<button class="btn bg2" style="justify-content:center;padding:12px" data-day="'+dayStr2+'" data-time="'+time+'" data-date="'+date+'" onclick="closeLbOpt();cellClick(this.dataset.day,this.dataset.time,this.dataset.date)">➕ 이 슬롯에 레슨생 추가</button>';
   html+='<button class="btn bp" style="justify-content:center;padding:12px" data-sid="'+sid+'" data-time="'+time+'" data-date="'+date+'" onclick="closeLbOpt();openLessonRecord(this.dataset.sid,this.dataset.time,this.dataset.date)">✍️ 레슨 기록 작성</button>';
   html+='<button class="btn bm" style="justify-content:center;padding:12px" data-sid="'+sid+'" data-time="'+time+'" data-date="'+date+'" onclick="closeLbOpt();openTempReschedule(this.dataset.sid,this.dataset.time,this.dataset.date)">📅 이번 주 일정 변경</button>';
   html+='<button class="btn bd" style="justify-content:center;padding:12px" data-sid="'+sid+'" data-time="'+time+'" data-date="'+date+'" onclick="closeLbOpt();removeSlotFromMenu(this.dataset.sid,this.dataset.time,this.dataset.date)">🗑 이 슬롯 비우기</button>';
@@ -2892,7 +2979,7 @@ function saveQS(){
     }
   });
   saveAll();cm('mQS');toast('슬롯 업데이트됨');renderSidebarToday();
-  if(page==='schedule'){ge('content').innerHTML=isMobile()?buildMobileSchedule():buildSchedule();}else render();
+  if(page==='schedule'){ge('content').innerHTML=isMobile()?buildMobileSchedule():buildSchedule();if(isMobile()){setTimeout(function(){attachMobileEvents();},50);}}else render();
 }
 
 /* FULL WEEK EDIT */
@@ -2948,7 +3035,7 @@ function saveWE(){
     weekOvr[wk][s.id]=slots;
   });
   saveAll();cm('mWE');toast('이번 주 스케줄 저장 📋');renderSidebarToday();
-  if(page==='schedule'){ge('content').innerHTML=isMobile()?buildMobileSchedule():buildSchedule();}else render();
+  if(page==='schedule'){ge('content').innerHTML=isMobile()?buildMobileSchedule():buildSchedule();if(isMobile()){setTimeout(function(){attachMobileEvents();},50);}}else render();
 }
 
 /* STUDENTS LIST */
@@ -2956,7 +3043,7 @@ var studentSearchVal='';
 var currentSortAsc=false;
 function buildStudents(filter, schedFilter){
   schedFilter=schedFilter||'all';
-  var base=filter?students.filter(function(s){return s.name.indexOf(filter)>=0;}):students;
+  var base=filter?students.filter(function(s){return s.name.indexOf(filter)>=0||(s.ph&&s.ph.indexOf(filter)>=0);}):students;
   var f=base;
   if(schedFilter==='fixed')f=base.filter(function(s){return s.schedType!=='flex'&&s.status==='수강중';});
   else if(schedFilter==='flex')f=base.filter(function(s){return s.schedType==='flex'&&s.status==='수강중';});
@@ -3005,7 +3092,7 @@ function buildStudents(filter, schedFilter){
     });
     o+='</div>';
   } else {
-    o+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(520px,1fr));gap:12px;padding:16px" id="studentsGrid">';
+    o+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:6px;padding:8px" id="studentsGrid">';
     f.forEach(function(s){
       var c=gc(s),c2=COLORS[(students.indexOf(s)+2)%COLORS.length];
       var sLogs=logs.filter(function(l){return l.sid===s.id;});
@@ -3016,8 +3103,12 @@ function buildStudents(filter, schedFilter){
       var _yr=_rawAge.length<=2&&_n>=0?(_n>=30?1900+_n:2000+_n):_n;
       var _ty=new Date().getFullYear();
       var ageStr=_yr>=1920&&_yr<=_ty?('만 '+(_ty-_yr)+'세 ('+_yr+'년생)'):''; /* 나이 우선 표시 */
-      var _du=s.deferrals||0,_dm=s.maxDeferrals||1;
+      var _du=s.deferrals||0,_dm=s.maxDeferrals||2;
       var defStr=' | 연기 '+_du+'/'+_dm+'회';
+      /* 미입금 체크 */
+      var _thisMonth=new Date().getFullYear()+'-'+(String(new Date().getMonth()+1).padStart(2,'0'));
+      var _paid=payments.some(function(p){return p.sid===s.id&&p.date&&p.date.slice(0,7)===_thisMonth;});
+      var unpaidBadge=(s.status==='수강중'&&s.fee>0&&!_paid)?'<span style="font-size:10px;background:rgba(200,80,80,.15);color:var(--r);border-radius:4px;padding:1px 5px;margin-left:4px">💰미입금</span>':'';
       var timeStr=s.schedType==='flex'?'🔄 변동 스케줄'
         :(s.days||[]).length
           ?'📌 고정 '+(s.days||[]).map(function(d){return d+'요일'+(s.times&&s.times[d]?' '+s.times[d]:'');}).join(', ')
@@ -3025,9 +3116,9 @@ function buildStudents(filter, schedFilter){
       o+='<div style="background:var(--s1);border:1px solid var(--b);border-radius:14px;overflow:hidden;display:flex" data-sid="'+s.id+'">';
       var avPhoto=s.photo
         ?'<img src="'+s.photo+'" style="width:128px;height:128px;object-fit:cover;object-position:top;display:block">'
-        :'<div style="width:128px;height:128px;background:linear-gradient(145deg,'+c+'28,'+c2+'18);display:flex;align-items:center;justify-content:center;font-family:Playfair Display,serif;font-size:30px;font-weight:900;color:'+c+';opacity:.7">'+esc(s.name.slice(0,1))+'</div>';
+        :'<div style="width:128px;height:128px;background:linear-gradient(145deg,'+c+'28,'+c2+'18);display:flex;align-items:center;justify-content:center;font-family:Playfair Display,serif;font-size:22px;font-weight:900;color:'+c+';opacity:.7">'+esc(s.name.slice(0,1))+'</div>';
       o+='<div style="width:128px;height:128px;flex-shrink:0;cursor:pointer;overflow:hidden" data-sid="'+s.id+'" onclick="openStudentById(this.dataset.sid)">'+avPhoto+'</div>';
-      o+='<div style="flex:1;padding:13px 16px;min-width:0;display:flex;flex-direction:column;gap:5px">';
+      o+='<div style="flex:1;padding:7px 10px;min-width:0;display:flex;flex-direction:column;gap:3px">';
       o+='<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;cursor:pointer" data-sid="'+s.id+'" onclick="openStudentById(this.dataset.sid)">';
       o+='<span style="font-size:17px;font-weight:800;color:var(--t)">'+esc(s.name)+'</span>';
       o+='<span class="bdg '+(s.status==='수강중'?'bg-g':s.status==='휴강'?'bg-a':'bg-r')+'" style="font-size:10.5px">'+esc(s.status)+'</span>';
@@ -3035,23 +3126,26 @@ function buildStudents(filter, schedFilter){
       o+='<span style="font-size:10.5px;padding:2px 7px;border-radius:5px;background:rgba(255,255,255,.07);color:var(--tm)">'+(s.schedType==='flex'?'🔄변동':'📌고정')+'</span>';
       o+='</div>';
       o+='<div style="font-size:12.5px;color:var(--tm);display:flex;gap:12px;flex-wrap:wrap">';
-      if(ageStr)o+='<span>'+ageStr+'</span>';
+      if(ageStr)o+='<span>'+ageStr+'</span>';if(unpaidBadge)o+=unpaidBadge;
+      if(_du>0)o+='<span style="font-size:11px;color:var(--a);background:rgba(200,169,110,.1);border-radius:4px;padding:1px 5px">연기 '+_du+'/'+_dm+'회 사용</span>';
       if(s.ph)o+='<span>📞 '+esc(s.ph)+'</span>';
       o+='</div>';
       o+='<div style="font-size:12px;color:var(--ts)">'+esc(timeStr)+'</div>';
-      o+='<div style="display:flex;align-items:center;gap:0;margin-top:auto;padding-top:8px;border-top:1px solid var(--b)">';
-      o+='<div style="display:flex;gap:14px;flex:1">';
-      o+='<div style="text-align:center"><div style="font-size:15px;font-weight:700;color:var(--a)">'+sLogs.length+'</div><div style="font-size:9px;color:var(--tm)">총레슨</div></div>';
-      o+='<div style="text-align:center"><div style="font-size:15px;font-weight:700;color:var(--g)">'+att+'</div><div style="font-size:9px;color:var(--tm)">출석</div></div>';
-      o+='<div style="text-align:center"><div style="font-size:15px;font-weight:700;color:var(--t)">'+attRate+'%</div><div style="font-size:9px;color:var(--tm)">출석률</div></div>';
-      o+='<div style="text-align:center"><div style="font-size:15px;font-weight:700;color:var(--bl)">'+(s.freq===2?'주2':'주1')+'</div><div style="font-size:9px;color:var(--tm)">횟수</div></div>';
+      o+='<div style="margin-top:auto;padding-top:6px;border-top:1px solid var(--b)">';
+      /* 통계 가로 한줄 */
+      o+='<div style="display:flex;gap:8px;margin-bottom:6px;font-size:11px;color:var(--tm)">';
+      o+='<span>📊 레슨 <b style="color:var(--a)">'+sLogs.length+'</b>회</span>';
+      o+='<span>출석 <b style="color:var(--g)">'+att+'</b>회</span>';
+      o+='<span>출석률 <b style="color:var(--t)">'+attRate+'%</b></span>';
+      o+='<span>'+(s.freq===2?'주2회':'주1회')+'</span>';
       o+='</div>';
-      o+='<div style="display:flex;gap:5px;flex-wrap:wrap">';
-      if(s.schedType==='flex') o+='<button class="btn bsm" style="background:rgba(110,163,200,.1);color:#6ea3c8;border:1px solid rgba(110,163,200,.2);font-size:11px" data-sid="'+s.id+'" onclick="event.stopPropagation();openBulkSchedule(this.dataset.sid)">📅 일정 등록</button>';
-      o+='<button class="btn bsm" style="background:rgba(200,169,110,.1);color:var(--a);border:1px solid rgba(200,169,110,.2);font-size:11px" data-sid="'+s.id+'" onclick="event.stopPropagation();useDeferral(this.dataset.sid)">연기 사용</button>';
-      o+='<button class="btn bsm" style="background:rgba(255,255,255,.05);color:var(--tm);font-size:11px" data-sid="'+s.id+'" onclick="event.stopPropagation();resetDeferral(this.dataset.sid)">초기화</button>';
-      o+='<button class="btn bp bsm" data-sid="'+s.id+'" onclick="event.stopPropagation();cm(\'mProfile\');openSModal(this.dataset.sid)">✏️ 수정</button>';
-      o+='<button class="btn bg2 bsm" data-sid="'+s.id+'" onclick="event.stopPropagation();openStudentById(this.dataset.sid)">👁 상세</button>';
+      o+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">';
+      o+='<button class="btn bsm" style="font-size:10px;padding:4px 2px;text-align:center;background:rgba(110,163,200,.1);color:#6ea3c8;border:1px solid rgba(110,163,200,.2)" data-sid="'+s.id+'" onclick="event.stopPropagation();openBulkSchedule(this.dataset.sid)">📅일정</button>';
+      o+='<button class="btn bsm" style="font-size:10px;padding:4px 2px;text-align:center;background:rgba(200,169,110,.1);color:var(--a);border:1px solid rgba(200,169,110,.2)" data-sid="'+s.id+'" onclick="event.stopPropagation();useDeferral(this.dataset.sid)">연기</button>';
+      if(_du>0) o+='<button class="btn bsm" style="font-size:10px;padding:4px 2px;text-align:center;background:rgba(200,80,80,.1);color:var(--r);border:1px solid rgba(200,80,80,.2)" data-sid="'+s.id+'" onclick="event.stopPropagation();cancelDeferral(this.dataset.sid)">연기취소</button>';
+      o+='<button class="btn bsm" style="font-size:10px;padding:4px 2px;text-align:center;background:rgba(255,255,255,.05);color:var(--tm)" data-sid="'+s.id+'" onclick="event.stopPropagation();resetDeferral(this.dataset.sid)">초기화</button>';
+      o+='<button class="btn bp bsm" style="font-size:10px;padding:4px 2px;text-align:center" data-sid="'+s.id+'" onclick="event.stopPropagation();cm(\'mProfile\');openSModal(this.dataset.sid)">✏️수정</button>';
+      o+='<button class="btn bg2 bsm" style="font-size:10px;padding:4px 2px;text-align:center" data-sid="'+s.id+'" onclick="event.stopPropagation();openStudentById(this.dataset.sid)">👁상세</button>';
       o+='</div></div></div></div>';
     });
     o+='</div>';
@@ -3333,7 +3427,11 @@ function openSModal(id){
   ge('mST').textContent=id?'레슨생 수정':'레슨생 추가';
   var s=id?students.find(function(st){return st.id===id;}):null;
   ge('s-nm').value=(s&&s.name)||'';ge('s-cls').value=(s&&s.cls)||'pro';
-  ge('s-gd').value=(s&&s.gd)||'여성';ge('s-age').value=(s&&s.age)||'';if(s&&s.age){var _ageEl=ge('s-age');if(_ageEl)updateAge(_ageEl);}
+  ge('s-gd').value=(s&&s.gd)||'여성';var _sAge=s&&s.age?String(s.age).trim():'';
+  var _sN=parseInt(_sAge)||0;
+  var _sYr=_sAge&&_sAge.length<=2&&_sN>=0?(_sN>=30?1900+_sN:2000+_sN):_sN;
+  ge('s-age').value=_sYr||_sAge||'';
+  if(ge('s-age').value){var _ageEl=ge('s-age');if(_ageEl)setTimeout(function(){updateAge(_ageEl);},50);}
   ge('s-ph').value=(s&&s.ph)||'';ge('s-st').value=(s&&s.st)||toDS(new Date());
   ge('s-memo').value=(s&&s.memo)||'';ge('s-stat').value=(s&&s.status)||'수강중';
   ge('s-fee').value=(s&&s.fee&&s.fee>0)?s.fee:'';if(ge('s-fee'))ge('s-fee').removeAttribute('data-user-edited');
@@ -3526,8 +3624,10 @@ function buildMediaPanel(data,mode){
   /* ── 개인 레슨 유의사항 ── */
   o+='<div style="background:rgba(255,255,255,.03);border:1px solid var(--b);border-radius:12px;padding:16px 18px;margin-bottom:14px">';
   o+='<div style="font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--ts);text-transform:uppercase;margin-bottom:10px">⚠️ 개인 레슨 유의사항</div>';
-  o+='<div style="font-size:13px;color:var(--ts);line-height:1.9">';
-  o+='1. ⏰ 시간 준수: 레슨은 정시에 시작하며, 정시에 끝납니다. 늦게 오셔도 정시에 끝나니 시간 준수 해주세요 :)<br>2. 📅 레슨 스케줄 변경: 당일 레슨 스케줄 변경은 이유 불문 안 되며, 못 오실 경우 레슨 1회 카운팅 됩니다.<br>3. 🔄 레슨 스케줄 연기: 레슨 커리큘럼에 의해 연기 횟수가 많아지면 수업 분위기와 습관 교정 진도에 영향을 줄 수 있어 4회 수업 중 1회만 가능합니다.<br>4. 🎤 하루 발성 커리큘럼 연습: 레슨 발성 커리큘럼을 시간을 꼭 내어 연습하셔야 실력 향상 및 다음 수업의 이해도를 높이니 반드시 연습해 주시길 바랍니다.<br>5. 💰 레슨 하루 전까지 입금: 레슨 하루 전까지 미입금 시 레슨 일정은 자동 취소되며 이 점 참고해 주시기 바랍니다.<br>6. ↩️ 환불 규정: 전체 수업의 ½을 받으신 경우 환불 불가. ⅓을 받으신 경우 ⅔ 환불. 받지 않은 경우 전액 환불. (4회 중 1회도 받지 않은 경우 전액 환불 / 1회 수업받은 경우 3회 레슨비 환불 / 2회 수업받은 경우 환불 불가)<br>7. 💧 개인 물 지참: 수업 중 마실 만큼의 물은 개인 지참 필히 해주세요.<br>';
+  o+='<div style="font-size:12px;color:var(--ts);line-height:1.85">';
+  o+='<div style="font-size:11px;color:var(--tm);font-style:italic;margin-bottom:8px">본 운영 방침은 최상의 수업 몰입도와 체계적인 발성 교정을 위해 설계되었습니다. 효율적인 수업 진행을 위해 아래 내용을 숙지하고 엄격히 준수해 주시기 바랍니다.</div>';
+  o+='1. 레슨 시간 준수: 정시 시작 및 종료를 원칙으로 합니다. 개인 사정으로 인한 지각 시에도 종료 시간은 동일합니다. (다만, 이전 수강생의 피드백이 길어져 발생하는 수 분 내외의 수업 지연은 최상의 레슨 퀄리티를 위해 제가 직접 조율하는 부분이니 양해 부탁드립니다.)<br>2. 당일 변경 및 취소 (사유 불문 1회 차감): 예약된 시간은 오직 한 분을 위해 비워둔 기회비용입니다. 갑작스러운 개인 사정, 건강 문제 등 어떠한 사유를 막론하고 당일 취소는 선생님의 준비 시간과 타 수강생의 기회를 박탈하는 행위이므로 예외 없이 차감됩니다.<br>3. 레슨 이월 및 연기: 4회 수업 중 1회만 가능합니다. (발성은 근육의 습관을 형성하는 과정입니다. 수업 간격이 불규칙해지면 신체 감각이 퇴보하여 결국 지난 학습 내용을 반복하게 됩니다. 지체 없는 성장을 위한 최소한의 훈련 루틴임을 이해해 주시기 바랍니다.)<br>4. 실력 변화를 위한 연습과 질문: 수업에서 배운 감각을 내 것으로 만드는 유일한 방법은 연습입니다. (개인 연습을 하시면서 잘 안되는 부분이나 궁금한 점을 꼭 체크해 오세요. 스스로 고민하고 질문을 던질 때 이해도가 높아지며, 그만큼 수업의 깊이와 실력 향상 속도도 눈에 띄게 빨라집니다.)<br>5. 수강료 납부 및 예약 확정: 입금 확인은 수업 참여에 대한 상호 간의 가장 기본적인 약속입니다. 수업 전날까지 입금 완료 시 예약이 최종 확정되며, 미입금 시 해당 시간대는 예약 대기자에게 우선권이 부여되어 일정이 자동 취소됩니다.<br>6. 중도 퇴실 및 환불 정책: 2회차 수업 참여 시점부터는 잔여 회차에 대한 반환이 진행되지 않습니다. (1회 수업 후 적성이나 변심에 의한 환불은 가능하나, 2회차부터는 핵심 커리큘럼과 노하우가 본격적으로 전달되는 단계입니다. 교육 콘텐츠의 가치를 보호하고 책임감 있는 학습 분위기를 유지하기 위한 기준이니 신중하게 결정해 주시기 바랍니다.)<br>7. 개인 준비물 (생수 / 녹음기 / 필기도구): 수분 공급은 성대 부상을 방지하는 필수 요건이며, 녹음과 기록은 휘발되는 감각을 객관화하여 학습 효과를 극대화하는 가장 강력한 도구입니다. 최상의 수업을 위해 반드시 지참해 주세요.<br>';
+  o+='<div style="margin-top:10px;padding:8px 12px;background:rgba(200,169,110,.06);border-left:3px solid var(--a);font-size:11.5px;color:var(--tm);font-style:italic">"모든 규정은 오로지 귀하의 실력 향상에만 초점을 맞추고 있습니다. 프로페셔널한 자세로 수업에 임해주시길 기대합니다."</div>';
   o+='</div>';
   o+='</div>';
 
@@ -3810,50 +3910,90 @@ function openProfile(data,mode){
 
 /* ── 전체 문자 메시지 ── */
 function showBulkSMS(){
-  /* 상담신청자: 수강중인 사람만 제외 (휴강/수료 포함) */
-  var studActivePhones=students.filter(function(s){return s.ph&&s.status==='수강중';}).map(function(s){return s.ph;});
-  var phones=consults.filter(function(c){
-    return c.phone && !c.converted && studActivePhones.indexOf(c.phone)<0;
-  }).map(function(c){return{name:c.name,phone:c.phone};});
+  /* 데이터 준비 */
+  var phones=consults.filter(function(c){return c.phone&&!c.converted;}).map(function(c){return{name:c.name||c.phone,phone:c.phone};});
   var studs=students.filter(function(s){return s.ph&&s.status==='수강중';}).map(function(s){return{name:s.name,phone:s.ph};});
-  var allList=phones.concat(studs);
-  var inqs=inquiries.filter(function(q){return q.phone;}).map(function(q){return{name:q.name,phone:q.phone};});
-  var allList2=phones.concat(studs).concat(inqs);
-  window._smsData={phones:phones,studs:studs,all:allList2,inqs:inqs};
-  var existing=document.getElementById('mSMS');
-  if(existing)existing.remove();
+  var inqs=inquiries.filter(function(q){return q.phone;}).map(function(q){return{name:q.name||q.phone,phone:q.phone};});
+  window._smsData={phones:phones,studs:studs,inqs:inqs};
+
+  var ex=document.getElementById('mSMS');if(ex)ex.remove();
   var m=document.createElement('div');
   m.id='mSMS';m.className='ov open';
-  var html='<div class="modal wide"><div class="mh"><div class="mt">📱 이벤트 문자 발송</div><div class="mc" onclick="document.getElementById(\'mSMS\').remove()">&#x2715;</div></div>';
-  html+='<div class="mb">';
-  html+='<div style="background:var(--ag);border:1px solid rgba(200,169,110,.18);border-radius:9px;padding:11px 14px;margin-bottom:14px;font-size:13px;color:var(--a)">💡 연락처를 복사해서 문자 앱에 붙여넣으세요. 브라우저 보안상 직접 발송은 불가합니다.</div>';
-  html+='<div style="display:flex;gap:8px;margin-bottom:12px">';
-  html+='<div class="ro on" id="sms-t0" onclick="switchSMSTarget(0)">📋 상담신청자 (수강생제외) ('+phones.length+'명)</div>';
-  html+='<div class="ro" id="sms-t1" onclick="switchSMSTarget(1)">♬ 수강생 ('+studs.length+'명)</div>';
-  html+='<div class="ro" id="sms-t2" onclick="switchSMSTarget(2)">전체 ('+allList2.length+'명)</div>';
-  html+='<div class="ro" id="sms-t3" onclick="switchSMSTarget(3)">❓ 문의자 ('+inqs.length+'명)</div>';
+
+  var html='<div class="modal wide"><div class="mh"><div class="mt">📱 문자 발송</div><div class="mc" onclick="document.getElementById(\'mSMS\').remove()">&#x2715;</div></div><div class="mb">';
+
+  /* 탭 3개 */
+  html+='<div style="display:flex;gap:6px;margin-bottom:14px">';
+  html+='<button id="sms-t0" class="btn bp bsm" onclick="smsSwitchTab(0)">📋 상담신청자 ('+phones.length+'명)</button>';
+  html+='<button id="sms-t1" class="btn bsm" onclick="smsSwitchTab(1)">🎵 수강생 ('+studs.length+'명)</button>';
+  html+='<button id="sms-t2" class="btn bsm" onclick="smsSwitchTab(2)">❓ 문의자 ('+inqs.length+'명)</button>';
   html+='</div>';
-  html+='<div class="f1" style="margin-bottom:12px"><label>수신자 연락처</label>';
-  html+='<textarea id="sms-phones" rows="3" style="font-size:13px">'+phones.map(function(p){return p.phone;}).join(', ')+'</textarea>';
-  html+='<div style="font-size:12px;color:var(--tm);margin-top:4px" id="sms-names">'+phones.map(function(p){return esc(p.name);}).join(', ')+'</div></div>';
-  html+='<div class="f1"><label>메시지 내용</label>';
-  html+='<textarea id="sms-body" rows="6" placeholder="예) 안녕하세요! Vocal Studio입니다. 이번 달 특별 이벤트를 안내드립니다."></textarea>';
-  html+='</div></div>';
-  html+='<div class="mf"><button class="btn bg2" onclick="document.getElementById(\'mSMS\').remove()">닫기</button>';
-  html+='<button class="btn bp" onclick="copySMSContent()">📋 전체 복사</button></div></div>';
+
+  /* 개별 연락처 목록 */
+  html+='<div id="sms-list" style="max-height:200px;overflow-y:auto;margin-bottom:12px;border:1px solid var(--b);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:4px"></div>';
+
+  /* 메시지 입력 */
+  html+='<div class="fg"><label style="font-size:12px;color:var(--tm)">메시지 내용</label>';
+  html+='<textarea id="sms-body" class="fi" rows="5" placeholder="내용을 입력하세요..."></textarea></div>';
+
+  /* 하단 버튼 */
+  html+='<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px">';
+  html+='<button class="btn bg2" onclick="document.getElementById(\'mSMS\').remove()">닫기</button>';
+  html+='<button class="btn bm" onclick="smsCopyNums()">📋 번호 복사</button>';
+  html+='<button class="btn bp" onclick="smsOpenApp()">📱 문자앱 열기</button>';
+  html+='</div></div></div>';
+
   m.innerHTML=html;
   m.addEventListener('click',function(ev){if(ev.target===m)m.remove();});
   document.body.appendChild(m);
+  smsSwitchTab(0);
 }
-function switchSMSTarget(idx){
-  [0,1,2,3].forEach(function(i){var el=document.getElementById('sms-t'+i);if(el)el.classList.toggle('on',i===idx);});
+
+function smsSwitchTab(idx){
+  [0,1,2].forEach(function(i){
+    var el=document.getElementById('sms-t'+i);
+    if(el){el.classList.toggle('bp',i===idx);el.classList.toggle('bg2',i!==idx);}
+  });
   var d=window._smsData;
-  var list=[d.phones,d.studs,d.all,d.inqs][idx]||[];
-  var ta=document.getElementById('sms-phones');
-  var nm=document.getElementById('sms-names');
-  if(ta)ta.value=list.map(function(p){return p.phone;}).join(', ');
-  if(nm)nm.textContent=list.map(function(p){return esc(p.name);}).join(', ');
+  var list=[d.phones,d.studs,d.inqs][idx]||[];
+  window._smsCurList=list;
+  var box=document.getElementById('sms-list');
+  if(!box) return;
+  if(!list.length){
+    box.innerHTML='<div style="text-align:center;padding:16px;color:var(--tm);font-size:13px">없음</div>';
+    return;
+  }
+  box.innerHTML=list.map(function(p,i){
+    return '<div style="display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;background:var(--s3)">'
+      +'<span style="flex:1;font-size:13px;color:var(--t)">'+esc(p.name)+'</span>'
+      +'<span style="font-size:12px;color:var(--tm)">'+esc(p.phone)+'</span>'
+      +'<a href="sms:'+esc(p.phone)+'" style="font-size:11px;background:rgba(100,200,120,.1);color:#6dc8a2;border:1px solid rgba(100,200,120,.2);border-radius:5px;padding:2px 7px;text-decoration:none;white-space:nowrap">문자</a>'
+      +'</div>';
+  }).join('');
 }
+
+function smsCopyNums(){
+  var list=window._smsCurList||[];
+  if(!list.length){toast('수신자가 없습니다','⚠️');return;}
+  var nums=list.map(function(p){return p.phone;}).join(', ');
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(nums).then(function(){toast(list.length+'명 번호 복사됨 📋');});
+  } else {
+    toast('직접 선택 후 복사해 주세요','⚠️');
+  }
+}
+
+function smsOpenApp(){
+  var list=window._smsCurList||[];
+  if(!list.length){toast('수신자가 없습니다','⚠️');return;}
+  var body=document.getElementById('sms-body');
+  var msg=body?body.value.trim():'';
+  var nums=list.map(function(p){return p.phone;}).join(';');
+  var uri='sms:'+nums+(msg?'?body='+encodeURIComponent(msg):'');
+  window.location.href=uri;
+}
+
+
 function copySMSContent(){
   var phones=(document.getElementById('sms-phones')&&document.getElementById('sms-phones').value)||'';
   var body=(document.getElementById('sms-body')&&document.getElementById('sms-body').value)||'';
@@ -3874,7 +4014,7 @@ function buildConsultList(){
   function consultCard(c){
     var refDetail=c.refDetail?' ('+esc(c.refDetail)+')':'';
     var ref=c.ref?'유입: '+esc(c.ref)+refDetail+'  ':'';
-    var r='<div class="ci" data-cid="'+c.id+'" onclick="openConsultById(this.dataset.cid)">';
+    var r='<div class="ci" data-cid="'+c.id+'" style="position:relative" onclick="openConsultById(this.dataset.cid)"><button class="btn bsm" style="position:absolute;top:8px;right:8px;font-size:10px;background:rgba(255,255,255,.07);z-index:1" data-cid="'+c.id+'" onclick="event.stopPropagation();showConsultForm(this.dataset.cid)">✏️ 수정</button>';
     r+='<div class="ci-av">'+(c.photo?'<img src="'+c.photo+'">':(esc((c.name&&c.name.slice(0,1))||'?')))+'</div>';
     r+='<div style="flex:1"><div style="font-size:14.5px;font-weight:600">'+esc(c.name||'이름 없음')+'</div>';
     r+='<div style="font-size:12.5px;color:var(--tm);margin-top:3px">'+(c.age?(function(a){var raw=String(a||'').trim();if(!raw)return '';var n=parseInt(raw)||0;var yr=raw.length<=2&&n>=0?(n>=30?1900+n:2000+n):n;var ty=new Date().getFullYear();return (yr>=1920&&yr<=ty)?'만 '+(ty-yr)+'세':'만 '+a+'세';})(c.age)+' · ':'')+esc(c.phone||'')+' · 접수 '+esc(c.date||'')+'</div>';
@@ -3917,7 +4057,13 @@ function convertFromProfile(id){
   pendingConvertId=id;editSid=null;
   ge('mST').textContent='레슨생 등록';
   ge('s-nm').value=c.name||'';ge('s-cls').value=c.cls||'pro';ge('s-gd').value=c.gd||'여성';
-  ge('s-age').value=c.age||'';ge('s-ph').value=c.phone||'';
+  /* age 출생연도로 통일 */
+  var _cAge=c.age?String(c.age).trim():'';
+  var _cN=parseInt(_cAge)||0;
+  var _cYr=_cAge.length<=2&&_cN>=0?(_cN>=30?1900+_cN:2000+_cN):_cN;
+  ge('s-age').value=_cYr||c.age||'';
+  if(ge('s-age').value) setTimeout(function(){updateAge(ge('s-age'));},50);
+  ge('s-ph').value=c.phone||'';
   /* 레슨 시작일: 신청서 firstDate가 있으면 그걸 사용, 없으면 오늘 */
   var startDate=c.firstDate||toDS(new Date());
   ge('s-st').value=startDate;
@@ -4026,6 +4172,29 @@ function prevAudioCI(input){
   r.readAsDataURL(file);
 }
 function openCIRec(){openRecording('__ci_consult__','consult-form','before');}
+
+function saveConsultEdit(cid){
+  var idx=consults.findIndex(function(x){return x.id===cid;});
+  if(idx<0){toast('수정할 항목을 찾을 수 없습니다','⚠️');return;}
+  var days=Array.from(document.querySelectorAll('#ci-dpick .dpb.on')).map(function(b){return b.textContent;});
+  var genres=Array.from(document.querySelectorAll('.genre-ro.on')).map(function(b){return b.textContent;});
+  var old=consults[idx];
+  consults[idx]=Object.assign({},old,{
+    name:(gv('ci-nm')||old.name).trim(),
+    age:gv('ci-age')||old.age,
+    phone:gv('ci-ph')||old.phone,
+    gd:gv('ci-gd')||old.gd,
+    job:gv('ci-job'),why:gv('ci-why'),
+    genres:genres,goalS:gv('ci-goal-s'),goalL:gv('ci-goal-l'),
+    cls:gv('ci-cls'),days:days,time:gv('ci-time'),
+    when:gv('ci-when'),schedPref:gv('ci-sched-pref'),
+    voice:gv('ci-voice'),vdetail:gv('ci-vdetail'),
+    exp:gv('ci-exp'),prev:gv('ci-prev'),memo:gv('ci-memo')
+  });
+  saveAll();
+  toast('상담 신청서 수정됨 ✅');
+  go('consult');
+}
 function saveConsult(){
   var name=(gv('ci-nm')).trim();if(!name){toast('성함을 입력해주세요','⚠️');return;}
   var days=Array.from(document.querySelectorAll('#ci-dpick .dpb.on')).map(function(b){return b.textContent;});
@@ -4033,7 +4202,7 @@ function saveConsult(){
   var audioData=gv('ci-audio-data'),audioType=gv('ci-audio-type');
   var data={
     id:uid(),name:name,photo:gv('ci-photo-data'),
-    birthYear:gv('ci-age'),age:gv('ci-age')?(new Date().getFullYear()-parseInt(gv('ci-age')))+'':'' ,gd:gv('ci-gd'),phone:gv('ci-ph'),job:gv('ci-job'),
+    birthYear:gv('ci-age'),age:gv('ci-age')||'' ,gd:gv('ci-gd'),phone:gv('ci-ph'),job:gv('ci-job'),
     ref:gv('ci-ref'),refDetail:(ge('ci-ref-detail')&&ge('ci-ref-detail').value)||'',
     why:gv('ci-why'),genres:genres,goalS:gv('ci-goal-s'),goalL:gv('ci-goal-l'),
     cls:gv('ci-cls'),days:days,time:gv('ci-time'),firstDate:(ge('ci-first-date')&&ge('ci-first-date').value)||'',when:gv('ci-when'),
@@ -4137,7 +4306,7 @@ function saveAndGoEval(){
   var cid=uid();
   var tempData={
     id:cid,name:name,photo:gv('ci-photo-data'),
-    birthYear:gv('ci-age'),age:gv('ci-age')?(new Date().getFullYear()-parseInt(gv('ci-age')))+'':'' ,gd:gv('ci-gd'),phone:gv('ci-ph'),job:gv('ci-job'),
+    birthYear:gv('ci-age'),age:gv('ci-age')||'' ,gd:gv('ci-gd'),phone:gv('ci-ph'),job:gv('ci-job'),
     ref:gv('ci-ref'),refDetail:(ge('ci-ref-detail')&&ge('ci-ref-detail').value)||'',
     why:gv('ci-why'),genres:genres,goalS:gv('ci-goal-s'),goalL:gv('ci-goal-l'),
     cls:gv('ci-cls'),days:days,time:gv('ci-time'),
@@ -4212,31 +4381,31 @@ function showEvalPage(cid){
   o+='<div class="cs-title">📄 개인 레슨 운영 규정 (필독)</div>';
   o+='<div style="font-size:12px;color:var(--tm);line-height:1.6;margin-bottom:10px;font-style:italic">본 운영 방침은 최상의 수업 몰입도와 체계적인 발성 교정을 위해 설계되었습니다. 효율적인 수업 진행을 위해 아래 내용을 숙지하고 엄격히 준수해 주시기 바랍니다.</div>';
   o+='<div style="display:flex;gap:10px;margin-bottom:10px">';
-  o+='<div style="font-size:13px;font-weight:700;color:var(--a);min-width:22px;flex-shrink:0">1.</div>';
+  o+='<span style="font-size:13px;font-weight:700;color:var(--a);min-width:22px;flex-shrink:0">1.</span>';
   o+='<div><div style="font-size:13px;font-weight:700;color:var(--t);margin-bottom:3px">레슨 시간 준수</div>';
-  o+='<div style="font-size:13px;color:var(--ts);line-height:1.65">정시 시작 및 종료를 원칙으로 합니다. 개인 사정으로 인한 지각 시에도 종료 시간은 동일합니다. (다만, 이전 수강생의 피드백이 길어져 발생하는 수 분 내외의 수업 지연은 최상의 레슨 퀄리티를 위해 제가 직접 조율하는 부분이니 양해 부탁드립니다.)</div></div></div>';
+  o+='<div style="font-size:13px;color:var(--ts);line-height:1.65">정시 시작 및 종료를 원칙으로 합니다. 개인 사정으로 인한 지각 시에도 종료 시간은 동일합니다. (다만, 이전 수강생의 피드백이 길어져 발생하는 수 분 내외의 수업 지연은 최상의 레슨 퀄리티를 위해 제가 직접 조율하는 부분이니 양해 부탁드립니다.) 🕒</div></div></div>';
   o+='<div style="display:flex;gap:10px;margin-bottom:10px">';
-  o+='<div style="font-size:13px;font-weight:700;color:var(--a);min-width:22px;flex-shrink:0">2.</div>';
+  o+='<span style="font-size:13px;font-weight:700;color:var(--a);min-width:22px;flex-shrink:0">2.</span>';
   o+='<div><div style="font-size:13px;font-weight:700;color:var(--t);margin-bottom:3px">당일 변경 및 취소 (사유 불문 1회 차감)</div>';
   o+='<div style="font-size:13px;color:var(--ts);line-height:1.65">예약된 시간은 오직 한 분을 위해 비워둔 기회비용입니다. 갑작스러운 개인 사정, 건강 문제 등 어떠한 사유를 막론하고 당일 취소는 선생님의 준비 시간과 타 수강생의 기회를 박탈하는 행위이므로 예외 없이 차감됩니다.</div></div></div>';
   o+='<div style="display:flex;gap:10px;margin-bottom:10px">';
-  o+='<div style="font-size:13px;font-weight:700;color:var(--a);min-width:22px;flex-shrink:0">3.</div>';
+  o+='<span style="font-size:13px;font-weight:700;color:var(--a);min-width:22px;flex-shrink:0">3.</span>';
   o+='<div><div style="font-size:13px;font-weight:700;color:var(--t);margin-bottom:3px">레슨 이월 및 연기</div>';
   o+='<div style="font-size:13px;color:var(--ts);line-height:1.65">4회 수업 중 1회만 가능합니다. (발성은 근육의 습관을 형성하는 과정입니다. 수업 간격이 불규칙해지면 신체 감각이 퇴보하여 결국 지난 학습 내용을 반복하게 됩니다. 지체 없는 성장을 위한 최소한의 훈련 루틴임을 이해해 주시기 바랍니다.)</div></div></div>';
   o+='<div style="display:flex;gap:10px;margin-bottom:10px">';
-  o+='<div style="font-size:13px;font-weight:700;color:var(--a);min-width:22px;flex-shrink:0">4.</div>';
+  o+='<span style="font-size:13px;font-weight:700;color:var(--a);min-width:22px;flex-shrink:0">4.</span>';
   o+='<div><div style="font-size:13px;font-weight:700;color:var(--t);margin-bottom:3px">실력 변화를 위한 연습과 질문</div>';
   o+='<div style="font-size:13px;color:var(--ts);line-height:1.65">수업에서 배운 감각을 내 것으로 만드는 유일한 방법은 연습입니다. (개인 연습을 하시면서 잘 안되는 부분이나 궁금한 점을 꼭 체크해 오세요. 스스로 고민하고 질문을 던질 때 이해도가 높아지며, 그만큼 수업의 깊이와 실력 향상 속도도 눈에 띄게 빨라집니다.)</div></div></div>';
   o+='<div style="display:flex;gap:10px;margin-bottom:10px">';
-  o+='<div style="font-size:13px;font-weight:700;color:var(--a);min-width:22px;flex-shrink:0">5.</div>';
+  o+='<span style="font-size:13px;font-weight:700;color:var(--a);min-width:22px;flex-shrink:0">5.</span>';
   o+='<div><div style="font-size:13px;font-weight:700;color:var(--t);margin-bottom:3px">수강료 납부 및 예약 확정</div>';
   o+='<div style="font-size:13px;color:var(--ts);line-height:1.65">입금 확인은 수업 참여에 대한 상호 간의 가장 기본적인 약속입니다. 수업 전날까지 입금 완료 시 예약이 최종 확정되며, 미입금 시 해당 시간대는 예약 대기자에게 우선권이 부여되어 일정이 자동 취소됩니다.</div></div></div>';
   o+='<div style="display:flex;gap:10px;margin-bottom:10px">';
-  o+='<div style="font-size:13px;font-weight:700;color:var(--a);min-width:22px;flex-shrink:0">6.</div>';
+  o+='<span style="font-size:13px;font-weight:700;color:var(--a);min-width:22px;flex-shrink:0">6.</span>';
   o+='<div><div style="font-size:13px;font-weight:700;color:var(--t);margin-bottom:3px">중도 퇴실 및 환불 정책</div>';
   o+='<div style="font-size:13px;color:var(--ts);line-height:1.65">2회차 수업 참여 시점부터는 잔여 회차에 대한 반환이 진행되지 않습니다. (1회 수업 후 적성이나 변심에 의한 환불은 가능하나, 2회차부터는 핵심 커리큘럼과 노하우가 본격적으로 전달되는 단계입니다. 교육 콘텐츠의 가치를 보호하고 책임감 있는 학습 분위기를 유지하기 위한 기준이니 신중하게 결정해 주시기 바랍니다.)</div></div></div>';
   o+='<div style="display:flex;gap:10px;margin-bottom:10px">';
-  o+='<div style="font-size:13px;font-weight:700;color:var(--a);min-width:22px;flex-shrink:0">7.</div>';
+  o+='<span style="font-size:13px;font-weight:700;color:var(--a);min-width:22px;flex-shrink:0">7.</span>';
   o+='<div><div style="font-size:13px;font-weight:700;color:var(--t);margin-bottom:3px">개인 준비물 (생수 / 녹음기 / 필기도구)</div>';
   o+='<div style="font-size:13px;color:var(--ts);line-height:1.65">수분 공급은 성대 부상을 방지하는 필수 요건이며, 녹음과 기록은 휘발되는 감각을 객관화하여 학습 효과를 극대화하는 가장 강력한 도구입니다. 최상의 수업을 위해 반드시 지참해 주세요.</div></div></div>';
   o+='<div style="margin-top:12px;padding:10px 14px;background:rgba(200,169,110,.06);border-left:3px solid var(--a);border-radius:0 6px 6px 0;font-size:12px;color:var(--tm);font-style:italic;line-height:1.6">"모든 규정은 오로지 귀하의 실력 향상에만 초점을 맞추고 있습니다. 프로페셔널한 자세로 수업에 임해주시길 기대합니다."</div>';
@@ -4439,8 +4608,9 @@ function ciCalcAge(el){
   var d=document.getElementById('ci-age-display');
   if(d)d.textContent='만 '+'만 '+age+'세 ('+yr+'년생)';
 }
-function showConsultForm(){
+function showConsultForm(cid){
   var DAYS=['월','화','수','목','금','토','일'];
+  var editC=cid?consults.find(function(x){return x.id===cid;}):null; /* 수정 모드 */
   var REFS=['지인 소개','인스타그램','네이버 검색','유튜브','현수막','블로그','전단지','카카오맵','기타'];
   var GENRES=['팝','R&B','발라드','뮤지컬','CCM','트로트','재즈','장르 무관'];
   var VOICES=['없음','성대결절','역류성 식도염','성대폴립','성대마비','성대부종','기타'];
@@ -4528,6 +4698,40 @@ function showConsultForm(){
   o+='</div></div>';
   ge('content').innerHTML=o;
   setTimeout(calcFee, 50);
+  /* 수정 모드: 기존 데이터 채우기 */
+  if(cid){
+    var editC=consults.find(function(x){return x.id===cid;});
+    if(editC){
+      var ec=editC;
+      var setV=function(id,v){var el=ge(id);if(el&&v)el.value=v;};
+      setV('ci-nm',ec.name);setV('ci-age',ec.age);setV('ci-ph',ec.phone||ec.phone);
+      setV('ci-job',ec.job);setV('ci-why',ec.why);
+      setV('ci-voice',ec.voice);setV('ci-vdetail',ec.vdetail);
+      setV('ci-exp',ec.exp);setV('ci-prev',ec.prev);setV('ci-memo',ec.memo);
+      setV('ci-goal-s',ec.goalS);setV('ci-goal-l',ec.goalL);
+      setV('ci-time',ec.time);setV('ci-when',ec.when);setV('ci-sched-pref',ec.schedPref);
+      if(ec.gd)ge('ci-gd').value=ec.gd;
+      if(ec.cls)ge('ci-cls').value=ec.cls;
+      if(ec.voice)ge('ci-voice').value=ec.voice;
+      if(ec.exp)ge('ci-exp').value=ec.exp;
+      /* 요일 선택 */
+      if(ec.days)ec.days.forEach(function(d){
+        document.querySelectorAll('#ci-dpick .dpb').forEach(function(b){if(b.textContent===d)b.classList.add('on');});
+      });
+      /* 장르 */
+      if(ec.genres)ec.genres.forEach(function(g){
+        document.querySelectorAll('.genre-ro').forEach(function(b){if(b.textContent===g)b.classList.add('on');});
+      });
+      if(ec.age)setTimeout(function(){ciCalcAge({value:ec.age});},100);
+      /* 저장 버튼 → 수정 저장 */
+      setTimeout(function(){
+        var savBtn=document.querySelector('[onclick="saveConsult()"]');
+        if(savBtn){savBtn.textContent='💾 수정 저장';savBtn.onclick=function(){saveConsultEdit(cid);};}
+        var evalBtn=document.querySelector('[onclick="saveAndGoEval()"]');
+        if(evalBtn)evalBtn.style.display='none';
+      },50);
+    }
+  }
 }
 
 
@@ -4542,9 +4746,19 @@ function openLightbox(src){
 /* 주간 스케줄 초기화 — 현재 주 weekOvr 삭제, 기본 스케줄로 복원 */
 function resetWeekOvr(){
   var mon=getViewMon(),wk=getWK(mon);
-  if(!confirm('이번 주 스케줄 예외 설정(임시변경/배정/결석 등)을 모두 초기화하고\n기본 스케줄로 되돌리겠습니까?'))return;
+  if(!weekOvr[wk]||Object.keys(weekOvr[wk]).length===0){
+    toast('초기화할 내용이 없습니다');return;
+  }
+  if(!confirm('이번 주 임시 배정/변경을 초기화하겠습니까?')) return;
   delete weekOvr[wk];
-  saveAll();toast('초기화됨 — 기본 스케줄로 복원');render();
+  saveAll();
+  /* Firebase 동기화 */
+  try{
+    var _db3=firebase.firestore();
+    _db3.collection('studio').doc('data').set({weekOvr:weekOvr},{merge:true});
+  }catch(e){}
+  toast('✅ 초기화 완료');
+  render();
 }
 function resetAllData(){
   if(!confirm('⚠️ 모든 레슨생, 레슨 기록, 스케줄, 상담 신청서 데이터가 삭제됩니다.\n\n정말 초기화하시겠습니까?')) return;
@@ -4582,11 +4796,4 @@ function toast(msg,ic){
 renderSidebarToday();render();initLock();
 
 </script>
-<div id="mobileTabBar" class="mobile-tab-bar" style="position:fixed;bottom:0;left:0;right:0;height:calc(60px + env(safe-area-inset-bottom,20px));padding-bottom:env(safe-area-inset-bottom,20px);background:#10101a;border-top:1px solid rgba(255,255,255,.08);display:flex;z-index:99999;">
-  <div id="mTab_consult"  onclick="go('consult')"  style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px;cursor:pointer;border-top:2px solid transparent;"><span style="font-size:18px;pointer-events:none">📋</span><span style="font-size:9px;font-weight:600;color:#4d4b55;pointer-events:none">상담</span></div>
-  <div id="mTab_students" onclick="go('students')" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px;cursor:pointer;border-top:2px solid transparent;"><span style="font-size:18px;pointer-events:none">🎵</span><span style="font-size:9px;font-weight:600;color:#4d4b55;pointer-events:none">레슨생</span></div>
-  <div id="mTab_logs"     onclick="go('logs')"     style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px;cursor:pointer;border-top:2px solid transparent;"><span style="font-size:18px;pointer-events:none">✏️</span><span style="font-size:9px;font-weight:600;color:#4d4b55;pointer-events:none">기록</span></div>
-  <div id="mTab_payment"  onclick="go('payment')"  style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px;cursor:pointer;border-top:2px solid transparent;"><span style="font-size:18px;pointer-events:none">💰</span><span style="font-size:9px;font-weight:600;color:#4d4b55;pointer-events:none">입금</span></div>
-  <div id="mTab_today"    onclick="go('today')"    style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px;cursor:pointer;border-top:2px solid transparent;"><span style="font-size:18px;pointer-events:none">⏰</span><span style="font-size:9px;font-weight:600;color:#4d4b55;pointer-events:none">오늘</span></div>
-  <div id="mTab_schedule" onclick="go('schedule')" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px;cursor:pointer;border-top:2px solid transparent;"><span style="font-size:18px;pointer-events:none">📅</span><span style="font-size:9px;font-weight:600;color:#4d4b55;pointer-events:none">스케줄</span></div>
-</div></body></html>
+<div id="mobileTabBar" class="mobile-tab-bar" style="position:fixed;bottom:0;left:0;right:0;height:calc(60px + env(safe-area-inset-bottom,20px));padding-bottom:env(safe-area-inset-bottom,20px);background:#10101a;border-top:1px solid rgba(255,255,255,.08);display:flex;z-index:99999;"><div id="mTab_consult" onclick="go('consult')" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px;cursor:pointer;border-top:2px solid transparent;"><span style="font-size:18px;pointer-events:none">📋</span><span style="font-size:9px;font-weight:600;color:#4d4b55;pointer-events:none">상담</span></div><div id="mTab_students" onclick="go('students')" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px;cursor:pointer;border-top:2px solid transparent;"><span style="font-size:18px;pointer-events:none">🎵</span><span style="font-size:9px;font-weight:600;color:#4d4b55;pointer-events:none">레슨생</span></div><div id="mTab_logs" onclick="go('logs')" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px;cursor:pointer;border-top:2px solid transparent;"><span style="font-size:18px;pointer-events:none">✏️</span><span style="font-size:9px;font-weight:600;color:#4d4b55;pointer-events:none">기록</span></div><div id="mTab_payment" onclick="go('payment')" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px;cursor:pointer;border-top:2px solid transparent;"><span style="font-size:18px;pointer-events:none">💰</span><span style="font-size:9px;font-weight:600;color:#4d4b55;pointer-events:none">입금</span></div><div id="mTab_today" onclick="go('today')" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px;cursor:pointer;border-top:2px solid transparent;"><span style="font-size:18px;pointer-events:none">⏰</span><span style="font-size:9px;font-weight:600;color:#4d4b55;pointer-events:none">오늘</span></div><div id="mTab_schedule" onclick="go('schedule')" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px;cursor:pointer;border-top:2px solid transparent;"><span style="font-size:18px;pointer-events:none">📅</span><span style="font-size:9px;font-weight:600;color:#4d4b55;pointer-events:none">스케줄</span></div></div></body></html>
