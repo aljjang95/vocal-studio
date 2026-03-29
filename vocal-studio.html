@@ -856,7 +856,7 @@ function initFirebase(){
     try{weekOvr=d.weekOvr||{};localStorage.setItem('vsC_wo',JSON.stringify(weekOvr));}catch(e){}
     try{consults=d.consults||[];localStorage.setItem('vsC_c',JSON.stringify(consults));}catch(e){}
     try{payments=d.payments||[];localStorage.setItem('vsC_p',JSON.stringify(payments));}catch(e){}
-    try{inquiries=d.inquiries||[];localStorage.setItem('vsC_iq',JSON.stringify(inquiries));}catch(e){}
+    try{if(d.inquiries&&d.inquiries.length>0){inquiries=d.inquiries;localStorage.setItem('vsC_iq',JSON.stringify(inquiries));}}catch(e){}
     _fbReady=true;
     _injectInitialInquiries(); /* 문의자 초기 데이터 주입 */
     /* UI 갱신 */
@@ -2342,8 +2342,8 @@ function _injectInitialInquiries(){
     try{
       var db2=firebase.firestore();
       var ref2=db2.collection('studio').doc('data');
-      ref2.update({inquiries:inquiries});
-    }catch(e){}
+      ref2.set({inquiries:inquiries},{merge:true});
+    }catch(e){console.log('Firebase inquiry sync error:',e);}
   }
 }
 function calcAgeStr(s){
