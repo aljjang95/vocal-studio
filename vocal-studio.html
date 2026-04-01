@@ -3470,7 +3470,7 @@ function lbClick(el){
     /* 레슨생 수정 */
     +'<button class="btn bg2" style="justify-content:flex-start;padding:10px 14px;gap:10px;font-size:13px" data-sid="'+sid+'" onclick="closeLbOpt();setTimeout(function(){openSModal(\''+sid+'\')},80)">✏️ 레슨생 정보 수정</button>'
     /* 회차 수정 */
-    +'<button class="btn bm" style="justify-content:flex-start;padding:10px 14px;gap:10px;font-size:13px;background:rgba(200,169,110,.08);color:var(--a);border:1px solid rgba(200,169,110,.18)" data-sid="'+sid+'" onclick="closeLbOpt();openEditLessonCount(this.dataset.sid)">✏️ 회차 수정 (현재 '+(function(x){var ci=getCycleInfo(x);return ci.totalLessons;})(s)+'회)</button>'
+    +'<button class="btn bm" style="justify-content:flex-start;padding:10px 14px;gap:10px;font-size:13px;background:rgba(200,169,110,.08);color:var(--a);border:1px solid rgba(200,169,110,.18)" data-sid="'+sid+'" onclick="closeLbOpt();openEditLessonCount(this.dataset.sid)">✏️ 회차 수정 (현재 '+getCycleInfo(s).totalLessons+'회)</button>'
     /* 슬롯 비우기 — 위험 액션 맨 아래 */
     +'<button class="btn bd" style="justify-content:flex-start;padding:10px 14px;gap:10px;font-size:13px" data-sid="'+sid+'" data-time="'+time+'" data-date="'+date+'" onclick="closeLbOpt();removeSlotFromMenu(this.dataset.sid,this.dataset.time,this.dataset.date)">🗑 이 슬롯 비우기</button>'
     +'</div></div>';
