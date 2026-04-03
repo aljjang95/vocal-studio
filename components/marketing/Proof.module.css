@@ -1,0 +1,23 @@
+.proof {
+  padding: 32px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  position: relative; z-index: 1;
+}
+.proofInner {
+  display: flex; align-items: center; justify-content: center;
+  gap: 48px; flex-wrap: wrap;
+}
+.proofLabel {
+  font-size: 0.75rem; color: var(--text2);
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+.proofLogos { display: flex; align-items: center; gap: 36px; }
+.proofItem {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.88rem; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: rgba(250,250,250,0.22);
+  transition: color 0.3s;
+}
+.proofItem:hover { color: rgba(250,250,250,0.5); }

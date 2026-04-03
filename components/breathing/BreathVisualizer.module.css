@@ -1,0 +1,108 @@
+/* ── BreathVisualizer ── */
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 32px 0;
+}
+
+.gaugeContainer {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.outerRing {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  transition: border-color 0.3s;
+}
+
+.outerRingActive {
+  border-color: rgba(34, 197, 94, 0.4);
+}
+
+.innerCircle {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: var(--surface2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s ease-out, background 0.3s, box-shadow 0.3s;
+  will-change: transform;
+}
+
+.innerCircleBreathing {
+  background: rgba(34, 197, 94, 0.12);
+  box-shadow: 0 0 40px rgba(34, 197, 94, 0.15);
+}
+
+.innerCircleIdle {
+  background: var(--surface2);
+}
+
+.timerText {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.timerLabel {
+  font-size: var(--fs-xs);
+  color: var(--text2);
+  margin-top: 4px;
+}
+
+.bestRecord {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xs);
+  font-size: var(--fs-sm);
+  color: var(--text2);
+}
+
+.bestValue {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.statusText {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  text-align: center;
+}
+
+.statusBreathing {
+  color: var(--success);
+}
+
+@media (max-width: 768px) {
+  .gaugeContainer {
+    width: 180px;
+    height: 180px;
+  }
+
+  .innerCircle {
+    width: 100px;
+    height: 100px;
+  }
+
+  .timerText {
+    font-size: 1.8rem;
+  }
+}

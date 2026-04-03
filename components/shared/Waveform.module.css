@@ -1,0 +1,53 @@
+.waveformWrap {
+  height: 60px;
+  display: flex; align-items: center;
+  gap: 3px; justify-content: center;
+  background: rgba(0,0,0,0.2); border-radius: 12px; padding: 0 16px;
+  overflow: hidden; position: relative;
+  margin: 0 0 18px;
+}
+.waveformWrap::before,
+.waveformWrap::after {
+  content: ''; position: absolute; top: 0; bottom: 0;
+  width: 40px; z-index: 1; pointer-events: none;
+}
+.waveformWrap::before {
+  left: 0;
+  background: linear-gradient(to right, rgba(24,24,27,0.95), transparent);
+}
+.waveformWrap::after {
+  right: 0;
+  background: linear-gradient(to left, rgba(24,24,27,0.95), transparent);
+}
+
+/* Individual wave bar */
+.waveBar {
+  width: 3.5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  background: linear-gradient(to top, var(--accent), var(--success-lt));
+  animation: waveAnim var(--dur, 1s) ease-in-out infinite alternate;
+}
+@keyframes waveAnim {
+  from { height: var(--min-h, 6px); opacity: 0.4; }
+  to   { height: var(--max-h, 36px); opacity: 1; }
+}
+
+/* Feature mini waveform */
+.featMiniBars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 50px;
+  margin-bottom: 12px;
+}
+.fmb {
+  flex: 1;
+  border-radius: 3px;
+  background: linear-gradient(to top, var(--accent), var(--success-lt));
+  animation: fmbAnim 1.5s ease-in-out infinite alternate;
+}
+@keyframes fmbAnim {
+  from { opacity: 0.4; transform: scaleY(0.4); }
+  to   { opacity: 1;   transform: scaleY(1); }
+}

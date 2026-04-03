@@ -1,0 +1,55 @@
+.how {
+  padding: 120px 0;
+  background: var(--bg2);
+  position: relative; overflow: hidden;
+}
+.how::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 800px 600px at 50% 50%, rgba(59,130,246,0.06) 0%, transparent 70%);
+}
+
+.stepsGrid {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 0; margin-top: 72px; position: relative;
+}
+.stepsGrid::before {
+  content: ''; position: absolute;
+  top: 44px; left: calc(12.5% + 20px); right: calc(12.5% + 20px);
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--border2) 20%, var(--border2) 80%, transparent);
+}
+
+.step {
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center; padding: 0 20px;
+}
+.stepNumWrap {
+  width: 88px; height: 88px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: relative; z-index: 1; margin-bottom: 24px;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.step:hover .stepNumWrap {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 6px rgba(59,130,246,0.08);
+}
+.stepEmoji { font-size: 26px; display: flex; align-items: center; justify-content: center; color: var(--accent-lt); }
+.stepN {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem; color: var(--text2); margin-top: 2px;
+}
+.step h3 {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.05rem; font-weight: 700; margin-bottom: 8px;
+}
+.step p { font-size: 0.85rem; color: var(--text2); line-height: 1.65; }
+
+@media (max-width: 960px) {
+  .stepsGrid { grid-template-columns: 1fr 1fr; gap: 40px; }
+  .stepsGrid::before { display: none; }
+}
+@media (max-width: 560px) {
+  .stepsGrid { grid-template-columns: 1fr; }
+}

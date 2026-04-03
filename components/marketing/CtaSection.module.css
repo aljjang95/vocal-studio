@@ -1,0 +1,59 @@
+.cta {
+  padding: 110px 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.ctaGlow {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 800px 600px at 50% 50%, rgba(59,130,246,0.10) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.ctaInner {
+  position: relative; z-index: 1;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.ctaTitle {
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(2.2rem, 4.2vw, 3.5rem);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  margin-bottom: 18px;
+}
+.ctaTitle em {
+  font-style: normal;
+  font-weight: 800;
+  background: linear-gradient(110deg, var(--accent), var(--accent2-lt));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.ctaSub {
+  font-size: 1rem;
+  color: var(--text2);
+  line-height: 1.75;
+  margin-bottom: 40px;
+}
+
+.ctaBtns {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.ctaFine {
+  margin-top: 18px;
+  font-size: 0.78rem;
+  color: var(--text2);
+  letter-spacing: 0.02em;
+}
+
+@media (max-width: 560px) {
+  .ctaBtns { flex-direction: column; align-items: center; }
+}

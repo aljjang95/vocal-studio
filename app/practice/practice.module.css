@@ -1,0 +1,230 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  padding: 16px 0;
+  background: rgba(9, 9, 11, 0.85);
+  backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: 1px solid var(--border);
+}
+
+.headerInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.backLink {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.backLink:hover {
+  color: var(--accent);
+}
+
+.headerNav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.headerLink {
+  padding: 8px 18px;
+  color: var(--text2);
+  text-decoration: none;
+  font-size: 0.88rem;
+  border-radius: 8px;
+  transition: color 0.2s, background 0.2s;
+}
+
+.headerLink:hover {
+  color: var(--text);
+  background: var(--surface2);
+}
+
+.main {
+  position: relative;
+  z-index: 1;
+  padding: 20px 0 40px;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.modeSwitcherWrap {
+  margin-bottom: 16px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 20px;
+  min-height: calc(100vh - 180px);
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sidebarList {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+}
+
+.playerSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 80px 24px;
+  text-align: center;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+}
+
+.emptyIcon {
+  font-size: 3rem;
+  opacity: 0.15;
+}
+
+.emptyTitle {
+  font-size: var(--fs-h2);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.emptyDesc {
+  font-size: var(--fs-sm);
+  color: var(--text2);
+  max-width: 360px;
+  line-height: 1.6;
+}
+
+/* Panel tabs */
+.panelTabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 4px;
+}
+
+.panelTab {
+  flex: 1;
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  border-radius: var(--r-xs);
+  color: var(--text2);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.panelTab:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.panelTabActive {
+  background: var(--surface2);
+  color: var(--accent-lt);
+  font-weight: 600;
+}
+
+.panelTabActive:hover {
+  background: var(--surface2);
+}
+
+/* Vocalmap placeholder */
+.vocalmapPlaceholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px 24px;
+  background: var(--bg2);
+  border: 1px dashed var(--border);
+  border-radius: var(--r);
+  text-align: center;
+}
+
+.vocalmapText {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+
+.vocalmapPreview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
+}
+
+.vocalmapLabel {
+  font-size: var(--fs-xs);
+  color: var(--text2);
+  font-weight: 600;
+}
+
+.vocalmapTag {
+  padding: 2px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xs);
+  font-size: 11px;
+  color: var(--text2);
+}
+
+.vocalmapMore {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.vocalmapRange {
+  font-size: var(--fs-xs);
+  color: var(--accent2-lt);
+  font-weight: 500;
+}
+
+/* PitchTimeline area - no special styles needed, component handles its own layout */

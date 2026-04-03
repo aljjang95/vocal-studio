@@ -1,0 +1,234 @@
+.uploader {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 20px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.title {
+  font-size: var(--fs-h3);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.toggleBtn {
+  background: none;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  font-size: var(--fs-xs);
+  padding: 6px 12px;
+  border-radius: var(--r-xs);
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+}
+
+.toggleBtn:hover {
+  color: var(--text);
+  background: var(--surface2);
+}
+
+.dropzone {
+  border: 2px dashed var(--border2);
+  border-radius: var(--r-sm);
+  padding: 32px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.dropzone:hover {
+  border-color: var(--accent);
+  background: rgba(59, 130, 246, 0.04);
+}
+
+.dropzoneActive {
+  border-color: var(--accent);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.dropzoneHasFile {
+  border-color: var(--success);
+  border-style: solid;
+  background: rgba(34, 197, 94, 0.05);
+}
+
+.dropzoneIcon {
+  display: block;
+  font-size: 1.8rem;
+  opacity: 0.3;
+  margin-bottom: 8px;
+}
+
+.dropzoneLabel {
+  display: block;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text2);
+  margin-bottom: 6px;
+}
+
+.dropzoneHint {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+
+.fileName {
+  font-size: var(--fs-sm);
+  color: var(--success);
+  margin-top: 4px;
+  margin-bottom: 4px;
+  word-break: break-all;
+}
+
+.fileInput {
+  display: none;
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 600px) {
+  .fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fieldLabel {
+  font-size: var(--fs-xs);
+  color: var(--text2);
+  font-weight: 500;
+}
+
+.fieldInput {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xs);
+  padding: 8px 12px;
+  font-size: var(--fs-sm);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.fieldInput:focus {
+  border-color: var(--accent);
+}
+
+.addBtn {
+  width: 100%;
+  padding: 10px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-xs);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.addBtn:hover {
+  opacity: 0.9;
+}
+
+.addBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.error {
+  color: var(--error);
+  font-size: var(--fs-xs);
+  margin-bottom: 8px;
+}
+
+.notice {
+  background: var(--surface);
+  border-radius: var(--r-xs);
+  padding: 12px;
+  text-align: center;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  margin-top: 12px;
+  line-height: 1.5;
+}
+
+/* Separation progress */
+.separationProgress {
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--surface);
+  border-radius: var(--r-xs);
+}
+
+.separationLabel {
+  font-size: var(--fs-xs);
+  color: var(--accent-lt);
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.progressBar {
+  height: 4px;
+  background: var(--surface2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* Separation error */
+.separationError {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--r-xs);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: var(--fs-xs);
+  color: var(--error-lt);
+}
+
+.retryBtn {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  background: var(--error);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-xs);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.retryBtn:hover {
+  opacity: 0.9;
+}

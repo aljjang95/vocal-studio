@@ -1,0 +1,374 @@
+// ─────────────────────────────────────────────
+// HLB 보컬스튜디오 — 공통 타입 정의
+// ─────────────────────────────────────────────
+
+// ── 채팅 메시지 ──
+export type MessageRole = 'user' | 'assistant';
+
+export interface Message {
+  id: string;
+  role: MessageRole;
+  content: string;
+  createdAt: Date;
+}
+
+// ── 음성 분석 결과 (Phase 1: 더미 타입 확정 / Phase 2: Web Audio API 교체) ──
+export interface AnalysisResult {
+  id: string;
+  userId?: string;
+  sessionDate: string; // ISO date string
+  pitchAccuracy: number;    // 0~100
+  breathStability: number;  // 0~100
+  dictionClarity: number;   // 0~100
+  rawData?: Record<string, unknown>; // Phase 2: Web Audio API 출력 원본
+}
+
+// ── 플랜 타입 ──
+export type Plan = 'free' | 'basic' | 'pro';
+
+// ── 사용자 ──
+export interface User {
+  id: string;
+  email: string;
+  plan: Plan;
+  createdAt: string;
+}
+
+// ── 대화 세션 ──
+export interface Conversation {
+  id: string;
+  userId: string;
+  title: string;
+  createdAt: string;
+  messages?: Message[];
+}
+
+// ── 주간 성장 리포트 ──
+export interface WeeklyReport {
+  id: string;
+  userId: string;
+  weekStart: string; // ISO date
+  summary: string;
+  scores: {
+    pitch: number;
+    breath: number;
+    diction: number;
+  };
+  recommendations: string[];
+}
+
+// ── API 응답 래퍼 ──
+export interface ApiSuccess<T> {
+  data: T;
+  error?: never;
+}
+
+export interface ApiError {
+  data?: never;
+  error: string;
+  code: string;
+}
+
+export type ApiResponse<T> = ApiSuccess<T> | ApiError;
+
+// ── 가격 플랜 UI ──
+export interface PricingPlan {
+  id: Plan;
+  name: string;
+  tagline: string;
+  monthlyPrice: number;
+  yearlyPrice: number;
+  features: Array<{ label: string; included: boolean }>;
+  isFeatured: boolean;
+  ctaLabel: string;
+}
+
+// ── 채팅 API 요청/응답 ──
+// ChatRequest: Phase 2에서 /api/chat route.ts가 DB 신뢰 소스로 전환 시 재사용
+export interface ChatRequest {
+  messages: Array<{ role: MessageRole; content: string }>;
+}
+
+export interface ChatResponse {
+  reply: string;
+}
+
+// ── Phase 2: 진단 (Diagnosis) ──
+
+export type VoiceType = '저음' | '중음' | '고음';
+export type ExperienceLevel = '초보' | '중급' | '고급';
+
+export interface BasicInfo {
+  nickname: string;
+  voiceType: VoiceType;
+  experience: ExperienceLevel;
+  genre: string;
+}
+
+export interface SelfEvalScores {
+  pitch: number;       // 0~100 음정
+  breath: number;      // 0~100 호흡
+  power: number;       // 0~100 성량
+  tone: number;        // 0~100 음색
+  technique: number;   // 0~100 테크닉
+}
+
+export type ConcernKey =
+  | 'high_notes'
+  | 'breath_control'
+  | 'pitch_accuracy'
+  | 'vocal_fatigue'
+  | 'tone_quality'
+  | 'diction'
+  | 'stage_fear'
+  | 'range_expand'
+  | 'vibrato';
+
+export interface DiagnosisRequest {
+  basicInfo: BasicInfo;
+  concerns: ConcernKey[];
+  goal: string;
+  selfEval: SelfEvalScores;
+}
+
+export interface DiagnosisResult {
+  id: string;
+  createdAt: string;
+  nickname: string;
+  overallScore: number;
+  scores: SelfEvalScores;
+  strengths: string[];
+  weaknesses: string[];
+  recommendations: string[];
+  suggestedCategory: string;
+  summary: string;
+}
+
+// ── Phase 2: 커리큘럼 (Curriculum) ──
+
+export interface CurriculumLesson {
+  id: string;
+  title: string;
+  description: string;
+  durationMin: number;
+}
+
+export interface CurriculumCategory {
+  id: string;
+  title: string;
+  icon: string;
+  description: string;
+  lessons: CurriculumLesson[];
+}
+
+// ── F1: 곡 연습 모드 ──
+
+export interface Song {
+  id: string;
+  title: string;
+  artist: string;
+  addedAt: string;
+  vocalBlobKey: string;
+  instrumentalBlobKey: string;
+  originalBlobKey?: string;
+  durationSec: number;
+  separationStatus?: 'pending' | 'done' | 'failed';
+  analysisStatus?: 'none' | 'analyzing' | 'done';
+  keyShift?: number; // -6 ~ +6 반음
+}
+
+export interface PracticeSession {
+  songId: string;
+  startedAt: string;
+  loopStart: number | null;
+  loopEnd: number | null;
+  playbackRate: number;
+}
+
+// ── F2: AI 워밍업 루틴 ──
+
+export interface WarmupCondition {
+  energy: 'good' | 'normal' | 'tired' | 'bad';
+  goals: string[]; // max 2
+}
+
+export interface WarmupRoutine {
+  id: string;
+  createdAt: string;
+  condition: WarmupCondition;
+  stages: WarmupStage[];
+  totalMinutes: number;
+  aiComment: string;
+}
+
+export interface WarmupStage {
+  stageId: number;
+  name: string;
+  pronunciation: string;
+  pattern: number[];
+  bpmRange: [number, number];
+  suggestedBpm: number;
+  repetitions: number;
+  durationMin: number;
+  guideText: string;
+}
+
+export interface WarmupRecord {
+  routineId: string;
+  completedAt: string;
+  stagesCompleted: number[];
+}
+
+// ── F3: 호흡 트레이너 ──
+
+export type BreathMode = 'long' | 'rhythm' | 'phrase';
+
+export interface BreathPhase {
+  type: 'inhale' | 'hold' | 'exhale' | 'rest';
+  durationSec: number;
+}
+
+export interface BreathRecord {
+  id: string;
+  date: string;
+  mode: BreathMode;
+  longestExhaleSec: number;
+  avgExhaleSec: number;
+  sessionsCount: number;
+  completedAt: string;
+}
+
+// ── 공유: HLB 커리큘럼 ──
+
+export interface HLBCurriculumStage {
+  id: number;
+  block: string;
+  name: string;
+  pattern: number[];
+  bpmRange: [number, number];
+  pronunciation: string;
+  guideText: string;
+  scaleType: string;
+  isFree: boolean;
+}
+
+export interface PitchData {
+  frequency: number;
+  noteName: string;
+  cents: number;
+  confidence: number;
+}
+
+export interface BreathData {
+  rms: number;
+  isBreathing: boolean;
+  durationSec: number;
+}
+
+// ── 곡 연습 모드 v2 ──
+
+export interface MelodyPoint {
+  time: number;
+  frequency: number;
+  noteName: string;
+}
+
+export interface SongSection {
+  type: 'intro' | 'verse' | 'chorus' | 'bridge' | 'outro' | 'other';
+  startTime: number;
+  endTime: number;
+  label: string;
+}
+
+export interface VocalTechnique {
+  type: 'vibrato' | 'bending' | 'belting' | 'falsetto' | 'whisper' | 'run' | 'crack' | 'mix' | 'breathy';
+  startTime: number;
+  endTime: number;
+  intensity: number; // 0~1
+}
+
+export interface LyricLine {
+  text: string;
+  startTime: number | null;
+  pronunciation?: string; // 한국식 발음
+}
+
+export interface SongAnalysis {
+  songId: string;
+  melodyData: MelodyPoint[];
+  sections: SongSection[];
+  vocalMap: VocalTechnique[];
+  songRange: { low: string; high: string };
+  lyrics: LyricLine[];
+  analyzedAt: string;
+}
+
+export interface SessionScore {
+  id: string;
+  songId: string;
+  playedAt: string;
+  keyShift: number;
+  overallScore: number;
+  sectionScores: { sectionIndex: number; score: number }[];
+  userPitchData: MelodyPoint[];
+  duration: number;
+}
+
+export interface UserVocalRange {
+  measuredAt: string;
+  low: { frequency: number; noteName: string };
+  high: { frequency: number; noteName: string };
+}
+
+export type PracticeMode = 'practice' | 'play';
+
+// ── AI Coach ──
+
+export type CoachCondition = 'good' | 'normal' | 'tired' | 'bad';
+export type CoachPhase = 'home' | 'condition' | 'lesson' | 'judgment' | 'summary';
+
+export interface StageProgress {
+  stageId: number;
+  bestScore: number;
+  attempts: number;
+  passedAt: string | null;
+  lastBpm: number;
+}
+
+export interface LessonAttempt {
+  stageId: number;
+  score: number;
+  bpm: number;
+  condition: CoachCondition;
+  attemptedAt: string;
+  passed: boolean;
+}
+
+export interface NoteScore {
+  noteIndex: number;
+  expectedMidi: number;
+  detectedFrequency: number;
+  cents: number;
+  score: number;
+}
+
+export interface PatternScore {
+  rootNote: number;
+  noteScores: NoteScore[];
+  average: number;
+}
+
+export interface CoachSession {
+  id: string;
+  startedAt: string;
+  condition: CoachCondition;
+  stagesAttempted: LessonAttempt[];
+  totalDurationSec: number;
+}
+
+export interface CoachFeedback {
+  feedback: string;
+  suggestion: string;
+  encouragement: string;
+  shouldLowerBpm: boolean;
+}

@@ -1,0 +1,198 @@
+.container {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  padding: 32px;
+  max-width: 680px;
+  margin: 0 auto;
+  animation: slideIn 0.4s ease-out;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.title {
+  font-size: var(--fs-h2);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.totalTime {
+  padding: 6px 14px;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: var(--r-xs);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--accent-lt);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── AI 코멘트 ── */
+.aiComment {
+  padding: 14px 18px;
+  background: rgba(139, 92, 246, 0.06);
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  border-radius: var(--r-xs);
+  margin-bottom: 24px;
+  font-size: var(--fs-sm);
+  color: var(--text2);
+  line-height: 1.6;
+}
+
+.aiLabel {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--accent2-lt);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── 단계 목록 ── */
+.stageList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.stageItem {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xs);
+  transition: border-color 0.2s;
+}
+
+.stageItem:hover {
+  border-color: var(--border2);
+}
+
+.stageNum {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--accent-lt);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.stageInfo {
+  min-width: 0;
+}
+
+.stageName {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stageMeta {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+
+.stageBadge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stageDuration {
+  font-size: var(--fs-xs);
+  color: var(--text2);
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+}
+
+/* ── 버튼 그룹 ── */
+.actions {
+  display: flex;
+  gap: 12px;
+}
+
+.startBtn {
+  flex: 1;
+  padding: 14px 24px;
+  border-radius: var(--r-xs);
+  border: none;
+  background: var(--cta-bg);
+  color: var(--cta-text);
+  font-size: var(--fs-body);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.startBtn:hover {
+  background: var(--cta-hover);
+}
+
+.regenBtn {
+  padding: 14px 24px;
+  border-radius: var(--r-xs);
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.regenBtn:hover {
+  background: var(--surface2);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: 20px;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .stageItem {
+    grid-template-columns: 32px 1fr;
+    gap: 10px;
+  }
+
+  .stageDuration {
+    grid-column: 1 / -1;
+    text-align: right;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+}
