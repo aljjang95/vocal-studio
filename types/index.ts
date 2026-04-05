@@ -432,11 +432,21 @@ export type AiCoverStep = 'record' | 'model' | 'convert' | 'result';
 
 // ── 여정 (Journey) ────────────────────────────
 
+export interface TensionDetail {
+  overall: number;
+  laryngeal: number;
+  tongue_root: number;
+  jaw: number;
+  register_break: number;
+  detail: string;
+}
+
 export interface EvaluationResult {
   score: number;
   pitchAccuracy: number;
   toneStability: number;
   tensionDetected: boolean;
+  tension?: TensionDetail;  // optional: 이전 응답 호환
   feedback: string;
   passed: boolean;
 }

@@ -50,7 +50,7 @@ export default function PracticeClient({ stageId }: Props) {
       const coachResp = await fetch('/api/journey-coach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stage_id: stageId, user_message: `${stage.name} 연습 중입니다. 점수: ${evalData.score}`, score: evalData.score, pitch_accuracy: evalData.pitchAccuracy }),
+        body: JSON.stringify({ stage_id: stageId, user_message: `${stage.name} 연습 중입니다. 점수: ${evalData.score}`, score: evalData.score, pitch_accuracy: evalData.pitchAccuracy, tension_detail: evalData.tension?.detail ?? "" }),
       });
       const coachData: CoachingFeedback = await coachResp.json();
       setCoaching(coachData);
