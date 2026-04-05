@@ -25,7 +25,7 @@ class RegisterTransition(BaseModel):
 class TensionAnalysis(BaseModel):
     voice_quality: VoiceQuality
     formant: FormantData
-    register: RegisterTransition
+    register_transition: RegisterTransition
     duration: float
 
 class TensionScore(BaseModel):

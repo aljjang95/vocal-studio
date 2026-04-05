@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import math
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from models.tension import TensionScore
 
 
 def calculate_pitch_score(target_hz: list[float], actual_hz: list[float]) -> int:
@@ -63,3 +67,32 @@ def calculate_stage_score(
 
     score = max(0.0, min(100.0, raw))
     return round(score)
+
+
+def calculate_stage_score_v2(
+    pitch_accuracy: float,
+    tone_stability: float,
+    tension_score: "TensionScore | None",
+) -> tuple[int, bool, str]:
+    """피치 정확도, 음색 안정도, tension_score를 통합하여 스테이지 점수를 계산한다.
+
+    tension_score.overall 비율에 따라 최대 30% 감점.
+
+    Args:
+        pitch_accuracy: 피치 정확도 (0~100)
+        tone_stability: 음색 안정도 (0~100)
+        tension_score: TensionScore 또는 None
+
+    Returns:
+        (통합 점수 0~100, tension_detected, tension_detail)
+    """
+    raw = pitch_accuracy * 0.6 + tone_stability * 0.4
+    tension_detected = False
+    tension_detail = ""
+    if tension_score is not None:
+        tension_detected = tension_score.tension_detected
+        tension_detail = tension_score.detail
+        if tension_detected:
+            penalty = min(0.3, tension_score.overall / 100 * 0.3)
+            raw *= (1 - penalty)
+    return round(max(0, min(100, raw))), tension_detected, tension_detail

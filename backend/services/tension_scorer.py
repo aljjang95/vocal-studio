@@ -10,7 +10,7 @@ def _normalize(value: float, low: float, high: float) -> float:
 def calculate_tension_score(analysis: TensionAnalysis) -> TensionScore:
     vq = analysis.voice_quality
     fm = analysis.formant
-    rg = analysis.register
+    rg = analysis.register_transition
 
     # 후두 긴장
     laryngeal = (

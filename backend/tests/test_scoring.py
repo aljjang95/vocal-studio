@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import pytest
-from services.scoring import calculate_pitch_score, calculate_stage_score
+from services.scoring import calculate_pitch_score, calculate_stage_score, calculate_stage_score_v2
+from models.tension import TensionScore
 
 
 def test_perfect_pitch_returns_100() -> None:
@@ -52,3 +53,29 @@ def test_score_clamped_0_100() -> None:
     high = calculate_stage_score(pitch_accuracy=200.0, tone_stability=200.0, tension_detected=False)
     assert low == 0
     assert high == 100
+
+
+def test_stage_score_v2_no_tension() -> None:
+    """tension_score=None이면 기본 가중치 점수 반환 + tension_detected=False."""
+    score, detected, detail = calculate_stage_score_v2(
+        pitch_accuracy=80.0, tone_stability=60.0, tension_score=None
+    )
+    # 80*0.6 + 60*0.4 = 48 + 24 = 72
+    assert score == 72
+    assert detected is False
+    assert detail == ""
+
+
+def test_stage_score_v2_with_tension() -> None:
+    """tension_detected=True이면 overall 비율로 최대 30% 감점된다."""
+    t_score = TensionScore(
+        overall=100.0, laryngeal_tension=80.0, tongue_root_tension=70.0,
+        jaw_tension=60.0, register_break=80.0, tension_detected=True, detail="후두 긴장",
+    )
+    score, detected, detail = calculate_stage_score_v2(
+        pitch_accuracy=100.0, tone_stability=100.0, tension_score=t_score
+    )
+    # raw=100, penalty=min(0.3, 100/100*0.3)=0.3, raw*(1-0.3)=70
+    assert score == 70
+    assert detected is True
+    assert detail == "후두 긴장"
