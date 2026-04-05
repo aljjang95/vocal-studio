@@ -1,0 +1,126 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.card {
+  background: #141414;
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.cardTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #e5e5e5;
+  margin-bottom: 0.25rem;
+}
+
+.cardDesc {
+  font-size: 0.85rem;
+  color: #888;
+  margin-bottom: 1rem;
+}
+
+.modelName {
+  font-size: 0.95rem;
+  color: #7c3aed;
+  font-weight: 500;
+}
+
+.sliderRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.sliderLabel {
+  font-size: 0.75rem;
+  color: #888;
+  min-width: 28px;
+  text-align: center;
+}
+
+.slider {
+  flex: 1;
+  accent-color: #7c3aed;
+  height: 6px;
+}
+
+.pitchValue {
+  text-align: center;
+  font-size: 0.85rem;
+  color: #e5e5e5;
+  margin-top: 0.5rem;
+}
+
+.statusText {
+  font-size: 0.95rem;
+  color: #e5e5e5;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.progressBg {
+  height: 6px;
+  background: #2a2a2a;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: #7c3aed;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.progressFailed {
+  background: #ef4444;
+}
+
+.error {
+  font-size: 0.85rem;
+  color: #ef4444;
+  text-align: center;
+}
+
+.navRow {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.backBtn {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  background: transparent;
+  color: #e5e5e5;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.backBtn:hover {
+  background: #1e1e1e;
+}
+
+.nextBtn {
+  flex: 2;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 12px;
+  background: #7c3aed;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.nextBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

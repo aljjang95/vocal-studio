@@ -1,0 +1,81 @@
+.container {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 1rem;
+}
+
+.stepItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #888;
+  background: #1e1e1e;
+  border: 2px solid #2a2a2a;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.circle.current {
+  border-color: #7c3aed;
+  color: #7c3aed;
+  background: rgba(124, 58, 237, 0.1);
+}
+
+.circle.completed {
+  border-color: #7c3aed;
+  background: #7c3aed;
+  color: white;
+}
+
+.label {
+  font-size: 0.85rem;
+  color: #555;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+
+.labelCurrent {
+  color: #e5e5e5;
+  font-weight: 600;
+}
+
+.labelCompleted {
+  color: #7c3aed;
+}
+
+.connector {
+  flex: 1;
+  height: 2px;
+  background: #2a2a2a;
+  margin: 0 0.25rem;
+  transition: background 0.2s;
+}
+
+.connectorDone {
+  background: #7c3aed;
+}
+
+@media (max-width: 480px) {
+  .label {
+    font-size: 0.75rem;
+  }
+
+  .circle {
+    width: 28px;
+    height: 28px;
+    font-size: 0.7rem;
+  }
+}

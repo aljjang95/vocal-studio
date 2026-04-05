@@ -1,0 +1,183 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.card {
+  background: #141414;
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.cardTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #e5e5e5;
+  margin-bottom: 0.75rem;
+}
+
+.checkboxList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.checkboxItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #e5e5e5;
+  cursor: pointer;
+}
+
+.checkboxItem input[type='checkbox'] {
+  accent-color: #7c3aed;
+  width: 16px;
+  height: 16px;
+}
+
+.input {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  color: #e5e5e5;
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input:focus {
+  border-color: #7c3aed;
+}
+
+.trainBtn {
+  width: 100%;
+  padding: 0.65rem;
+  border: none;
+  border-radius: 12px;
+  background: #7c3aed;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.trainBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error {
+  font-size: 0.85rem;
+  color: #ef4444;
+  margin-top: 0.5rem;
+}
+
+.modelList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.modelItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  transition: border-color 0.2s;
+}
+
+.modelItemSelected {
+  border-color: #7c3aed;
+}
+
+.modelInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.modelName {
+  font-size: 0.9rem;
+  color: #e5e5e5;
+  font-weight: 500;
+}
+
+.modelStatus {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.statusDone {
+  color: #22c55e;
+}
+
+.statusFail {
+  color: #ef4444;
+}
+
+.selectBtn {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid #7c3aed;
+  border-radius: 8px;
+  background: transparent;
+  color: #7c3aed;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.selectBtn:hover {
+  background: rgba(124, 58, 237, 0.1);
+}
+
+.navRow {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.backBtn {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  background: transparent;
+  color: #e5e5e5;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.backBtn:hover {
+  background: #1e1e1e;
+}
+
+.nextBtn {
+  flex: 2;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 12px;
+  background: #7c3aed;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.nextBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

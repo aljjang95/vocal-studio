@@ -1,0 +1,83 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2.5rem 1rem;
+  gap: 1.5rem;
+}
+
+/* Record button */
+.recordBtn {
+  width: 7rem;
+  height: 7rem;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: opacity 0.3s, box-shadow 0.3s, transform 0.15s;
+  background: linear-gradient(135deg, var(--accent, #7c3aed), var(--accent-lt, #a855f7));
+  box-shadow: 0 0 24px rgba(124, 58, 237, 0.4);
+}
+
+.recordBtn:hover {
+  opacity: 0.9;
+  transform: scale(1.04);
+}
+
+.recordBtnActive {
+  background: var(--error, #ef4444);
+  box-shadow: 0 0 24px rgba(239, 68, 68, 0.5);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+.statusText {
+  font-size: var(--fs-base, 1rem);
+  font-weight: 500;
+  color: var(--text, #e5e5e5);
+}
+
+/* Timer display */
+.timerWrap {
+  text-align: center;
+}
+
+.timerLabel {
+  font-size: var(--fs-xs, 0.75rem);
+  color: var(--text2, #a3a3a3);
+}
+
+.timerValue {
+  font-size: 1.875rem;
+  font-family: var(--font-mono, monospace);
+  color: var(--text, #e5e5e5);
+  margin-top: 0.25rem;
+}
+
+/* Level meter */
+.levelMeter {
+  width: 16rem;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 2rem;
+  justify-content: center;
+}
+
+.levelBar {
+  width: 0.5rem;
+  border-radius: 2px;
+  transition: height 75ms ease;
+}
+
+/* Duration warning */
+.warning {
+  font-size: var(--fs-sm, 0.875rem);
+  color: #facc15;
+}

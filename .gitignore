@@ -36,3 +36,6 @@ Thumbs.db
 
 # TypeScript build info
 *.tsbuildinfo
+modal_app/__pycache__/
+public/audio/*.wav
+backend/.claude-edit-count

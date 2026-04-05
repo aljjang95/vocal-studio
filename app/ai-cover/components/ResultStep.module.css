@@ -1,0 +1,99 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.card {
+  background: #141414;
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.cardTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #e5e5e5;
+  margin-bottom: 1rem;
+}
+
+.loadingText {
+  text-align: center;
+  color: #888;
+  padding: 3rem 0;
+}
+
+.errorText {
+  text-align: center;
+  color: #ef4444;
+  padding: 2rem 0;
+}
+
+.downloadRow {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.downloadBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid #7c3aed;
+  border-radius: 12px;
+  background: transparent;
+  color: #7c3aed;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.downloadBtn:hover {
+  background: rgba(124, 58, 237, 0.1);
+}
+
+.navRow {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.retryBtn {
+  flex: 1;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 12px;
+  background: #7c3aed;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.retryBtn:hover {
+  opacity: 0.9;
+}
+
+.resetBtn {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  background: transparent;
+  color: #e5e5e5;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.resetBtn:hover {
+  background: #1e1e1e;
+}
+
+@media (max-width: 480px) {
+  .downloadRow {
+    flex-direction: column;
+  }
+}

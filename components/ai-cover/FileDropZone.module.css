@@ -1,0 +1,89 @@
+.dropzone {
+  border: 2px dashed var(--border2, #3a3a4a);
+  border-radius: var(--r, 12px);
+  padding: 2rem 1rem;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  background: var(--bg2, #111113);
+}
+
+.dropzone:hover {
+  border-color: var(--accent, #7c3aed);
+  background: rgba(124, 58, 237, 0.04);
+}
+
+.dropzoneActive {
+  border-color: var(--accent, #7c3aed);
+  background: rgba(124, 58, 237, 0.08);
+}
+
+.dropzoneDisabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dropzoneDisabled:hover {
+  border-color: var(--border2, #3a3a4a);
+  background: var(--bg2, #111113);
+}
+
+/* Icon */
+.icon {
+  font-size: 2.5rem;
+  opacity: 0.3;
+}
+
+/* Label text */
+.label {
+  font-size: var(--fs-sm, 0.875rem);
+  font-weight: 600;
+  color: var(--text2, #a3a3a3);
+}
+
+.hint {
+  font-size: var(--fs-xs, 0.75rem);
+  color: var(--muted, #6b6b7b);
+}
+
+.dragText {
+  font-size: var(--fs-base, 1rem);
+  font-weight: 500;
+  color: var(--accent-lt, #a855f7);
+}
+
+/* Selected file info */
+.fileInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.fileName {
+  font-size: var(--fs-sm, 0.875rem);
+  color: var(--success, #22c55e);
+  word-break: break-all;
+  text-align: center;
+}
+
+.fileSize {
+  font-size: var(--fs-xs, 0.75rem);
+  color: var(--muted, #6b6b7b);
+}
+
+/* Error */
+.error {
+  font-size: var(--fs-xs, 0.75rem);
+  color: var(--error, #ef4444);
+  margin-top: 0.5rem;
+}
+
+.fileInput {
+  display: none;
+}
