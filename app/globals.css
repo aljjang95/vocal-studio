@@ -1,48 +1,77 @@
 /* ── DESIGN TOKENS ── */
 :root {
-  --bg:        #09090B;
-  --bg2:       #111113;
-  --bg3:       #18181B;
+  /* ── Backgrounds (Zinc Elevation) ── */
+  --bg-base:     #09090B;
+  --bg-raised:   #111113;
+  --bg-elevated: #1A1A1E;
+  --bg-hover:    #222226;
+
+  /* ── Text ── */
+  --text-primary:   #FAFAFA;
+  --text-secondary: #A1A1AA;
+  --text-muted:     #63636E;
+
+  /* ── Accent ── */
+  --accent:       #3B82F6;
+  --accent-hover: #2563EB;
+  --accent-muted: rgba(59,130,246,0.12);
+  --accent-glow:  rgba(59,130,246,0.20);
+
+  /* ── Semantic ── */
+  --success:       #22C55E;
+  --success-muted: rgba(34,197,94,0.12);
+  --warning:       #EAB308;
+  --warning-muted: rgba(234,179,8,0.12);
+  --error:         #EF4444;
+  --error-muted:   rgba(239,68,68,0.12);
+
+  /* ── Borders ── */
+  --border-subtle:  rgba(255,255,255,0.06);
+  --border-default: rgba(255,255,255,0.10);
+  --border-strong:  rgba(255,255,255,0.16);
+
+  /* ── Radii ── */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  /* ── Typography ── */
+  --font-sans: 'Inter', 'Noto Sans KR', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --fs-display: clamp(2.75rem, 5vw, 4rem);
+  --fs-h1:      clamp(2rem, 3.5vw, 2.75rem);
+  --fs-h2:      clamp(1.375rem, 2vw, 1.75rem);
+  --fs-h3:      1.125rem;
+  --fs-body:    1rem;
+  --fs-sm:      0.875rem;
+  --fs-xs:      0.75rem;
+
+  /* ── Easing ── */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ── Legacy aliases (기존 컴포넌트 호환) ── */
+  --bg:        var(--bg-base);
+  --bg2:       var(--bg-raised);
+  --bg3:       var(--bg-elevated);
   --surface:   rgba(255,255,255,0.05);
   --surface2:  rgba(255,255,255,0.08);
   --surface3:  rgba(255,255,255,0.12);
-  --text:      #FAFAFA;
-  --text2:     #A1A1AA;
-  --muted:     #71717A;
-  --border:    rgba(255,255,255,0.08);
-  --border2:   rgba(255,255,255,0.15);
-  --accent:    #3B82F6;
+  --text:      var(--text-primary);
+  --text2:     var(--text-secondary);
+  --muted:     var(--text-muted);
+  --border:    var(--border-subtle);
+  --border2:   var(--border-strong);
   --accent-lt: #60A5FA;
   --accent2:   #8B5CF6;
   --accent2-lt:#A78BFA;
-  --cta-bg:    #FAFAFA;
-  --cta-text:  #09090B;
+  --cta-bg:    var(--text-primary);
+  --cta-text:  var(--bg-base);
   --cta-hover: #E4E4E7;
-  --success:   #22C55E;
   --success-lt:#4ADE80;
-  --warning:   #EAB308;
-  --error:     #EF4444;
   --error-lt:  #F87171;
-  --r:         16px;
-  --r-sm:      12px;
-  --r-xs:      8px;
-  --fs-display: clamp(3rem,5.5vw,4.5rem);
-  --fs-h1:     clamp(2.2rem,3.8vw,3.2rem);
-  --fs-h2:     clamp(1.4rem,2vw,1.8rem);
-  --fs-h3:     1.125rem;
-  --fs-body:   1rem;
-  --fs-sm:     0.875rem;
-  --fs-xs:     0.75rem;
-
-  --fs-hero-display: clamp(3.5rem, 7vw, 6.5rem);
-  --hero-title-lh: 0.95;
-  --hero-title-ls: -0.04em;
-  --glow-blue: rgba(59,130,246,0.15);
-  --glow-purple: rgba(139,92,246,0.12);
-  --glass-bg: rgba(24,24,27,0.55);
-  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-
-  /* legacy aliases for components that still reference old tokens */
+  --r:         var(--radius-lg);
+  --r-sm:      var(--radius-md);
+  --r-xs:      var(--radius-sm);
   --gold:      var(--accent);
   --gold-lt:   var(--accent-lt);
   --violet:    var(--accent);
@@ -50,16 +79,22 @@
   --rose:      var(--error);
   --teal:      var(--success);
   --teal-lt:   var(--success-lt);
+  --glow-blue: var(--accent-glow);
+  --glow-purple: rgba(139,92,246,0.12);
+  --glass-bg:  rgba(24,24,27,0.55);
+  --fs-hero-display: var(--fs-display);
+  --hero-title-lh: 1.05;
+  --hero-title-ls: -0.03em;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; font-size: 16px; }
 
 body {
-  font-family: 'Inter', 'Noto Sans KR', -apple-system, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  line-height: 1.6;
+  font-family: var(--font-sans);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  line-height: 1.7;
   overflow-x: hidden;
 }
 
@@ -220,3 +255,15 @@ section { position: relative; z-index: 1; }
 .section-head { margin-bottom: 72px; }
 .section-head.center { text-align: center; }
 .section-head.center .section-desc { margin: 0 auto; }
+
+/* ── DS: Ripple ── */
+@keyframes ds-ripple {
+  to { transform: scale(4); opacity: 0; }
+}
+
+/* ── DS: Scroll Reveal ── */
+.ds-reveal {
+  opacity: 0; transform: translateY(24px);
+  transition: opacity 0.7s var(--ease-out-expo), transform 0.7s var(--ease-out-expo);
+}
+.ds-visible { opacity: 1; transform: translateY(0); }
