@@ -1,5 +1,6 @@
 'use client';
 
+import Card from '@/components/ds/Card';
 import type { HLBCurriculumStage, StageStatus } from '@/types';
 
 interface StageCardProps {
@@ -9,44 +10,69 @@ interface StageCardProps {
   onClick: () => void;
 }
 
-const STATUS_STYLES: Record<StageStatus, string> = {
-  locked: 'opacity-40 cursor-not-allowed',
-  available: 'ring-2 ring-emerald-400 cursor-pointer hover:scale-[1.02]',
-  in_progress: 'ring-2 ring-amber-400 cursor-pointer hover:scale-[1.02]',
-  passed: 'ring-2 ring-blue-400 cursor-pointer',
-};
-
-const STATUS_BADGE: Record<StageStatus, string> = {
-  locked: '🔒',
-  available: '▶️',
-  in_progress: '🔄',
-  passed: '✅',
-};
-
 export default function StageCard({ stage, status, bestScore, onClick }: StageCardProps) {
+  const variant = status === 'locked' ? 'locked'
+    : (status === 'available' || status === 'in_progress') ? 'active'
+    : 'default';
+
   return (
-    <button
+    <Card
+      variant={variant}
+      interactive={status !== 'locked'}
       onClick={status !== 'locked' ? onClick : undefined}
-      disabled={status === 'locked'}
-      className={`w-full p-4 rounded-xl bg-gray-900/50 border border-gray-800 transition-all duration-200 text-left ${STATUS_STYLES[status]}`}
+      style={{ cursor: status === 'locked' ? 'default' : 'pointer' }}
     >
-      <div className="flex items-center gap-3">
-        <span className="text-2xl">{stage.blockIcon}</span>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-400">{stage.id}단계</span>
-            <span>{STATUS_BADGE[status]}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <span style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 13, fontWeight: 600,
+          color: 'var(--text-muted)',
+          width: 28, textAlign: 'right' as const, flexShrink: 0,
+        }}>
+          {String(stage.id).padStart(2, '0')}
+        </span>
+
+        <div style={{
+          width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+          background: status === 'passed' ? 'var(--success)'
+            : status === 'available' || status === 'in_progress' ? 'var(--accent)'
+            : 'var(--bg-elevated)',
+          boxShadow: status === 'available' || status === 'in_progress'
+            ? '0 0 8px var(--accent-glow)' : 'none',
+        }} />
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>
+            {stage.name}
           </div>
-          <h3 className="text-white font-medium truncate">{stage.name}</h3>
-          <p className="text-xs text-gray-500">{stage.block} · {stage.pronunciation}</p>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>
+            {stage.pronunciation} · {stage.scaleType || stage.block}
+          </div>
         </div>
+
         {bestScore > 0 && (
-          <div className="text-right">
-            <div className="text-lg font-bold text-white">{bestScore}</div>
-            <div className="text-xs text-gray-500">점</div>
+          <div style={{ textAlign: 'right' as const }}>
+            <div style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 18, fontWeight: 700, color: 'var(--text-primary)',
+            }}>{bestScore}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>점</div>
           </div>
         )}
+
+        {status === 'locked' && (
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
+            <rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+            <path d="M5 7V5a3 3 0 016 0v2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+          </svg>
+        )}
+
+        {status !== 'locked' && (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
+            <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        )}
       </div>
-    </button>
+    </Card>
   );
 }

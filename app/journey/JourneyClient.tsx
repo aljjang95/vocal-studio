@@ -10,41 +10,54 @@ export default function JourneyClient() {
   const { getStageStatus, progress } = useJourneyStore();
 
   const blocks = hlbCurriculum.reduce<Record<string, typeof hlbCurriculum>>((acc, stage) => {
-    const key = `${stage.blockIcon} ${stage.block}`;
+    const key = stage.block;
     if (!acc[key]) acc[key] = [];
     acc[key].push(stage);
     return acc;
   }, {});
 
+  const completedCount = Object.values(progress).filter((p) => p?.passedAt).length;
+
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-4 pb-20">
-      <header className="text-center py-6">
-        <h1 className="text-2xl font-bold">소리의 길</h1>
-        <p className="text-gray-400 mt-1">몸이 기억하는 소리를 찾아가는 여정</p>
-      </header>
-      <div className="max-w-md mx-auto space-y-8">
-        {Object.entries(blocks).map(([blockName, stages]) => (
-          <section key={blockName}>
-            <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">{blockName}</h2>
-            <div className="space-y-2 relative">
-              <div className="absolute left-6 top-0 bottom-0 w-px bg-gray-800" />
-              {stages.map((stage) => {
-                const status = getStageStatus(stage.id);
-                const prog = progress[stage.id];
-                return (
-                  <div key={stage.id} className="relative z-10">
+    <div style={{
+      minHeight: '100vh', background: 'var(--bg-base)',
+      color: 'var(--text-primary)', padding: '0 20px 60px',
+    }}>
+      <div style={{ maxWidth: 520, margin: '0 auto' }}>
+        <header style={{ padding: '40px 0 24px' }}>
+          <h1 style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em' }}>소리의 길</h1>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6 }}>
+            {completedCount}개 완료 · 전체 {hlbCurriculum.length}단계
+          </p>
+        </header>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+          {Object.entries(blocks).map(([blockName, stages]) => (
+            <section key={blockName}>
+              <h2 style={{
+                fontSize: 12, fontWeight: 600, color: 'var(--text-muted)',
+                letterSpacing: '0.03em', marginBottom: 10, paddingLeft: 2,
+              }}>
+                {blockName}
+              </h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {stages.map((stage) => {
+                  const status = getStageStatus(stage.id);
+                  const prog = progress[stage.id];
+                  return (
                     <StageCard
+                      key={stage.id}
                       stage={stage}
                       status={status}
                       bestScore={prog?.bestScore ?? 0}
                       onClick={() => router.push(`/journey/${stage.id}`)}
                     />
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        ))}
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
       </div>
     </div>
   );
