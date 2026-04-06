@@ -28,7 +28,7 @@ export default function BreathingPageClient() {
         <div className="container">
           <div className={styles.headerInner}>
             <Link href="/" className={styles.backLink}>
-              &larr; 보컬마인드
+              &larr; HLB 보컬스튜디오
             </Link>
             <nav className={styles.headerNav}>
               <Link href="/coaching" className={styles.headerLink}>코칭</Link>

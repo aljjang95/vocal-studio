@@ -1,4 +1,4 @@
-/** Audio-related constants shared across the VocalMind audio infrastructure. */
+/** Audio-related constants shared across the HLB 보컬스튜디오 audio infrastructure. */
 
 export const DEFAULT_BPM = 120;
 export const MIN_BPM = 40;
