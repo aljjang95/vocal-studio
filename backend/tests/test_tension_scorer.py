@@ -1,7 +1,6 @@
 """긴장 점수 계산 테스트."""
 from __future__ import annotations
-import pytest
-from models.tension import FormantData, RegisterTransition, TensionAnalysis, TensionScore, VoiceQuality
+from models.tension import FormantData, RegisterTransition, TensionAnalysis, VoiceQuality
 from services.tension_scorer import calculate_tension_score
 
 def _make_analysis(**overrides) -> TensionAnalysis:

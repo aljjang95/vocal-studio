@@ -456,3 +456,31 @@ export interface CoachingFeedback {
   nextExercise: string;
   encouragement: string;
 }
+
+// ── 스케일 연습 (Scale Practice) ────────────────────────
+
+export interface ScalePracticeData {
+  guideVideoId: string | null;
+  practiceInstructions: string[];
+  defaultScale: number[];
+  startNote: string;
+  transposeRange: [number, number];
+  defaultBpm: number;
+}
+
+export type FeedbackMode = 'quiet' | 'gentle' | 'active';
+export type KeyLabel = 'solfege' | 'note' | 'number';
+
+// ── 자동 레슨 모드 ──
+export type LessonMode = 'auto' | 'free';
+export type LessonPhase = 'guide' | 'ready' | 'playing' | 'recording' | 'grading' | 'result';
+
+export interface ScalePracticeScore {
+  score: number;
+  passed: boolean;
+  level: 'beginner' | 'intermediate' | 'advanced';
+  feedbackHint: string;
+  tensionOverall: number;
+  pitchAccuracy: number;
+  toneStability: number;
+}

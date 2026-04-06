@@ -42,10 +42,14 @@ def calculate_tension_score(analysis: TensionAnalysis) -> TensionScore:
     tension_detected = overall > 40
 
     parts = []
-    if laryngeal > 50: parts.append("후두 긴장")
-    if tongue_root > 50: parts.append("혀뿌리 긴장")
-    if jaw > 50: parts.append("턱 긴장")
-    if register_break > 50: parts.append("성구전환 끊김")
+    if laryngeal > 50:
+        parts.append("후두 긴장")
+    if tongue_root > 50:
+        parts.append("혀뿌리 긴장")
+    if jaw > 50:
+        parts.append("턱 긴장")
+    if register_break > 50:
+        parts.append("성구전환 끊김")
     detail = ", ".join(parts) if parts else "이완 상태"
 
     return TensionScore(

@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HLB 보컬스튜디오 — Design Preview v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-base: #09090B;
+    --bg-raised: #111113;
+    --bg-elevated: #1A1A1E;
+    --bg-hover: #222226;
+    --text-primary: #FAFAFA;
+    --text-secondary: #A1A1AA;
+    --text-muted: #63636E;
+    --accent: #3B82F6;
+    --accent-hover: #2563EB;
+    --accent-muted: rgba(59,130,246,0.12);
+    --success: #22C55E;
+    --warning: #EAB308;
+    --error: #EF4444;
+    --border-subtle: rgba(255,255,255,0.06);
+    --border-default: rgba(255,255,255,0.10);
+    --border-strong: rgba(255,255,255,0.16);
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --font-sans: 'Inter', 'Noto Sans KR', -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg-base);
+    color: var(--text-primary);
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+  /* Grain */
+  body::after {
+    content: ''; position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 9999; opacity: 0.07; mix-blend-mode: overlay;
+  }
+
+  /* ── CLICK RIPPLE ── */
+  .ripple-container { position: relative; overflow: hidden; }
+  .ripple {
+    position: absolute; border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    transform: scale(0); animation: rippleAnim 0.6s ease-out forwards;
+    pointer-events: none;
+  }
+  @keyframes rippleAnim {
+    to { transform: scale(4); opacity: 0; }
+  }
+
+  /* ── NAV ── */
+  .nav {
+    position: sticky; top: 0; z-index: 100;
+    height: 56px; background: rgba(9,9,11,0.85);
+    backdrop-filter: blur(16px) saturate(1.4);
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex; align-items: center; padding: 0 28px;
+  }
+  .nav-logo {
+    font-size: 15px; font-weight: 700; letter-spacing: -0.01em;
+    color: var(--text-primary); margin-right: 40px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .nav-logo-mark {
+    width: 24px; height: 24px; border-radius: 6px;
+    background: linear-gradient(135deg, var(--accent), #8B5CF6);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .nav-logo-mark svg { width: 14px; height: 14px; color: #fff; }
+  .nav-links { display: flex; gap: 28px; flex: 1; }
+  .nav-link {
+    font-size: 13px; font-weight: 500; color: var(--text-muted);
+    text-decoration: none; padding: 17px 0; position: relative;
+    transition: color 0.15s;
+  }
+  .nav-link:hover { color: var(--text-secondary); }
+  .nav-link.active { color: var(--text-primary); }
+  .nav-link.active::after {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+    height: 2px; background: var(--accent); border-radius: 1px;
+  }
+
+  .container { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
+
+  /* ── HERO WITH REAL PHOTO ── */
+  .hero {
+    position: relative; min-height: 92vh;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center; overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute; inset: 0; z-index: 0;
+  }
+  .hero-bg img {
+    width: 100%; height: 100%; object-fit: cover;
+    filter: brightness(0.25) saturate(0.7);
+  }
+  .hero-bg::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg,
+      rgba(9,9,11,0.3) 0%,
+      rgba(9,9,11,0.6) 50%,
+      rgba(9,9,11,1) 100%
+    );
+  }
+  .hero-content {
+    position: relative; z-index: 2;
+    max-width: 640px; padding: 0 20px;
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 600; letter-spacing: 0.06em;
+    color: var(--accent); margin-bottom: 24px;
+    padding: 6px 16px; border-radius: 20px;
+    background: rgba(59,130,246,0.08);
+    border: 1px solid rgba(59,130,246,0.15);
+  }
+  .hero-badge-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+    animation: dotPulse 2s ease infinite;
+  }
+  @keyframes dotPulse { 50% { opacity: 0.3; } }
+  .hero h1 {
+    font-size: clamp(2.5rem, 5.5vw, 4.2rem);
+    font-weight: 800; letter-spacing: -0.03em; line-height: 1.08;
+    margin-bottom: 20px;
+  }
+  .hero h1 em {
+    font-style: normal;
+    background: linear-gradient(135deg, #fff, rgba(255,255,255,0.6));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .hero p {
+    font-size: 17px; color: var(--text-secondary); line-height: 1.75;
+    margin-bottom: 40px;
+  }
+  .hero-actions { display: flex; gap: 12px; justify-content: center; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    font-family: var(--font-sans); font-size: 14px; font-weight: 600;
+    padding: 13px 28px; border-radius: var(--radius-md);
+    border: none; cursor: pointer; text-decoration: none;
+    transition: all 0.2s ease; position: relative; overflow: hidden;
+  }
+  .btn-primary {
+    background: var(--text-primary); color: var(--bg-base);
+    box-shadow: 0 4px 16px rgba(255,255,255,0.1);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(255,255,255,0.15); }
+  .btn-primary:active { transform: scale(0.97); }
+  .btn-secondary {
+    background: rgba(255,255,255,0.06); color: var(--text-primary);
+    border: 1px solid var(--border-default);
+  }
+  .btn-secondary:hover { background: rgba(255,255,255,0.10); border-color: var(--border-strong); }
+  .btn-secondary:active { transform: scale(0.97); }
+  .btn-accent {
+    background: var(--accent); color: #fff;
+    box-shadow: 0 4px 16px rgba(59,130,246,0.25);
+  }
+  .btn-accent:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(59,130,246,0.3); }
+  .btn-accent:active { transform: scale(0.97); }
+
+  /* ── PHOTO SECTIONS ── */
+  .photo-section {
+    position: relative; padding: 96px 0;
+    overflow: hidden;
+  }
+  .photo-section-bg {
+    position: absolute; inset: 0; z-index: 0;
+  }
+  .photo-section-bg img {
+    width: 100%; height: 100%; object-fit: cover;
+    filter: brightness(0.15) saturate(0.5);
+  }
+  .photo-section-bg::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, var(--bg-base) 0%, transparent 20%, transparent 80%, var(--bg-base) 100%);
+  }
+  .photo-section .container { position: relative; z-index: 2; }
+
+  /* ── FEATURES ── */
+  .features { padding: 96px 0; }
+  .section-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-label::before { content: ''; width: 20px; height: 1px; background: var(--accent); }
+  .section-title {
+    font-size: clamp(1.8rem, 3vw, 2.5rem);
+    font-weight: 800; letter-spacing: -0.025em; line-height: 1.1;
+    margin-bottom: 16px;
+  }
+  .section-desc {
+    font-size: 16px; color: var(--text-secondary); line-height: 1.75;
+    max-width: 480px; margin-bottom: 48px;
+  }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .feature-card {
+    background: var(--bg-raised); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg); padding: 32px 28px;
+    transition: all 0.25s ease; cursor: pointer;
+  }
+  .feature-card:hover {
+    border-color: var(--border-default); transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+  }
+  .feature-card:active { transform: translateY(-2px) scale(0.99); }
+  .feature-icon {
+    width: 44px; height: 44px; border-radius: 10px;
+    background: var(--accent-muted);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 20px; transition: transform 0.3s ease;
+  }
+  .feature-card:hover .feature-icon { transform: scale(1.1) rotate(-3deg); }
+  .feature-icon svg { width: 22px; height: 22px; color: var(--accent); }
+  .feature-card h3 { font-size: 16px; font-weight: 650; margin-bottom: 8px; letter-spacing: -0.01em; }
+  .feature-card p { font-size: 14px; color: var(--text-secondary); line-height: 1.65; }
+
+  /* ── STAGE LIST ── */
+  .stage-section { padding: 96px 0; }
+  .stage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
+  .stages { display: flex; flex-direction: column; gap: 2px; }
+  .stage {
+    display: flex; align-items: center; gap: 16px;
+    padding: 16px 20px; background: var(--bg-raised);
+    transition: all 0.2s; cursor: pointer; text-decoration: none; color: inherit;
+  }
+  .stage:first-child { border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+  .stage:last-child { border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+  .stage:hover { background: var(--bg-elevated); transform: translateX(4px); }
+  .stage:active { transform: translateX(2px) scale(0.995); }
+  .stage-num {
+    font-family: var(--font-mono); font-size: 13px; font-weight: 600;
+    color: var(--text-muted); width: 28px; text-align: right; flex-shrink: 0;
+  }
+  .stage-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--border-default); flex-shrink: 0;
+    transition: all 0.3s;
+  }
+  .stage-dot.done { background: var(--success); }
+  .stage-dot.current { background: var(--accent); box-shadow: 0 0 8px rgba(59,130,246,0.5); }
+  .stage-dot.locked { background: var(--bg-elevated); }
+  .stage-info { flex: 1; }
+  .stage-name { font-size: 14px; font-weight: 500; }
+  .stage-meta { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+  .stage-arrow {
+    color: var(--text-muted); opacity: 0; transition: all 0.2s;
+  }
+  .stage:hover .stage-arrow { opacity: 1; transform: translateX(3px); }
+  .stage.locked { opacity: 0.3; cursor: default; }
+  .stage.locked:hover { background: var(--bg-raised); transform: none; }
+
+  /* ── SCORE ── */
+  .score-panel { text-align: center; }
+  .score-ring {
+    width: 180px; height: 180px; position: relative;
+    margin: 0 auto 20px;
+  }
+  .score-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .score-ring circle { fill: none; stroke-width: 5; stroke-linecap: round; }
+  .score-ring .bg { stroke: rgba(255,255,255,0.05); }
+  .score-ring .fill {
+    stroke: var(--success); stroke-dasharray: 502;
+    stroke-dashoffset: 65;
+    animation: fillRing 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+  }
+  @keyframes fillRing { from { stroke-dashoffset: 502; } }
+  .score-value {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .score-num {
+    font-family: var(--font-mono); font-size: 56px; font-weight: 700;
+    letter-spacing: -0.03em; line-height: 1; color: var(--success);
+  }
+  .score-label {
+    font-size: 11px; color: var(--text-muted); font-weight: 500;
+    letter-spacing: 0.08em; text-transform: uppercase; margin-top: 6px;
+  }
+  .score-verdict {
+    font-size: 16px; font-weight: 600; color: var(--success); margin-bottom: 32px;
+  }
+
+  /* ── PRACTICE CARD ── */
+  .practice-card {
+    background: var(--bg-raised); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg); padding: 32px; text-align: left;
+  }
+  .coach-msg { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 24px; }
+  .coach-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--text-primary); margin-top: 8px; flex-shrink: 0;
+    animation: dotPulse 2s ease infinite;
+  }
+  .coach-text { font-size: 15px; line-height: 1.7; color: var(--text-secondary); }
+  .tag-row { display: flex; gap: 6px; margin-bottom: 24px; flex-wrap: wrap; }
+  .tag {
+    font-size: 11px; font-weight: 500; padding: 4px 10px; border-radius: 6px;
+    background: rgba(255,255,255,0.04); color: var(--text-muted);
+    border: 1px solid var(--border-subtle);
+  }
+  .tag-accent {
+    background: var(--accent-muted); color: var(--accent);
+    border-color: rgba(59,130,246,0.15);
+  }
+  .metric { margin-bottom: 16px; }
+  .metric-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .metric-label { font-size: 12px; color: var(--text-muted); }
+  .metric-value { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+  .metric-bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.04); overflow: hidden; }
+  .metric-fill { height: 100%; border-radius: 2px; transition: width 1s cubic-bezier(0.16, 1, 0.3, 1); }
+
+  /* ── CTA SECTION ── */
+  .cta-section {
+    position: relative; padding: 120px 0; text-align: center; overflow: hidden;
+  }
+  .cta-section-bg {
+    position: absolute; inset: 0;
+  }
+  .cta-section-bg img {
+    width: 100%; height: 100%; object-fit: cover;
+    filter: brightness(0.2) saturate(0.6);
+  }
+  .cta-section-bg::after {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, rgba(59,130,246,0.08), transparent 70%);
+  }
+  .cta-section .container { position: relative; z-index: 2; }
+  .cta-section h2 {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 800; letter-spacing: -0.025em; line-height: 1.1;
+    margin-bottom: 16px;
+  }
+  .cta-section p {
+    font-size: 16px; color: var(--text-secondary); margin-bottom: 36px;
+    max-width: 420px; margin-left: auto; margin-right: auto;
+  }
+
+  /* ── HOVER GLOW CURSOR (artifact effect) ── */
+  .glow-card {
+    position: relative;
+  }
+  .glow-card::before {
+    content: ''; position: absolute; inset: -1px;
+    border-radius: inherit;
+    background: radial-gradient(
+      300px circle at var(--glow-x, 50%) var(--glow-y, 50%),
+      rgba(59,130,246,0.12), transparent 60%
+    );
+    opacity: 0; transition: opacity 0.3s;
+    pointer-events: none; z-index: -1;
+  }
+  .glow-card:hover::before { opacity: 1; }
+
+  /* ── SCROLL REVEAL ── */
+  .reveal {
+    opacity: 0; transform: translateY(24px);
+    transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1);
+  }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 768px) {
+    .grid-3 { grid-template-columns: 1fr; }
+    .stage-grid { grid-template-columns: 1fr; }
+    .nav-links { display: none; }
+    .hero h1 { font-size: 2.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-logo">
+    <div class="nav-logo-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/></svg>
+    </div>
+    HLB 보컬스튜디오
+  </div>
+  <div class="nav-links">
+    <a class="nav-link active" href="#">소리의 길</a>
+    <a class="nav-link" href="#">스케일</a>
+    <a class="nav-link" href="#">연습실</a>
+    <a class="nav-link" href="#">AI 코치</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg">
+    <img src="https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=1920&q=80" alt="Recording Studio">
+  </div>
+  <div class="hero-content reveal" id="hero-reveal">
+    <div class="hero-badge">
+      <span class="hero-badge-dot"></span>
+      AI 보컬 코칭
+    </div>
+    <h1>당신의 목소리를<br><em>깨워드립니다</em></h1>
+    <p>7년 경력 보컬 트레이너의 커리큘럼과 AI 긴장 감지 기술이 결합된, 당신만의 보컬 코치.</p>
+    <div class="hero-actions">
+      <button class="btn btn-primary ripple-container" onclick="createRipple(event)">무료로 시작하기</button>
+      <button class="btn btn-secondary ripple-container" onclick="createRipple(event)">둘러보기</button>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features">
+  <div class="container">
+    <div class="section-label">Features</div>
+    <h2 class="section-title reveal">AI가 당신의 몸을 읽습니다</h2>
+    <p class="section-desc reveal">후두, 혀뿌리, 턱의 긴장을 실시간으로 분석하고, 편안한 발성으로 안내합니다.</p>
+    <div class="grid-3">
+      <div class="feature-card glow-card reveal" onmousemove="trackGlow(event, this)">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+        </div>
+        <h3>실시간 긴장 감지</h3>
+        <p>AI가 후두, 혀뿌리, 턱의 긴장을 측정하고 이완 방법을 안내합니다.</p>
+      </div>
+      <div class="feature-card glow-card reveal" onmousemove="trackGlow(event, this)" style="animation-delay:0.1s">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M7 6V4M12 6V4M17 6V4"/></svg>
+        </div>
+        <h3>피아노 스케일 연습</h3>
+        <p>그랜드 피아노와 함께 스케일 연습. 3단계 채점으로 실력 측정.</p>
+      </div>
+      <div class="feature-card glow-card reveal" onmousemove="trackGlow(event, this)" style="animation-delay:0.2s">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        </div>
+        <h3>AI 커버 생성</h3>
+        <p>당신의 음성을 학습한 AI 모델로 좋아하는 노래를 커버.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- JOURNEY + SCORE (with studio photo background) -->
+<section class="photo-section">
+  <div class="photo-section-bg">
+    <img src="https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=1920&q=80" alt="Piano Keys">
+  </div>
+  <div class="container">
+    <div class="stage-grid">
+      <!-- LEFT: Stage List -->
+      <div class="reveal">
+        <div class="section-label">Journey</div>
+        <h2 class="section-title" style="margin-bottom:8px;">소리의 길</h2>
+        <p style="font-size:14px;color:var(--text-muted);margin-bottom:24px;">28단계 커리큘럼. 이완부터 실가창까지.</p>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">이완 기초</p>
+        <div class="stages">
+          <a class="stage ripple-container" onclick="createRipple(event)">
+            <span class="stage-num">01</span>
+            <span class="stage-dot done"></span>
+            <div class="stage-info"><div class="stage-name">설근 안정화</div><div class="stage-meta">어 · 라운딩</div></div>
+            <svg class="stage-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </a>
+          <a class="stage ripple-container" onclick="createRipple(event)">
+            <span class="stage-num">02</span>
+            <span class="stage-dot done"></span>
+            <div class="stage-info"><div class="stage-name">후두 안정</div><div class="stage-meta">어 · 라운딩</div></div>
+            <svg class="stage-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </a>
+          <a class="stage ripple-container" onclick="createRipple(event)">
+            <span class="stage-num">03</span>
+            <span class="stage-dot current"></span>
+            <div class="stage-info"><div class="stage-name">이완 라운딩</div><div class="stage-meta">어 · 라운딩</div></div>
+            <svg class="stage-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </a>
+          <a class="stage locked">
+            <span class="stage-num">05</span>
+            <span class="stage-dot locked"></span>
+            <div class="stage-info"><div class="stage-name">허밍 세팅</div><div class="stage-meta">흠 · 라운딩</div></div>
+          </a>
+          <a class="stage locked">
+            <span class="stage-num">06</span>
+            <span class="stage-dot locked"></span>
+            <div class="stage-info"><div class="stage-name">백프레셔 허밍</div><div class="stage-meta">흠 · 라운딩</div></div>
+          </a>
+        </div>
+      </div>
+
+      <!-- RIGHT: Score + Practice -->
+      <div class="reveal" style="animation-delay:0.15s">
+        <div class="score-panel">
+          <div class="score-ring">
+            <svg viewBox="0 0 180 180">
+              <circle class="bg" cx="90" cy="90" r="80"/>
+              <circle class="fill" cx="90" cy="90" r="80"/>
+            </svg>
+            <div class="score-value">
+              <span class="score-num" id="score-counter">0</span>
+              <span class="score-label">Score</span>
+            </div>
+          </div>
+          <div class="score-verdict">통과</div>
+        </div>
+
+        <div class="practice-card">
+          <div class="coach-msg">
+            <div class="coach-dot"></div>
+            <div class="coach-text">'어' 소리를 피아노를 따라 연결하세요. 턱을 편하게.</div>
+          </div>
+          <div class="tag-row">
+            <span class="tag">어</span>
+            <span class="tag">라운딩</span>
+            <span class="tag">BPM 60</span>
+            <span class="tag tag-accent">이완 중심</span>
+          </div>
+          <div style="margin-bottom:24px;">
+            <div class="metric">
+              <div class="metric-header"><span class="metric-label">이완</span><span class="metric-value">82</span></div>
+              <div class="metric-bar"><div class="metric-fill" style="width:82%;background:var(--success);"></div></div>
+            </div>
+            <div class="metric">
+              <div class="metric-header"><span class="metric-label">음정</span><span class="metric-value">68</span></div>
+              <div class="metric-bar"><div class="metric-fill" style="width:68%;background:var(--accent);"></div></div>
+            </div>
+            <div class="metric">
+              <div class="metric-header"><span class="metric-label">톤</span><span class="metric-value">74</span></div>
+              <div class="metric-bar"><div class="metric-fill" style="width:74%;background:var(--warning);"></div></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-secondary ripple-container" onclick="createRipple(event)" style="flex:1;">다시</button>
+            <button class="btn btn-accent ripple-container" onclick="createRipple(event)" style="flex:1;">다음 단계</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-section-bg">
+    <img src="https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=1920&q=80" alt="Singer performing">
+  </div>
+  <div class="container">
+    <div class="reveal">
+      <h2>지금 시작하세요</h2>
+      <p>첫 5단계는 무료입니다. 당신의 목소리가 어떻게 변하는지 직접 경험하세요.</p>
+      <button class="btn btn-primary ripple-container" onclick="createRipple(event)" style="font-size:15px;padding:15px 36px;">
+        무료 체험 시작
+      </button>
+    </div>
+  </div>
+</section>
+
+<div style="height:60px;background:var(--bg-base);"></div>
+
+<script>
+// ── Click Ripple Effect ──
+function createRipple(e) {
+  const btn = e.currentTarget;
+  const rect = btn.getBoundingClientRect();
+  const ripple = document.createElement('span');
+  ripple.className = 'ripple';
+  const size = Math.max(rect.width, rect.height);
+  ripple.style.width = ripple.style.height = size + 'px';
+  ripple.style.left = (e.clientX - rect.left - size/2) + 'px';
+  ripple.style.top = (e.clientY - rect.top - size/2) + 'px';
+  btn.appendChild(ripple);
+  ripple.addEventListener('animationend', () => ripple.remove());
+}
+
+// ── Glow Card Tracking ──
+function trackGlow(e, el) {
+  const rect = el.getBoundingClientRect();
+  el.style.setProperty('--glow-x', (e.clientX - rect.left) + 'px');
+  el.style.setProperty('--glow-y', (e.clientY - rect.top) + 'px');
+}
+
+// ── Scroll Reveal ──
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.15 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ── Score Counter Animation ──
+function countUp(el, target, duration) {
+  let start = 0;
+  const step = (ts) => {
+    if (!start) start = ts;
+    const progress = Math.min((ts - start) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.round(eased * target);
+    if (progress < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+const scoreEl = document.getElementById('score-counter');
+const scoreObs = new IntersectionObserver((entries) => {
+  if (entries[0].isIntersecting) {
+    countUp(scoreEl, 87, 1200);
+    scoreObs.disconnect();
+  }
+}, { threshold: 0.5 });
+scoreObs.observe(scoreEl);
+
+// ── Hero immediate reveal ──
+setTimeout(() => document.getElementById('hero-reveal')?.classList.add('visible'), 100);
+</script>
+
+</body>
+</html>

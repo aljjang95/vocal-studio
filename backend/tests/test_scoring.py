@@ -1,7 +1,11 @@
 from __future__ import annotations
 
-import pytest
-from services.scoring import calculate_pitch_score, calculate_stage_score, calculate_stage_score_v2
+from services.scoring import (
+    calculate_pitch_score,
+    calculate_stage_score,
+    calculate_stage_score_v2,
+    calculate_scale_practice_score,
+)
 from models.tension import TensionScore
 
 
@@ -79,3 +83,152 @@ def test_stage_score_v2_with_tension() -> None:
     assert score == 70
     assert detected is True
     assert detail == "후두 긴장"
+
+
+# ===== 3단계 채점 공식 (scale-practice) =====
+
+class TestScalePracticeBeginner:
+    """초급 (stage 1~9): score = (100 - 긴장도), 통과 = 긴장도 ≤ 45."""
+
+    def test_relaxed_voice_passes(self) -> None:
+        """긴장도 20 → 점수 80, 통과."""
+        result = calculate_scale_practice_score(
+            stage_id=3, tension_overall=20.0, pitch_accuracy=30.0, tone_stability=50.0
+        )
+        assert result.score == 80
+        assert result.passed is True
+        assert result.level == "beginner"
+
+    def test_tense_voice_fails(self) -> None:
+        """긴장도 60 → 점수 40, 불통과."""
+        result = calculate_scale_practice_score(
+            stage_id=5, tension_overall=60.0, pitch_accuracy=90.0, tone_stability=90.0
+        )
+        assert result.score == 40
+        assert result.passed is False
+
+    def test_pitch_ignored_in_beginner(self) -> None:
+        """초급은 음정이 틀려도 몸이 편하면 통과."""
+        result = calculate_scale_practice_score(
+            stage_id=1, tension_overall=30.0, pitch_accuracy=10.0, tone_stability=20.0
+        )
+        assert result.score == 70
+        assert result.passed is True
+
+    def test_boundary_stage_9(self) -> None:
+        """stage 9는 초급."""
+        result = calculate_scale_practice_score(
+            stage_id=9, tension_overall=45.0, pitch_accuracy=50.0, tone_stability=50.0
+        )
+        assert result.score == 55
+        assert result.passed is True  # 긴장도 == 45 → 통과
+
+    def test_boundary_tension_46_fails(self) -> None:
+        """긴장도 46 → 불통과."""
+        result = calculate_scale_practice_score(
+            stage_id=2, tension_overall=46.0, pitch_accuracy=80.0, tone_stability=80.0
+        )
+        assert result.passed is False
+
+
+class TestScalePracticeIntermediate:
+    """중급 (stage 10~17): score = (100-긴장도)*0.6 + 피치정확도*0.4, 통과 = 긴장도 ≤ 40 AND 피치 ≥ 60."""
+
+    def test_good_intermediate_passes(self) -> None:
+        """긴장도 30, 피치 80 → 점수 = 70*0.6 + 80*0.4 = 42+32 = 74, 통과."""
+        result = calculate_scale_practice_score(
+            stage_id=12, tension_overall=30.0, pitch_accuracy=80.0, tone_stability=70.0
+        )
+        assert result.score == 74
+        assert result.passed is True
+        assert result.level == "intermediate"
+
+    def test_high_tension_fails(self) -> None:
+        """긴장도 50 → 피치 좋아도 불통과."""
+        result = calculate_scale_practice_score(
+            stage_id=15, tension_overall=50.0, pitch_accuracy=90.0, tone_stability=90.0
+        )
+        assert result.passed is False
+
+    def test_low_pitch_fails(self) -> None:
+        """피치 50 → 긴장도 낮아도 불통과."""
+        result = calculate_scale_practice_score(
+            stage_id=10, tension_overall=20.0, pitch_accuracy=50.0, tone_stability=80.0
+        )
+        assert result.passed is False
+
+    def test_boundary_stage_17(self) -> None:
+        """stage 17은 중급."""
+        result = calculate_scale_practice_score(
+            stage_id=17, tension_overall=40.0, pitch_accuracy=60.0, tone_stability=70.0
+        )
+        assert result.level == "intermediate"
+        assert result.passed is True  # 긴장도 == 40, 피치 == 60
+
+
+class TestScalePracticeAdvanced:
+    """고급 (stage 18~28): score = (100-긴장도)*0.4 + 피치정확도*0.5 + 톤안정도*0.1, 통과 = 긴장도 ≤ 35 AND 피치 ≥ 75."""
+
+    def test_good_advanced_passes(self) -> None:
+        """긴장도 20, 피치 85, 톤 80 → 점수 = 80*0.4 + 85*0.5 + 80*0.1 = 32+42.5+8 = 82.5 → 83, 통과."""
+        result = calculate_scale_practice_score(
+            stage_id=20, tension_overall=20.0, pitch_accuracy=85.0, tone_stability=80.0
+        )
+        assert result.score == 82  # round(82.5) = 82
+        assert result.passed is True
+        assert result.level == "advanced"
+
+    def test_high_tension_fails(self) -> None:
+        """긴장도 40 → 불통과."""
+        result = calculate_scale_practice_score(
+            stage_id=22, tension_overall=40.0, pitch_accuracy=90.0, tone_stability=90.0
+        )
+        assert result.passed is False
+
+    def test_low_pitch_fails(self) -> None:
+        """피치 70 → 불통과."""
+        result = calculate_scale_practice_score(
+            stage_id=25, tension_overall=30.0, pitch_accuracy=70.0, tone_stability=90.0
+        )
+        assert result.passed is False
+
+    def test_boundary_stage_28(self) -> None:
+        """stage 28은 고급."""
+        result = calculate_scale_practice_score(
+            stage_id=28, tension_overall=35.0, pitch_accuracy=75.0, tone_stability=70.0
+        )
+        assert result.level == "advanced"
+        assert result.passed is True  # 긴장도 == 35, 피치 == 75
+
+    def test_score_formula(self) -> None:
+        """공식 검증: (100-긴장도)*0.4 + 피치*0.5 + 톤*0.1."""
+        result = calculate_scale_practice_score(
+            stage_id=18, tension_overall=50.0, pitch_accuracy=60.0, tone_stability=40.0
+        )
+        # (100-50)*0.4 + 60*0.5 + 40*0.1 = 20 + 30 + 4 = 54
+        assert result.score == 54
+
+
+class TestScalePracticeResult:
+    """ScalePracticeResult 구조 검증."""
+
+    def test_result_has_feedback_hint(self) -> None:
+        """결과에 feedback_hint가 포함되어야 한다."""
+        result = calculate_scale_practice_score(
+            stage_id=5, tension_overall=60.0, pitch_accuracy=80.0, tone_stability=80.0
+        )
+        assert result.feedback_hint != ""
+
+    def test_beginner_hint_is_tension_only(self) -> None:
+        """초급 피드백 힌트는 긴장만 언급."""
+        result = calculate_scale_practice_score(
+            stage_id=3, tension_overall=50.0, pitch_accuracy=20.0, tone_stability=20.0
+        )
+        assert "긴장" in result.feedback_hint
+
+    def test_advanced_hint_includes_all(self) -> None:
+        """고급 피드백 힌트는 종합."""
+        result = calculate_scale_practice_score(
+            stage_id=20, tension_overall=40.0, pitch_accuracy=60.0, tone_stability=50.0
+        )
+        assert "종합" in result.feedback_hint or "긴장" in result.feedback_hint

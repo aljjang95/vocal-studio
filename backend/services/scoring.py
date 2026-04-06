@@ -1,10 +1,75 @@
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from models.tension import TensionScore
+
+
+@dataclass
+class ScalePracticeResult:
+    """3단계 채점 결과."""
+    score: int
+    passed: bool
+    level: str  # "beginner" | "intermediate" | "advanced"
+    feedback_hint: str
+
+
+def _get_level(stage_id: int) -> str:
+    if stage_id <= 9:
+        return "beginner"
+    if stage_id <= 17:
+        return "intermediate"
+    return "advanced"
+
+
+def calculate_scale_practice_score(
+    stage_id: int,
+    tension_overall: float,
+    pitch_accuracy: float,
+    tone_stability: float,
+) -> ScalePracticeResult:
+    """3단계 채점 공식으로 스케일 연습 점수를 계산한다.
+
+    초급 (1~9):  score = (100 - 긴장도), 통과 = 긴장도 ≤ 45
+    중급 (10~17): score = (100-긴장도)*0.6 + 피치정확도*0.4, 통과 = 긴장도 ≤ 40 AND 피치 ≥ 60
+    고급 (18~28): score = (100-긴장도)*0.4 + 피치정확도*0.5 + 톤안정도*0.1, 통과 = 긴장도 ≤ 35 AND 피치 ≥ 75
+    """
+    level = _get_level(stage_id)
+    tension_overall = max(0.0, min(100.0, tension_overall))
+    pitch_accuracy = max(0.0, min(100.0, pitch_accuracy))
+    tone_stability = max(0.0, min(100.0, tone_stability))
+
+    if level == "beginner":
+        raw = 100.0 - tension_overall
+        passed = tension_overall <= 45
+        if not passed:
+            feedback_hint = "긴장 부위를 이완하는 데 집중하세요"
+        else:
+            feedback_hint = "긴장 없이 편안한 소리가 나고 있어요"
+    elif level == "intermediate":
+        raw = (100.0 - tension_overall) * 0.6 + pitch_accuracy * 0.4
+        passed = tension_overall <= 40 and pitch_accuracy >= 60
+        if tension_overall > 40:
+            feedback_hint = "긴장을 더 풀어야 합니다"
+        elif pitch_accuracy < 60:
+            feedback_hint = "긴장은 좋으나 음정 정확도를 높여보세요"
+        else:
+            feedback_hint = "긴장 관리와 음정 모두 양호합니다"
+    else:  # advanced
+        raw = (100.0 - tension_overall) * 0.4 + pitch_accuracy * 0.5 + tone_stability * 0.1
+        passed = tension_overall <= 35 and pitch_accuracy >= 75
+        if tension_overall > 35:
+            feedback_hint = "종합: 고음에서 긴장이 감지됩니다"
+        elif pitch_accuracy < 75:
+            feedback_hint = "종합: 긴장 관리는 좋으나 음정 정밀도를 높여야 합니다"
+        else:
+            feedback_hint = "종합: 긴장, 음정, 톤 모두 우수합니다"
+
+    score = round(max(0.0, min(100.0, raw)))
+    return ScalePracticeResult(score=score, passed=passed, level=level, feedback_hint=feedback_hint)
 
 
 def calculate_pitch_score(target_hz: list[float], actual_hz: list[float]) -> int:

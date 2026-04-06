@@ -1,6 +1,9 @@
 """RAG 기반 감각 코칭 — ChromaDB 검색 + Claude API."""
 from __future__ import annotations
-import os, json, re, logging
+import os
+import json
+import re
+import logging
 import anthropic
 import chromadb
 
