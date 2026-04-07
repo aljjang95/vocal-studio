@@ -179,8 +179,9 @@ export async function POST(
 
     // FAQ 자동 응답 체크 — 매칭되면 API 호출 없이 즉시 응답
     const lastMsg = messages[messages.length - 1];
-    if (lastMsg?.role === 'user' && typeof lastMsg.content === 'string') {
-      const faqMatch = matchFaq(lastMsg.content);
+    if (lastMsg?.role === 'user') {
+      const content = typeof lastMsg.content === 'string' ? lastMsg.content : '';
+      const faqMatch = matchFaq(content);
       if (faqMatch) {
         return NextResponse.json({ reply: faqMatch.answer } satisfies ChatResponse);
       }
