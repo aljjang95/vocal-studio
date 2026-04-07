@@ -1,30 +1,51 @@
-import { NextResponse } from 'next/server';
-import { ApiError } from '@/types';
+import { NextRequest, NextResponse } from 'next/server';
 
-// ── Phase 1: 미구현 엔드포인트 ────────────────────────────────
-// 이 엔드포인트는 Phase 2(Supabase Auth + Web Audio API) 연동 전까지
-// 모든 요청에 501 Not Implemented를 반환합니다.
-//
-// ⚠️ Phase 2 구현 체크리스트 (이 주석을 지우기 전에 모두 완료할 것):
-//   □ lib/supabase/server.ts의 createClient() 연결 확인
-//   □ getUser()로 세션 토큰 검증 (body.userId 절대 신뢰 금지)
-//   □ analysis_results 테이블 스키마 마이그레이션 완료
-//   □ RLS 정책: "자신의 행만 INSERT 가능" 설정 확인
-//   □ Web Audio API pitchfinder 연동 완료
-//
-// Phase 2 구현 예시:
-//   import { createClient } from '@/lib/supabase/server';
-//   const supabase = createClient();
-//   const { data: { user }, error } = await supabase.auth.getUser();
-//   if (error || !user) return NextResponse.json({ error: '인증이 필요합니다.', code: 'UNAUTHORIZED' }, { status: 401 });
-//   const userId = user.id; // ← body.userId 절대 신뢰 금지, 반드시 이 값 사용
+const BACKEND_URL = process.env.VOCAL_BACKEND_URL ?? 'http://localhost:8001';
 
-export async function POST(): Promise<NextResponse<ApiError>> {
-  return NextResponse.json(
-    {
-      error: '음성 분석 기능은 준비 중입니다.',
-      code: 'NOT_IMPLEMENTED',
-    },
-    { status: 501 }
-  );
+/**
+ * POST /api/analyze
+ * 음성 파일을 Python 백엔드 /evaluate로 프록시하여 분석 결과를 반환한다.
+ * 클라이언트에서 multipart/form-data로 audio + stage_id를 전송.
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const formData = await request.formData();
+    const audio = formData.get('audio');
+    const stageId = formData.get('stage_id') ?? '1';
+
+    if (!audio || !(audio instanceof Blob)) {
+      return NextResponse.json(
+        { error: '음성 파일이 필요합니다.', code: 'MISSING_AUDIO' },
+        { status: 400 },
+      );
+    }
+
+    const backendForm = new FormData();
+    backendForm.append('audio', audio, 'recording.webm');
+    backendForm.append('stage_id', String(stageId));
+    backendForm.append('target_pitches', '[]');
+
+    const res = await fetch(`${BACKEND_URL}/evaluate`, {
+      method: 'POST',
+      body: backendForm,
+    });
+
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      return NextResponse.json(
+        { error: errBody.detail ?? '음성 분석에 실패했습니다.', code: 'ANALYSIS_FAILED' },
+        { status: res.status },
+      );
+    }
+
+    const result = await res.json();
+    return NextResponse.json(result);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'unknown';
+    console.error('[/api/analyze]', msg);
+    return NextResponse.json(
+      { error: '서버 오류가 발생했습니다.', code: 'SERVER_ERROR' },
+      { status: 500 },
+    );
+  }
 }
