@@ -7,7 +7,6 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const audio = formData.get('audio') as File | null;
     const stageId = formData.get('stage_id') as string;
-    const targetPitches = formData.get('target_pitches') as string;
 
     if (!audio || !stageId) {
       return NextResponse.json(
@@ -16,14 +15,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // FormData를 그대로 Python 백엔드에 전달
+    const backendForm = new FormData();
+    backendForm.append('audio', audio, audio.name || 'recording.webm');
+    backendForm.append('stage_id', stageId);
+    backendForm.append('target_pitches', formData.get('target_pitches') as string || '[]');
+
     const resp = await fetch(`${BACKEND_URL}/evaluate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        stage_id: parseInt(stageId, 10),
-        audio_url: 'file:///tmp/recording.wav',
-        target_pitches: JSON.parse(targetPitches || '[]'),
-      }),
+      body: backendForm,
     });
 
     const data = await resp.json();

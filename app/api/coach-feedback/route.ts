@@ -7,7 +7,7 @@ import {
 import type { ApiError, CoachFeedback } from '@/types';
 
 // ── AI 설정 ─────────────────────────────────────────────────
-const AI_MODEL = process.env.AI_MODEL ?? 'claude-sonnet-4-20250514';
+const AI_MODEL = process.env.AI_MODEL ?? 'claude-haiku-4-5-20251001';
 const AI_MAX_TOKENS = 800;
 
 // ── Rate Limit (인메모리) ───────────────────────────────────

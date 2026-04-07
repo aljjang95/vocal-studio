@@ -55,7 +55,7 @@ def get_coaching_feedback(stage_id: int, user_message: str, score: int, pitch_ac
 
     client = anthropic.Anthropic()
     response = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-haiku-4-5-20251001",
         max_tokens=500,
         system=[{"type": "text", "text": COACHING_SYSTEM, "cache_control": {"type": "ephemeral"}}],
         messages=[{"role": "user", "content": user_prompt}],
