@@ -10,10 +10,17 @@ from routers.onboarding import router as onboarding_router
 
 app = FastAPI(title="VocalMind AI Backend", version="0.1.0")
 
+import os as _os
+
+_allowed_origins = [
+    "http://localhost:3000",
+    *([_os.environ["FRONTEND_URL"]] if _os.environ.get("FRONTEND_URL") else []),
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    allow_methods=["POST"],
+    allow_origins=_allowed_origins,
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
