@@ -3,7 +3,6 @@
 import { useState, useRef, useCallback, useEffect, type DragEvent, type ChangeEvent } from 'react';
 import { usePracticeStore } from '@/stores/practiceStore';
 import { saveBlob, getBlob } from '@/lib/storage/songDB';
-import styles from './SongUploader.module.css';
 
 const ACCEPTED_TYPES = ['audio/mpeg', 'audio/wav', 'audio/x-m4a', 'audio/mp4', 'audio/flac', 'audio/x-flac'];
 const ACCEPTED_EXTENSIONS = ['.mp3', '.wav', '.m4a', '.flac'];
@@ -257,24 +256,24 @@ export default function SongUploader({ collapsed, onToggle }: Props) {
 
   if (collapsed) {
     return (
-      <div className={styles.uploader}>
-        <div className={styles.header}>
-          <span className={styles.title}>곡 업로드</span>
-          <button className={styles.toggleBtn} onClick={onToggle}>펼치기</button>
+      <div className="bg-[var(--bg2)] border border-[var(--border)] rounded-xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-lg font-bold text-[var(--text)]">곡 업로드</span>
+          <button className="bg-transparent border border-[var(--border2)] text-[var(--text2)] text-xs px-3 py-1.5 rounded-md cursor-pointer transition-all hover:text-[var(--text)] hover:bg-[var(--surface2)]" onClick={onToggle}>펼치기</button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={styles.uploader}>
-      <div className={styles.header}>
-        <span className={styles.title}>곡 업로드</span>
-        <button className={styles.toggleBtn} onClick={onToggle}>접기</button>
+    <div className="bg-[var(--bg2)] border border-[var(--border)] rounded-xl p-5">
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-lg font-bold text-[var(--text)]">곡 업로드</span>
+        <button className="bg-transparent border border-[var(--border2)] text-[var(--text2)] text-xs px-3 py-1.5 rounded-md cursor-pointer transition-all hover:text-[var(--text)] hover:bg-[var(--surface2)]" onClick={onToggle}>접기</button>
       </div>
 
       <div
-        className={`${styles.dropzone} ${dragOver ? styles.dropzoneActive : ''} ${file ? styles.dropzoneHasFile : ''}`}
+        className={`${"border-2 border-dashed border-[var(--border2)] rounded-lg px-4 py-8 text-center cursor-pointer transition-all relative mb-4 hover:border-[var(--accent)] hover:bg-blue-500/[0.04]"} ${dragOver ? "border-[var(--accent)] bg-blue-500/[0.08]" : ''} ${file ? "border-[var(--success)] border-solid bg-green-500/[0.05]" : ''}`}
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleFileDrop}
@@ -282,19 +281,19 @@ export default function SongUploader({ collapsed, onToggle }: Props) {
       >
         {file ? (
           <>
-            <span className={styles.dropzoneLabel}>선택된 파일</span>
-            <div className={styles.fileName}>{file.name}</div>
-            <span className={styles.dropzoneHint}>
+            <span className="block text-sm font-semibold text-[var(--text2)] mb-1.5">선택된 파일</span>
+            <div className="text-sm text-[var(--success)] mt-1 mb-1 break-all">{file.name}</div>
+            <span className="text-xs text-[var(--muted)]">
               {(file.size / (1024 * 1024)).toFixed(1)}MB
             </span>
           </>
         ) : (
           <>
-            <span className={styles.dropzoneIcon}>&#9835;</span>
-            <span className={styles.dropzoneLabel}>
+            <span className="block text-[1.8rem] opacity-30 mb-2">&#9835;</span>
+            <span className="block text-sm font-semibold text-[var(--text2)] mb-1.5">
               오디오 파일을 끌어다 놓거나 클릭하여 선택
             </span>
-            <span className={styles.dropzoneHint}>
+            <span className="text-xs text-[var(--muted)]">
               {ACCEPTED_EXTENSIONS.join(', ')} / 최대 50MB
             </span>
           </>
@@ -303,16 +302,16 @@ export default function SongUploader({ collapsed, onToggle }: Props) {
           ref={fileInputRef}
           type="file"
           accept={ACCEPTED_EXTENSIONS.join(',')}
-          className={styles.fileInput}
+          className="hidden"
           onChange={handleFileSelect}
         />
       </div>
 
-      <div className={styles.fields}>
-        <div className={styles.field}>
-          <label className={styles.fieldLabel}>곡 제목 *</label>
+      <div className="grid grid-cols-2 gap-3 mb-4 max-sm:grid-cols-1">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-[var(--text2)] font-medium">곡 제목 *</label>
           <input
-            className={styles.fieldInput}
+            className="bg-[var(--surface)] border border-[var(--border)] rounded-md px-3 py-2 text-sm text-[var(--text)] outline-none transition-colors focus:border-[var(--accent)]"
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -320,10 +319,10 @@ export default function SongUploader({ collapsed, onToggle }: Props) {
             maxLength={100}
           />
         </div>
-        <div className={styles.field}>
-          <label className={styles.fieldLabel}>아티스트</label>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-[var(--text2)] font-medium">아티스트</label>
           <input
-            className={styles.fieldInput}
+            className="bg-[var(--surface)] border border-[var(--border)] rounded-md px-3 py-2 text-sm text-[var(--text)] outline-none transition-colors focus:border-[var(--accent)]"
             type="text"
             value={artist}
             onChange={(e) => setArtist(e.target.value)}
@@ -333,10 +332,10 @@ export default function SongUploader({ collapsed, onToggle }: Props) {
         </div>
       </div>
 
-      {error && <p className={styles.error}>{error}</p>}
+      {error && <p className="text-[var(--error)] text-xs mb-2">{error}</p>}
 
       <button
-        className={styles.addBtn}
+        className="w-full py-2.5 bg-[var(--accent)] text-white border-none rounded-md text-sm font-semibold cursor-pointer transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
         onClick={handleAdd}
         disabled={!canAdd || isAdding}
       >
@@ -345,13 +344,13 @@ export default function SongUploader({ collapsed, onToggle }: Props) {
 
       {/* Separation progress inline */}
       {separatingId && !separationError && (
-        <div className={styles.separationProgress}>
-          <div className={styles.separationLabel}>
+        <div className="mt-3 p-3 bg-[var(--surface)] rounded-md">
+          <div className="text-xs text-[var(--accent-lt)] font-medium mb-2">
             보컬/MR 분리 중... {separationProgress}%
           </div>
-          <div className={styles.progressBar}>
+          <div className="h-1 bg-[var(--surface2)] rounded-sm overflow-hidden">
             <div
-              className={styles.progressFill}
+              className="h-full bg-[var(--accent)] rounded-sm transition-[width] duration-300"
               style={{ width: `${separationProgress}%` }}
             />
           </div>
@@ -359,15 +358,15 @@ export default function SongUploader({ collapsed, onToggle }: Props) {
       )}
 
       {separationError && (
-        <div className={styles.separationError}>
+        <div className="mt-3 p-3 bg-red-500/[0.08] border border-red-500/20 rounded-md flex items-center justify-between gap-3 text-xs text-[var(--error-lt)]">
           <span>{separationError}</span>
-          <button className={styles.retryBtn} onClick={handleRetrySeparation}>
+          <button className="shrink-0 px-3 py-1.5 bg-[var(--error)] text-white border-none rounded-md text-xs font-semibold cursor-pointer transition-opacity hover:opacity-90" onClick={handleRetrySeparation}>
             다시 시도
           </button>
         </div>
       )}
 
-      <div className={styles.notice}>
+      <div className="bg-[var(--surface)] rounded-md p-3 text-center text-[var(--muted)] text-xs mt-3 leading-relaxed">
         업로드 후 자동으로 보컬/MR 분리가 진행됩니다. 분리 중에도 원본으로 재생 가능합니다.
       </div>
     </div>

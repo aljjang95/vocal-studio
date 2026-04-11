@@ -3,15 +3,13 @@
 import { Message } from '@/types';
 import { IconMic, IconUser } from '@/components/shared/Icons';
 import TTSButton from '@/components/shared/TTSButton';
-import styles from './ChatMessage.module.css';
 
 interface ChatMessageProps {
   message: Message;
 }
 
-// RISK-1 수정: dangerouslySetInnerHTML 제거.
-// 텍스트를 줄바꿈(\n)과 **bold** 패턴으로 파싱해 React 엘리먼트로 렌더링.
-// HTML 문자열을 직접 삽입하지 않으므로 XSS 위험 없음.
+// Safe text parser: converts newlines and **bold** patterns to React elements.
+// No raw HTML injection -- XSS-safe by design.
 function parseContent(text: string): React.ReactNode[] {
   const nodes: React.ReactNode[] = [];
 
@@ -36,14 +34,26 @@ export default function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.role === 'user';
 
   return (
-    <div className={`${styles.chatMsg} ${isUser ? styles.user : styles.ai}`}>
-      <div className={`${styles.chatAvatar} ${isUser ? styles.userAv : styles.aiAv}`}>
+    <div className={`flex gap-2.5 items-end ${isUser ? 'flex-row-reverse' : ''}`}>
+      <div
+        className={`w-[30px] h-[30px] rounded-lg shrink-0 flex items-center justify-center text-[13px] ${
+          isUser
+            ? 'bg-white/10 text-[var(--text2)]'
+            : 'bg-[rgba(59,130,246,0.14)] text-[var(--accent-lt)]'
+        }`}
+      >
         {isUser ? <IconUser size={14} /> : <IconMic size={14} />}
       </div>
-      <div className={styles.chatBubble}>
+      <div
+        className={`max-w-[78%] px-4 py-3 rounded-[18px] text-[0.875rem] leading-[1.58] ${
+          isUser
+            ? 'bg-white/[0.08] border border-white/[0.12] rounded-br-[5px] text-[var(--text)]'
+            : 'bg-[rgba(59,130,246,0.11)] border border-[rgba(59,130,246,0.18)] rounded-bl-[5px] text-[var(--text2)]'
+        }`}
+      >
         {parseContent(message.content)}
         {!isUser && (
-          <div className={styles.ttsRow}>
+          <div className="mt-1.5 flex justify-end">
             <TTSButton text={message.content} size="sm" />
           </div>
         )}
@@ -54,11 +64,15 @@ export default function ChatMessage({ message }: ChatMessageProps) {
 
 export function TypingIndicator() {
   return (
-    <div className={`${styles.chatMsg} ${styles.ai}`}>
-      <div className={`${styles.chatAvatar} ${styles.aiAv}`}><IconMic size={14} /></div>
-      <div className={styles.chatBubble} style={{ padding: '8px 14px' }}>
-        <div className={styles.typingDots}>
-          <span /><span /><span />
+    <div className="flex gap-2.5 items-end">
+      <div className="w-[30px] h-[30px] rounded-lg shrink-0 flex items-center justify-center text-[13px] bg-[rgba(59,130,246,0.14)] text-[var(--accent-lt)]">
+        <IconMic size={14} />
+      </div>
+      <div className="max-w-[78%] px-3.5 py-2 rounded-[18px] text-[0.875rem] leading-[1.58] bg-[rgba(59,130,246,0.11)] border border-[rgba(59,130,246,0.18)] rounded-bl-[5px] text-[var(--text2)]">
+        <div className="flex gap-1 items-center py-1 px-0.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-[var(--muted)] animate-[typingBounce_1.2s_infinite]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-[var(--muted)] animate-[typingBounce_1.2s_infinite_0.2s]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-[var(--muted)] animate-[typingBounce_1.2s_infinite_0.4s]" />
         </div>
       </div>
     </div>

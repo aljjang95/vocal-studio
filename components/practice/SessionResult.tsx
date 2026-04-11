@@ -5,7 +5,6 @@ import { usePracticeStore } from '@/stores/practiceStore';
 import { getSessions } from '@/lib/storage/songDB';
 import type { SessionScore } from '@/types';
 import PitchTimeline from './PitchTimeline';
-import styles from './SessionResult.module.css';
 
 function formatDuration(sec: number): string {
   const m = Math.floor(sec / 60);
@@ -14,11 +13,11 @@ function formatDuration(sec: number): string {
 }
 
 function getScoreGrade(score: number): { label: string; className: string } {
-  if (score >= 90) return { label: 'S', className: styles.gradeS };
-  if (score >= 80) return { label: 'A', className: styles.gradeA };
-  if (score >= 70) return { label: 'B', className: styles.gradeB };
-  if (score >= 60) return { label: 'C', className: styles.gradeC };
-  return { label: 'D', className: styles.gradeD };
+  if (score >= 90) return { label: 'S', className: "text-[#FFD700]" };
+  if (score >= 80) return { label: 'A', className: "text-[var(--success)]" };
+  if (score >= 70) return { label: 'B', className: "text-[var(--accent-lt)]" };
+  if (score >= 60) return { label: 'C', className: "text-[var(--warning)]" };
+  return { label: 'D', className: "text-[var(--error-lt)]" };
 }
 
 export default function SessionResult() {
@@ -111,18 +110,18 @@ export default function SessionResult() {
     : null;
 
   return (
-    <div className={styles.overlay} onClick={handleClose}>
-      <div className={styles.dialog} onClick={(e) => e.stopPropagation()}>
-        <button className={styles.closeBtn} onClick={handleClose} aria-label="닫기">
+    <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-[300] backdrop-blur-sm" onClick={handleClose}>
+      <div className="bg-[var(--bg2)] border border-[var(--border2)] rounded-xl px-8 py-9 max-w-[440px] w-[92%] relative animate-[resultSlideIn_0.4s_cubic-bezier(0.16,1,0.3,1)]" onClick={(e) => e.stopPropagation()}>
+        <button className="absolute top-4 right-4 bg-transparent border-none text-[var(--muted)] text-lg cursor-pointer p-1 transition-colors hover:text-[var(--text)]" onClick={handleClose} aria-label="닫기">
           &#10005;
         </button>
 
-        <div className={styles.title}>연주 결과</div>
+        <div className="text-sm font-semibold text-[var(--text)]">연주 결과</div>
 
         {/* Score gauge */}
-        <div className={styles.gaugeSection}>
-          <div className={styles.gauge}>
-            <svg viewBox="0 0 120 120" className={styles.gaugeSvg}>
+        <div className="flex justify-center mb-7">
+          <div className="relative w-[140px] h-[140px]">
+            <svg viewBox="0 0 120 120" className="w-full h-full">
               <circle
                 cx="60" cy="60" r="54"
                 fill="none"
@@ -138,47 +137,47 @@ export default function SessionResult() {
                 strokeDasharray={circumference}
                 strokeDashoffset={strokeDashoffset}
                 transform="rotate(-90 60 60)"
-                className={styles.gaugeProgress}
+                className="transition-[stroke-dashoffset] duration-[800ms] cubic-bezier(0.16,1,0.3,1)"
               />
             </svg>
-            <div className={styles.gaugeCenter}>
-              <div className={styles.scoreNumber}>{animatedScore}</div>
-              <div className={`${styles.gradeLabel} ${grade.className}`}>{grade.label}</div>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <div className="text-[2.5rem] font-extrabold text-[var(--text)] font-[Inter,monospace] leading-none">{animatedScore}</div>
+              <div className={`${"text-sm font-bold mt-1"} ${grade.className}`}>{grade.label}</div>
             </div>
           </div>
         </div>
 
         {/* Category scores */}
-        <div className={styles.categories}>
-          <div className={styles.categoryItem}>
-            <span className={styles.categoryLabel}>음정 정확도</span>
-            <div className={styles.categoryBar}>
+        <div className="flex flex-col gap-3.5 mb-5">
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-[var(--text2)] min-w-[80px] font-medium">음정 정확도</span>
+            <div className="flex-1 h-1.5 bg-[var(--surface2)] rounded-sm overflow-hidden">
               <div
-                className={styles.categoryFill}
+                className="h-full bg-[var(--accent)] rounded-sm transition-[width] duration-1000 ease-out delay-500"
                 style={{ width: `${currentSession.overallScore}%` }}
               />
             </div>
-            <span className={styles.categoryValue}>{currentSession.overallScore}</span>
+            <span className="text-xs text-[var(--text)] font-semibold min-w-[28px] text-right font-[Inter,monospace]">{currentSession.overallScore}</span>
           </div>
         </div>
 
         {/* Comparison with previous */}
         {previousBest && scoreDiff !== null && (
-          <div className={styles.comparison}>
-            <span className={styles.comparisonLabel}>이전 최고 기록 대비</span>
-            <span className={`${styles.comparisonDiff} ${
-              scoreDiff > 0 ? styles.diffUp : scoreDiff < 0 ? styles.diffDown : styles.diffSame
+          <div className="flex items-center justify-center gap-2 p-2.5 bg-[var(--surface)] rounded-md mb-4">
+            <span className="text-xs text-[var(--text2)]">이전 최고 기록 대비</span>
+            <span className={`${"text-sm font-bold font-[Inter,monospace]"} ${
+              scoreDiff > 0 ? "text-[var(--success)]" : scoreDiff < 0 ? "text-[var(--error-lt)]" : "text-[var(--muted)]"
             }`}>
               {scoreDiff > 0 ? `+${scoreDiff}` : scoreDiff === 0 ? '동일' : `${scoreDiff}`}
             </span>
-            <span className={styles.comparisonPrev}>
+            <span className="text-xs text-[var(--muted)]">
               (이전: {previousBest.overallScore}점)
             </span>
           </div>
         )}
 
         {/* Song + duration info */}
-        <div className={styles.meta}>
+        <div className="flex justify-center gap-4 text-xs text-[var(--muted)] mb-6">
           <span>소요 시간: {formatDuration(currentSession.duration)}</span>
           {currentSession.keyShift !== 0 && (
             <span>
@@ -188,18 +187,18 @@ export default function SessionResult() {
         </div>
 
         {/* Actions */}
-        <div className={styles.actions}>
-          <button className={styles.retryBtn} onClick={handleRetry}>
+        <div className="flex gap-2.5">
+          <button className="flex-1 py-3 bg-[var(--accent)] text-white border-none rounded-md text-sm font-semibold cursor-pointer transition-opacity hover:opacity-90" onClick={handleRetry}>
             다시 부르기
           </button>
-          <button className={styles.practiceBtn} onClick={handlePractice}>
+          <button className="flex-1 py-3 bg-transparent text-[var(--text2)] border border-[var(--border2)] rounded-md text-sm font-semibold cursor-pointer transition-all hover:bg-[var(--surface2)] hover:text-[var(--text)]" onClick={handlePractice}>
             연습하기
           </button>
         </div>
 
         {/* Detail analysis toggle */}
         <button
-          className={styles.detailBtn}
+          className="block w-full mt-3 py-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-md text-[var(--accent-lt)] text-xs font-semibold cursor-pointer transition-all text-center hover:bg-[var(--surface2)] hover:text-[var(--accent)]"
           onClick={() => setShowTimeline((prev) => !prev)}
         >
           {showTimeline ? '상세 분석 닫기' : '상세 분석 보기'}
@@ -207,7 +206,7 @@ export default function SessionResult() {
 
         {/* PitchTimeline */}
         {showTimeline && currentSession && (
-          <div className={styles.timelineWrap}>
+          <div className="mt-4">
             <PitchTimeline session={currentSession} analysis={currentAnalysis} />
           </div>
         )}

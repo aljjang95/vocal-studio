@@ -6,7 +6,6 @@ import { getLessonById } from '@/lib/curriculum';
 import ChatMessage, { TypingIndicator } from '@/components/coach/ChatMessage';
 import ChatInput from '@/components/coach/ChatInput';
 import { IconMic } from '@/components/shared/Icons';
-import styles from './CoachingChat.module.css';
 
 export default function CoachingChat() {
   const {
@@ -49,7 +48,6 @@ export default function CoachingChat() {
       return;
     }
 
-    // 히스토리 구성 (초기 메시지 포함)
     const prevHistory = useCoachingStore
       .getState()
       .messages.map((m) => ({ role: m.role, content: m.content }));
@@ -78,7 +76,6 @@ export default function CoachingChat() {
       const data = await res.json() as { reply?: string };
       append('assistant', data.reply ?? '죄송해요, 잠시 후 다시 시도해주세요.');
 
-      // 3턴 이상이면 레슨 완료 처리
       const userMsgCount = useCoachingStore.getState().messages.filter((m) => m.role === 'user').length;
       if (userMsgCount >= 3 && currentLessonId) {
         completeLesson(currentLessonId);
@@ -91,30 +88,37 @@ export default function CoachingChat() {
   }, [isLoading, append, setLoading, completeLesson, currentLessonId]);
 
   return (
-    <div className={styles.chatContainer}>
-      <div className={styles.chatHeader}>
-        <div className={styles.chatAv}><IconMic size={16} /></div>
-        <div className={styles.chatHeaderText}>
-          <div className={styles.chatHeaderTitle}>
+    <div className="bg-[var(--bg3)] border border-[var(--border2)] rounded-[var(--r)] overflow-hidden flex flex-col max-h-[calc(100vh-120px)]">
+      <div className="px-5 py-4 bg-black/30 border-b border-[var(--border)] flex items-center gap-3">
+        <div className="w-9 h-9 rounded-[10px] bg-gradient-to-br from-[var(--accent)] to-[var(--success)] flex items-center justify-center text-[15px] shrink-0 text-white">
+          <IconMic size={16} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-['Inter',sans-serif] text-[0.88rem] font-bold whitespace-nowrap overflow-hidden text-ellipsis">
             {lessonInfo ? lessonInfo.lesson.title : 'HLB 보컬스튜디오 AI 코치'}
           </div>
-          <div className={styles.chatHeaderSub}>
+          <div className="text-[0.7rem] text-[var(--text2)]">
             {lessonInfo ? `${lessonInfo.category.icon} ${lessonInfo.category.title}` : '레슨을 선택해주세요'}
           </div>
         </div>
-        <div className={styles.onlineStatus}>
-          <div className={styles.onlineDot} />
+        <div className="ml-auto flex items-center gap-[5px] text-[0.7rem] text-[var(--success-lt)] font-mono shrink-0">
+          <div className="w-[5px] h-[5px] bg-[var(--success-lt)] rounded-full animate-[pulse_2s_infinite]" />
           온라인
         </div>
       </div>
 
-      <div className={styles.chatBody} ref={bodyRef} role="log" aria-live="polite">
+      <div
+        className="flex-1 p-5 overflow-y-auto flex flex-col gap-3.5 min-h-[300px] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[var(--border2)] [&::-webkit-scrollbar-thumb]:rounded-sm"
+        ref={bodyRef}
+        role="log"
+        aria-live="polite"
+      >
         {messages.map((msg) => (
           <ChatMessage key={msg.id} message={msg} />
         ))}
         {isLoading && <TypingIndicator />}
         {messages.length === 0 && !isLoading && (
-          <div className={styles.emptyState}>
+          <div className="flex items-center justify-center flex-1 text-[var(--text2)] text-[0.88rem] text-center p-10">
             <p>왼쪽 커리큘럼에서 레슨을 선택하면 코칭이 시작됩니다.</p>
           </div>
         )}

@@ -10,7 +10,6 @@ import {
   disposePitchShifter,
 } from '@/lib/audio/pitchShifter';
 import type { Song } from '@/types';
-import styles from './PracticePlayer.module.css';
 
 const SPEEDS = [0.5, 0.75, 1.0, 1.25, 1.5];
 
@@ -467,74 +466,74 @@ export default function PracticePlayer({ song }: Props) {
 
   if (!song) {
     return (
-      <div className={styles.player}>
-        <div className={styles.noSong}>
-          <div className={styles.noSongIcon}>&#9654;</div>
-          <p className={styles.noSongText}>곡을 업로드하거나 선택해주세요</p>
+      <div className="bg-[var(--bg2)] border border-[var(--border)] rounded-xl p-5">
+        <div className="flex flex-col items-center justify-center px-5 py-12 text-center gap-3">
+          <div className="text-[2.5rem] opacity-20">&#9654;</div>
+          <p className="text-[var(--text2)] text-sm">곡을 업로드하거나 선택해주세요</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={styles.player}>
+    <div className="bg-[var(--bg2)] border border-[var(--border)] rounded-xl p-5">
       {/* Song info */}
-      <div className={styles.songHeader}>
-        <div className={styles.songInfo}>
-          <div className={styles.songTitle}>{song.title}</div>
-          <div className={styles.songArtist}>{song.artist}</div>
+      <div className="flex items-start justify-between mb-4 gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="text-lg font-bold text-[var(--text)]">{song.title}</div>
+          <div className="text-sm text-[var(--text2)] mt-0.5">{song.artist}</div>
         </div>
         {separationStatus === 'pending' && (
-          <div className={styles.separatingBadge}>보컬 분리 중...</div>
+          <div className="shrink-0 px-2.5 py-1 bg-yellow-500/[0.15] text-[var(--warning)] rounded-[10px] text-[11px] font-semibold animate-pulse">보컬 분리 중...</div>
         )}
       </div>
 
       {/* Seekbar */}
-      <div className={styles.seekbarContainer}>
+      <div className="relative mb-2">
         <div
           ref={seekbarRef}
-          className={styles.seekbar}
+          className="w-full h-1.5 bg-[var(--surface2)] rounded-sm cursor-pointer relative overflow-visible"
           onMouseDown={handleSeekDown}
         >
           {/* Loop region highlight */}
           {loopStart !== null && loopEnd !== null && duration > 0 && (
             <div
-              className={styles.loopRegion}
+              className="absolute top-0 h-full bg-blue-500/20 rounded-sm pointer-events-none z-[1]"
               style={{
                 left: `${(loopStart / duration) * 100}%`,
                 width: `${((loopEnd - loopStart) / duration) * 100}%`,
               }}
             />
           )}
-          <div className={styles.seekbarFill} style={{ width: `${progress}%` }} />
-          <div className={styles.seekbarHandle} style={{ left: `${progress}%` }} />
+          <div className="h-full bg-[var(--accent)] rounded-sm pointer-events-none relative z-[2]" style={{ width: `${progress}%` }} />
+          <div className="absolute top-1/2 w-3.5 h-3.5 bg-[var(--accent-lt)] rounded-full -translate-x-1/2 -translate-y-1/2 pointer-events-none shadow-[0_1px_4px_rgba(0,0,0,0.3)] z-[3]" style={{ left: `${progress}%` }} />
         </div>
       </div>
 
       {/* Time */}
-      <div className={styles.timeDisplay}>
+      <div className="flex justify-between text-xs text-[var(--muted)] mb-4">
         <span>{formatTime(currentTime)}</span>
         <span>{formatTime(duration)}</span>
       </div>
 
       {/* Transport */}
-      <div className={styles.transport}>
-        <button className={styles.transportBtn} onClick={restart} aria-label="처음으로">
+      <div className="flex items-center justify-center gap-3 mb-5">
+        <button className="w-10 h-10 flex items-center justify-center bg-[var(--surface)] border border-[var(--border)] rounded-full text-[var(--text)] cursor-pointer text-base transition-all hover:bg-[var(--surface2)] hover:border-[var(--border2)]" onClick={restart} aria-label="처음으로">
           &#9198;
         </button>
-        <button className={`${styles.transportBtn} ${styles.playBtn}`} onClick={togglePlay} aria-label={isPlaying ? '일시정지' : '재생'}>
+        <button className={`${"w-10 h-10 flex items-center justify-center bg-[var(--surface)] border border-[var(--border)] rounded-full text-[var(--text)] cursor-pointer text-base transition-all hover:bg-[var(--surface2)] hover:border-[var(--border2)]"} ${"w-[52px] h-[52px] bg-[var(--accent)] border-[var(--accent)] text-xl hover:bg-[var(--accent-lt)] hover:border-[var(--accent-lt)]"}`} onClick={togglePlay} aria-label={isPlaying ? '일시정지' : '재생'}>
           {isPlaying ? '\u275A\u275A' : '\u25B6'}
         </button>
       </div>
 
       {/* Speed */}
-      <div className={styles.speedSection}>
-        <div className={styles.sectionLabel}>재생 속도</div>
-        <div className={styles.speedBtns}>
+      <div className="mb-5">
+        <div className="text-xs text-[var(--text2)] font-semibold mb-2 uppercase tracking-wide">재생 속도</div>
+        <div className="flex gap-1.5">
           {SPEEDS.map((s) => (
             <button
               key={s}
-              className={`${styles.speedBtn} ${playbackRate === s ? styles.speedBtnActive : ''}`}
+              className={`${"flex-1 px-1 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-md text-[var(--text2)] text-xs font-medium cursor-pointer transition-all hover:bg-[var(--surface2)] hover:text-[var(--text)]"} ${playbackRate === s ? "bg-[var(--accent)] border-[var(--accent)] text-white hover:bg-[var(--accent-lt)]" : ''}`}
               onClick={() => setPlaybackRate(s)}
             >
               {s}x
@@ -544,21 +543,21 @@ export default function PracticePlayer({ song }: Props) {
       </div>
 
       {/* Key Shift */}
-      <div className={styles.keySection}>
-        <div className={styles.sectionLabel}>키 조절</div>
-        <div className={styles.keyControls}>
+      <div className="mb-5">
+        <div className="text-xs text-[var(--text2)] font-semibold mb-2 uppercase tracking-wide">키 조절</div>
+        <div className="flex items-center gap-3 justify-center">
           <button
-            className={styles.keyBtn}
+            className="w-8 h-8 flex items-center justify-center bg-[var(--surface)] border border-[var(--border)] rounded-md text-[var(--text)] cursor-pointer text-base font-semibold transition-all hover:bg-[var(--surface2)] hover:border-[var(--border2)] disabled:opacity-30 disabled:cursor-not-allowed"
             onClick={() => setKeyShift(keyShift - 1)}
             disabled={keyShift <= -6}
           >
             -
           </button>
-          <span className={styles.keyValue}>
+          <span className="text-sm font-bold text-[var(--text)] min-w-[48px] text-center font-[Inter,monospace]">
             {keyShift === 0 ? '원키' : keyShift > 0 ? `+${keyShift}` : `${keyShift}`}
           </span>
           <button
-            className={styles.keyBtn}
+            className="w-8 h-8 flex items-center justify-center bg-[var(--surface)] border border-[var(--border)] rounded-md text-[var(--text)] cursor-pointer text-base font-semibold transition-all hover:bg-[var(--surface2)] hover:border-[var(--border2)] disabled:opacity-30 disabled:cursor-not-allowed"
             onClick={() => setKeyShift(keyShift + 1)}
             disabled={keyShift >= 6}
           >
@@ -566,16 +565,16 @@ export default function PracticePlayer({ song }: Props) {
           </button>
         </div>
         {keyShift !== 0 && (
-          <div className={styles.keyHint}>
+          <div className="text-[10px] text-[var(--muted)] text-center mt-1.5">
             {keyShift > 0 ? `+${keyShift}` : keyShift} 반음 적용됨
           </div>
         )}
       </div>
 
       {/* Volume */}
-      <div className={styles.volumeSection}>
-        <div className={styles.volumeRow}>
-          <span className={styles.volumeLabel}>MR 볼륨</span>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-[var(--text2)] min-w-[80px] font-medium">MR 볼륨</span>
           <input
             type="range"
             min={0}
@@ -583,12 +582,12 @@ export default function PracticePlayer({ song }: Props) {
             step={0.01}
             value={mrVolume}
             onChange={(e) => setMrVolume(parseFloat(e.target.value))}
-            className={styles.volumeSlider}
+            className="flex-1 h-1 appearance-none bg-[var(--surface2)] rounded-sm outline-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--accent)] [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:border-none"
           />
-          <span className={styles.volumeValue}>{Math.round(mrVolume * 100)}%</span>
+          <span className="text-xs text-[var(--muted)] min-w-[32px] text-right">{Math.round(mrVolume * 100)}%</span>
         </div>
-        <div className={styles.volumeRow}>
-          <span className={styles.volumeLabel}>보컬 가이드</span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-[var(--text2)] min-w-[80px] font-medium">보컬 가이드</span>
           <input
             type="range"
             min={0}
@@ -596,9 +595,9 @@ export default function PracticePlayer({ song }: Props) {
             step={0.01}
             value={vocalGuideVolume}
             onChange={(e) => setVocalGuideVolume(parseFloat(e.target.value))}
-            className={styles.volumeSlider}
+            className="flex-1 h-1 appearance-none bg-[var(--surface2)] rounded-sm outline-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--accent)] [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:border-none"
           />
-          <span className={styles.volumeValue}>{Math.round(vocalGuideVolume * 100)}%</span>
+          <span className="text-xs text-[var(--muted)] min-w-[32px] text-right">{Math.round(vocalGuideVolume * 100)}%</span>
         </div>
       </div>
     </div>

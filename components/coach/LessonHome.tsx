@@ -3,7 +3,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useCoachStore } from '@/stores/coachStore';
 import { hlbCurriculum, blockNames } from '@/lib/data/hlbCurriculum';
-import styles from './LessonHome.module.css';
 
 export default function LessonHome() {
   const { progress, sessionHistory, setPhase } = useCoachStore();
@@ -31,7 +30,6 @@ export default function LessonHome() {
     setPhase('condition');
   }, [setPhase]);
 
-  // Recent 7 days of practice history
   const recentHistory = useMemo(() => {
     const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
     const allAttempts: Array<{
@@ -66,29 +64,31 @@ export default function LessonHome() {
   const isFirstVisit = passedCount === 0 && sessionHistory.length === 0;
 
   return (
-    <div className={styles.container}>
+    <div className="animate-[slideIn_0.4s_ease-out]">
       {/* Hero section */}
-      <div className={styles.hero}>
-        <h1 className={styles.title}>AI 보컬 코치</h1>
+      <div className="text-center px-5 py-10 max-[768px]:px-4 max-[768px]:py-7 bg-[var(--bg3)] border border-[var(--border2)] rounded-[var(--r)] mb-6">
+        <h1 className="text-[var(--fs-h2)] font-bold text-[var(--text)] mb-2">AI 보컬 코치</h1>
 
         {currentStage && (
           <>
-            <div className={styles.currentStage}>
+            <div className="text-[var(--fs-xs)] text-[var(--muted)] uppercase tracking-wider mb-1">
               Stage {nextStageId} / 50 - {currentStage.block}
             </div>
-            <div className={styles.stageName}>{currentStage.name}</div>
+            <div className="text-[clamp(1.3rem,3vw,1.6rem)] font-extrabold text-[var(--accent-lt)] mb-4">
+              {currentStage.name}
+            </div>
           </>
         )}
 
         {/* Progress bar */}
-        <div className={styles.progressWrap}>
-          <div className={styles.progressLabel}>
+        <div className="max-w-[400px] mx-auto mb-6">
+          <div className="flex justify-between text-[var(--fs-xs)] text-[var(--muted)] mb-2">
             <span>진도율</span>
             <span>{passedCount} / 50</span>
           </div>
-          <div className={styles.progressTrack}>
+          <div className="h-1.5 bg-[var(--surface2)] rounded-[3px] overflow-hidden">
             <div
-              className={styles.progressFill}
+              className="h-full bg-gradient-to-r from-[var(--accent)] to-[var(--accent2)] rounded-[3px] transition-[width] duration-500 ease-out"
               style={{ width: `${(passedCount / 50) * 100}%` }}
             />
           </div>
@@ -96,22 +96,24 @@ export default function LessonHome() {
 
         <button
           type="button"
-          className={styles.startBtn}
+          className="inline-block px-10 py-4 max-[768px]:w-full border-none rounded-[var(--r-xs)] bg-[var(--cta-bg)] text-[var(--cta-text)] text-[var(--fs-body)] font-bold cursor-pointer transition-all duration-200 hover:bg-[var(--cta-hover)] hover:-translate-y-0.5"
           onClick={handleStartLesson}
         >
           오늘의 레슨 시작
         </button>
 
         {isFirstVisit && (
-          <div className={styles.firstVisit}>
+          <div className="mt-4 px-4 py-3 bg-[rgba(59,130,246,0.08)] border border-[rgba(59,130,246,0.2)] rounded-[var(--r-xs)] text-[var(--fs-sm)] text-[var(--text2)] leading-normal">
             Stage 1부터 시작합니다. 편안한 소리부터 시작해볼까요?
           </div>
         )}
       </div>
 
       {/* Block list with collapsible stages */}
-      <div className={styles.blocksSection}>
-        <div className={styles.blocksTitle}>커리큘럼 진행 상황</div>
+      <div className="bg-[var(--bg3)] border border-[var(--border2)] rounded-[var(--r)] overflow-hidden mb-6">
+        <div className="px-5 py-4 text-[var(--fs-sm)] font-bold text-[var(--text)] border-b border-[var(--border)]">
+          커리큘럼 진행 상황
+        </div>
         {blockNames.map((block) => {
           const stages = hlbCurriculum.filter((s) => s.block === block);
           const passedInBlock = stages.filter(
@@ -120,50 +122,54 @@ export default function LessonHome() {
           const isOpen = openBlocks[block] ?? false;
 
           return (
-            <div key={block} className={styles.blockItem}>
+            <div key={block} className="border-b border-[var(--border)] last:border-b-0">
               <button
                 type="button"
-                className={styles.blockHeader}
+                className="flex items-center justify-between px-5 py-3.5 bg-transparent border-none text-[var(--text)] text-[var(--fs-sm)] font-semibold cursor-pointer w-full text-left transition-colors duration-200 hover:bg-[var(--surface)]"
                 onClick={() => toggleBlock(block)}
               >
-                <div className={styles.blockInfo}>
+                <div className="flex items-center gap-2">
                   <span>{block}</span>
-                  <span className={styles.blockPassCount}>
+                  <span className="font-mono text-[var(--fs-xs)] text-[var(--muted)]">
                     {passedInBlock}/{stages.length}
                   </span>
                 </div>
                 <span
-                  className={`${styles.blockArrow} ${isOpen ? styles.blockArrowOpen : ''}`}
+                  className={`text-[var(--fs-xs)] text-[var(--muted)] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
                 >
                   &#9660;
                 </span>
               </button>
 
               {isOpen && (
-                <div className={styles.blockStages}>
+                <div className="px-5 pb-3">
                   {stages.map((stage) => {
                     const stageProgress = progress[stage.id];
                     const isPassed = !!stageProgress?.passedAt;
                     return (
                       <div
                         key={stage.id}
-                        className={styles.stageRow}
+                        className="flex items-center justify-between px-3 py-2 rounded-[var(--r-xs)] cursor-pointer transition-colors duration-200 hover:bg-[var(--surface)]"
                         onClick={() => isPassed ? handleReviewStage(stage.id) : undefined}
                         role={isPassed ? 'button' : undefined}
                         tabIndex={isPassed ? 0 : undefined}
                       >
-                        <div className={styles.stageInfo}>
+                        <div className="flex items-center gap-2">
                           <div
-                            className={`${styles.stageCheck} ${isPassed ? styles.stageCheckPassed : ''}`}
+                            className={`w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center text-[10px] shrink-0 ${
+                              isPassed
+                                ? 'border-[var(--success)] bg-[rgba(34,197,94,0.15)] text-[var(--success)]'
+                                : 'border-[var(--border2)]'
+                            }`}
                           >
                             {isPassed ? '\u2713' : ''}
                           </div>
-                          <span className={styles.stageRowName}>
+                          <span className="text-[var(--fs-sm)] text-[var(--text2)]">
                             {stage.id}. {stage.name}
                           </span>
                         </div>
                         {stageProgress && (
-                          <span className={styles.stageScore}>
+                          <span className="text-[var(--fs-xs)] text-[var(--muted)] font-mono">
                             {stageProgress.bestScore}점
                           </span>
                         )}
@@ -178,24 +184,24 @@ export default function LessonHome() {
       </div>
 
       {/* Recent history */}
-      <div className={styles.historySection}>
-        <div className={styles.historyTitle}>최근 7일 연습 기록</div>
+      <div className="bg-[var(--bg3)] border border-[var(--border2)] rounded-[var(--r)] p-5">
+        <div className="text-[var(--fs-sm)] font-bold text-[var(--text)] mb-3">최근 7일 연습 기록</div>
         {recentHistory.length === 0 ? (
-          <div className={styles.historyEmpty}>
+          <div className="text-[var(--fs-sm)] text-[var(--muted)] text-center py-5">
             아직 연습 기록이 없습니다.
           </div>
         ) : (
-          <div className={styles.historyList}>
+          <div className="flex flex-col gap-2">
             {recentHistory.map((item, idx) => (
-              <div key={idx} className={styles.historyItem}>
-                <span className={styles.historyDate}>
+              <div key={idx} className="flex items-center justify-between px-3 py-2.5 bg-[var(--surface)] rounded-[var(--r-xs)] border border-[var(--border)]">
+                <span className="text-[var(--fs-xs)] text-[var(--muted)] font-mono">
                   {new Date(item.date).toLocaleDateString('ko-KR', {
                     month: 'short',
                     day: 'numeric',
                   })}
                 </span>
-                <span className={styles.historyStage}>{item.stageName}</span>
-                <span className={styles.historyScore}>{item.score}점</span>
+                <span className="text-[var(--fs-sm)] text-[var(--text2)]">{item.stageName}</span>
+                <span className="text-[var(--fs-sm)] font-bold text-[var(--accent-lt)] font-mono">{item.score}점</span>
               </div>
             ))}
           </div>

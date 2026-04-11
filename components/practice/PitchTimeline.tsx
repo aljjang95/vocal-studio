@@ -5,7 +5,6 @@ import { usePracticeStore } from '@/stores/practiceStore';
 import { frequencyToMidi, midiToNoteName, midiToFrequency } from '@/lib/audio/musicUtils';
 import { SEMITONES_PER_OCTAVE, A4_FREQUENCY, A4_MIDI_NOTE } from '@/lib/audio/constants';
 import type { MelodyPoint, SongSection, SessionScore, SongAnalysis } from '@/types';
-import styles from './PitchTimeline.module.css';
 
 // ── Constants ──
 
@@ -529,39 +528,39 @@ export default function PitchTimeline({ session, analysis }: PitchTimelineProps)
   }, [zoom, clampOffset]);
 
   return (
-    <div className={styles.pitchTimeline}>
+    <div className="bg-[var(--bg2)] border border-[var(--border)] rounded-xl overflow-hidden">
       {/* Header */}
-      <div className={styles.header}>
-        <span className={styles.title}>피치 타임라인 분석</span>
-        <div className={styles.zoomControls}>
-          <button className={styles.zoomBtn} onClick={handleZoomOut} aria-label="축소">
+      <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-[var(--border)]">
+        <span className="text-sm font-bold text-[var(--text)]">피치 타임라인 분석</span>
+        <div className="flex items-center gap-1.5">
+          <button className="flex items-center justify-center w-7 h-7 bg-[var(--surface)] border border-[var(--border)] rounded-md text-[var(--text2)] text-sm font-bold cursor-pointer transition-all select-none hover:bg-[var(--surface2)] hover:text-[var(--text)]" onClick={handleZoomOut} aria-label="축소">
             -
           </button>
-          <span className={styles.zoomLabel}>{Math.round(zoom * 100)}%</span>
-          <button className={styles.zoomBtn} onClick={handleZoomIn} aria-label="확대">
+          <span className="text-xs text-[var(--muted)] min-w-[36px] text-center font-[Inter,monospace]">{Math.round(zoom * 100)}%</span>
+          <button className="flex items-center justify-center w-7 h-7 bg-[var(--surface)] border border-[var(--border)] rounded-md text-[var(--text2)] text-sm font-bold cursor-pointer transition-all select-none hover:bg-[var(--surface2)] hover:text-[var(--text)]" onClick={handleZoomIn} aria-label="확대">
             +
           </button>
         </div>
       </div>
 
       {/* Summary stats */}
-      <div className={styles.summaryBar}>
-        <div className={styles.statItem}>
-          <span className={styles.statLabel}>전체 정확도</span>
-          <span className={styles.statValue}>{session.overallScore}%</span>
+      <div className="flex items-center gap-5 px-5 py-2.5 bg-[var(--surface)] border-b border-[var(--border)] flex-wrap">
+        <div className="flex items-center gap-1.5 text-xs">
+          <span className="text-[var(--muted)]">전체 정확도</span>
+          <span className="text-[var(--text)] font-semibold font-[Inter,monospace]">{session.overallScore}%</span>
         </div>
         {bestSection && (
-          <div className={styles.statItem}>
-            <span className={styles.statLabel}>최고 구간</span>
-            <span className={`${styles.statValue} ${styles.statBest}`}>
+          <div className="flex items-center gap-1.5 text-xs">
+            <span className="text-[var(--muted)]">최고 구간</span>
+            <span className={`${"text-[var(--text)] font-semibold font-[Inter,monospace]"} ${"text-[var(--success)]"}`}>
               {bestSection.label} {bestSection.score}%
             </span>
           </div>
         )}
         {worstSection && (
-          <div className={styles.statItem}>
-            <span className={styles.statLabel}>취약 구간</span>
-            <span className={`${styles.statValue} ${styles.statWorst}`}>
+          <div className="flex items-center gap-1.5 text-xs">
+            <span className="text-[var(--muted)]">취약 구간</span>
+            <span className={`${"text-[var(--text)] font-semibold font-[Inter,monospace]"} ${"text-[var(--error-lt)]"}`}>
               {worstSection.label} {worstSection.score}%
             </span>
           </div>
@@ -571,44 +570,44 @@ export default function PitchTimeline({ session, analysis }: PitchTimelineProps)
       {/* Canvas */}
       <div
         ref={containerRef}
-        className={styles.canvasArea}
+        className="relative w-full h-[250px] overflow-hidden cursor-grab bg-[var(--bg3)] active:cursor-grabbing"
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
-        <canvas ref={canvasRef} className={styles.canvas} />
+        <canvas ref={canvasRef} className="block w-full h-full" />
       </div>
 
       {/* Bottom panels */}
-      <div className={styles.panels}>
+      <div className="grid grid-cols-2 border-t border-[var(--border)] max-[700px]:grid-cols-1">
         {/* Section scores */}
-        <div className={styles.sectionPanel}>
-          <div className={styles.panelTitle}>구간별 점수</div>
-          <div className={styles.sectionList}>
+        <div className="px-5 py-3.5 border-r border-[var(--border)] max-[700px]:border-r-0 max-[700px]:border-b max-[700px]:border-[var(--border)]">
+          <div className="text-xs font-semibold text-[var(--text2)] mb-2.5 uppercase tracking-wide">구간별 점수</div>
+          <div className="flex flex-col gap-1.5 max-h-[200px] overflow-y-auto">
             {sectionScores.map((sec) => (
               <div
                 key={sec.index}
-                className={styles.sectionItem}
+                className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md cursor-pointer transition-colors hover:bg-[var(--surface2)]"
                 onClick={() => handleSectionClick(sec)}
               >
-                <span className={styles.sectionLabel}>{sec.label}</span>
-                <div className={styles.sectionScoreBar}>
+                <span className="flex-1 text-xs text-[var(--text)] font-medium">{sec.label}</span>
+                <div className="flex-1 h-1 bg-[var(--surface2)] rounded-sm overflow-hidden">
                   <div
-                    className={`${styles.sectionScoreFill} ${
+                    className={`${"h-full rounded-sm transition-[width] duration-300 ease-out"} ${
                       sec.score >= 80
-                        ? styles.fillGood
+                        ? "bg-[var(--success)]"
                         : sec.score >= 60
-                          ? styles.fillOk
-                          : styles.fillBad
+                          ? "bg-[var(--warning)]"
+                          : "bg-[var(--error)]"
                     }`}
                     style={{ width: `${sec.score}%` }}
                   />
                 </div>
-                <span className={styles.sectionScoreValue}>{sec.score}%</span>
+                <span className="text-xs text-[var(--text2)] font-semibold font-[Inter,monospace] min-w-[32px] text-right">{sec.score}%</span>
                 <button
-                  className={styles.practiceBtn}
+                  className="mt-1 px-3 py-1.5 text-xs font-semibold text-[var(--accent-lt)] bg-blue-500/10 border border-blue-500/25 rounded-md cursor-pointer transition-colors whitespace-nowrap hover:bg-blue-500/20"
                   onClick={(e) => {
                     e.stopPropagation();
                     handlePracticeSection(sec);
@@ -622,23 +621,23 @@ export default function PitchTimeline({ session, analysis }: PitchTimelineProps)
         </div>
 
         {/* Feedback */}
-        <div className={styles.feedbackPanel}>
-          <div className={styles.panelTitle}>피드백</div>
+        <div className="px-5 py-3.5">
+          <div className="text-xs font-semibold text-[var(--text2)] mb-2.5 uppercase tracking-wide">피드백</div>
           {feedback.length > 0 ? (
-            <div className={styles.feedbackList}>
+            <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto">
               {feedback.map((fb, i) => (
                 <div
                   key={i}
-                  className={styles.feedbackItem}
+                  className="flex items-start gap-2 px-2.5 py-1.5 rounded-md cursor-pointer transition-colors hover:bg-[var(--surface2)]"
                   onClick={() => handleFeedbackClick(fb)}
                 >
-                  <span className={styles.feedbackTime}>{formatTime(fb.time)}</span>
-                  <span className={styles.feedbackText}>{fb.text}</span>
+                  <span className="text-xs text-[var(--accent-lt)] font-[Inter,monospace] font-semibold min-w-[40px] shrink-0">{formatTime(fb.time)}</span>
+                  <span className="text-xs text-[var(--text2)] leading-relaxed">{fb.text}</span>
                 </div>
               ))}
             </div>
           ) : (
-            <div className={styles.noFeedback}>
+            <div className="text-xs text-[var(--muted)] py-2.5 text-center">
               크게 이탈한 구간이 없습니다
             </div>
           )}
@@ -646,21 +645,21 @@ export default function PitchTimeline({ session, analysis }: PitchTimelineProps)
       </div>
 
       {/* Legend */}
-      <div className={styles.legend}>
-        <div className={styles.legendItem}>
-          <span className={`${styles.legendDot} ${styles.legendRef}`} />
+      <div className="flex items-center justify-center gap-4 px-5 py-2.5 border-t border-[var(--border)]">
+        <div className="flex items-center gap-[5px] text-xs text-[var(--muted)]">
+          <span className={`${"w-2 h-[3px] rounded-sm"} ${"bg-white/30"}`} />
           원곡 멜로디
         </div>
-        <div className={styles.legendItem}>
-          <span className={`${styles.legendDot} ${styles.legendGood}`} />
+        <div className="flex items-center gap-[5px] text-xs text-[var(--muted)]">
+          <span className={`${"w-2 h-[3px] rounded-sm"} ${"bg-[var(--success)]"}`} />
           정확 (15c 이내)
         </div>
-        <div className={styles.legendItem}>
-          <span className={`${styles.legendDot} ${styles.legendOk}`} />
+        <div className="flex items-center gap-[5px] text-xs text-[var(--muted)]">
+          <span className={`${"w-2 h-[3px] rounded-sm"} ${"bg-[var(--warning)]"}`} />
           약간 이탈 (30c 이내)
         </div>
-        <div className={styles.legendItem}>
-          <span className={`${styles.legendDot} ${styles.legendBad}`} />
+        <div className="flex items-center gap-[5px] text-xs text-[var(--muted)]">
+          <span className={`${"w-2 h-[3px] rounded-sm"} ${"bg-[var(--error)]"}`} />
           크게 이탈 (30c 초과)
         </div>
       </div>

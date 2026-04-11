@@ -2,7 +2,6 @@
 
 import { useMemo } from 'react';
 import { useBreathingStore } from '@/stores/breathingStore';
-import styles from './WeeklyChart.module.css';
 
 interface DayData {
   date: string;
@@ -33,7 +32,6 @@ export default function WeeklyChart() {
   const { chartData, uniqueDays, changeRate, changeDirection } = useMemo(() => {
     const last28 = getLast28Days();
 
-    // Group records by date, take max exhale per day
     const byDate: Record<string, number> = {};
     for (const r of records) {
       if (last28.includes(r.date)) {
@@ -49,7 +47,6 @@ export default function WeeklyChart() {
 
     const daysWithData = data.filter((d) => d.maxExhale > 0);
 
-    // Change rate: compare last 7 days avg vs previous 7 days avg
     const last7 = data.slice(21);
     const prev7 = data.slice(14, 21);
     const avg = (arr: DayData[]) => {
@@ -75,13 +72,13 @@ export default function WeeklyChart() {
 
   if (uniqueDays < 3) {
     return (
-      <div className={styles.wrapper}>
-        <div className={styles.header}>
-          <h3 className={styles.title}>주간 기록</h3>
+      <div className="flex flex-col gap-4 p-6 bg-[var(--surface)] border border-[var(--border)] rounded-xl max-md:p-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold text-[var(--text)]">주간 기록</h3>
         </div>
-        <div className={styles.emptyState}>
-          <div className={styles.emptyIcon}>---</div>
-          <p className={styles.emptyText}>
+        <div className="flex flex-col items-center justify-center gap-3 py-10 px-5 text-center">
+          <div className="text-2xl text-[var(--muted)]">---</div>
+          <p className="text-sm text-[var(--text2)] leading-relaxed">
             3일 이상 연습하면 그래프가 표시됩니다.
             <br />
             꾸준히 연습하여 호흡 변화를 확인해보세요.
@@ -101,7 +98,6 @@ export default function WeeklyChart() {
   const chartW = SVG_W - PAD_LEFT - PAD_RIGHT;
   const chartH = SVG_H - PAD_TOP - PAD_BOTTOM;
 
-  // Only show last 14 days for readability
   const visibleData = chartData.slice(14);
   const maxVal = Math.max(...visibleData.map((d) => d.maxExhale), 5);
   const barCount = visibleData.length;
@@ -110,10 +106,10 @@ export default function WeeklyChart() {
 
   const changeClass =
     changeDirection === 'up'
-      ? styles.changeUp
+      ? 'bg-green-500/[0.12] text-[var(--success)]'
       : changeDirection === 'down'
-        ? styles.changeDown
-        : styles.changeNeutral;
+        ? 'bg-red-500/[0.12] text-[var(--error)]'
+        : 'bg-[var(--surface2)] text-[var(--text2)]';
 
   const changeLabel =
     changeDirection === 'up'
@@ -123,16 +119,16 @@ export default function WeeklyChart() {
         : '-- %';
 
   return (
-    <div className={styles.wrapper}>
-      <div className={styles.header}>
-        <h3 className={styles.title}>주간 기록</h3>
-        <span className={`${styles.changeRate} ${changeClass}`}>
+    <div className="flex flex-col gap-4 p-6 bg-[var(--surface)] border border-[var(--border)] rounded-xl max-md:p-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-bold text-[var(--text)]">주간 기록</h3>
+        <span className={`text-sm font-semibold px-2.5 py-1 rounded ${changeClass}`}>
           이전 주 대비 {changeLabel}
         </span>
       </div>
-      <div className={styles.chartArea}>
+      <div className="w-full overflow-x-auto">
         <svg
-          className={styles.chartSvg}
+          className="block"
           viewBox={`0 0 ${SVG_W} ${SVG_H}`}
           preserveAspectRatio="xMidYMid meet"
           width="100%"

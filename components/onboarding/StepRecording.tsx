@@ -3,7 +3,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 import Button from '@/components/ds/Button';
-import s from './StepRecording.module.css';
 
 const MIN_SEC = 5;
 const MAX_SEC = 30;
@@ -144,27 +143,41 @@ export default function StepRecording() {
   };
 
   return (
-    <div className={s.container}>
-      <h3 className={s.title}>목소리를 들려주세요</h3>
-      <p className={s.desc}>
+    <div className="flex flex-col items-center gap-7 py-5 animate-[slideIn_0.4s_ease-out]">
+      <h3 className="font-['Inter',sans-serif] text-[1.4rem] font-bold text-center">
+        목소리를 들려주세요
+      </h3>
+      <p className="text-[0.9rem] text-[var(--text2)] text-center leading-relaxed max-w-[480px]">
         편하게 아무 노래나 한 소절 불러주세요. AI가 목소리 상태를 분석하고 맞춤 로드맵을 만들어드립니다.
       </p>
 
-      <div className={s.recArea}>
+      <div className="flex flex-col items-center gap-4">
         <button
           type="button"
-          className={`${s.recBtn} ${isRecording ? s.recBtnActive : ''}`}
+          className={`w-24 h-24 max-[560px]:w-20 max-[560px]:h-20 rounded-full border-[3px] flex items-center justify-center cursor-pointer transition-all duration-300 ${
+            isRecording
+              ? 'border-[var(--error)] bg-[rgba(239,68,68,0.1)] animate-[recPulse_1.5s_ease-in-out_infinite]'
+              : 'border-[var(--border2)] bg-[var(--bg3)] hover:border-[var(--accent)] hover:bg-[rgba(59,130,246,0.08)]'
+          }`}
           onClick={isRecording ? stopRecording : startRecording}
           disabled={submitting}
           aria-label={isRecording ? '녹음 중지' : '녹음 시작'}
         >
-          <div className={`${s.recIcon} ${isRecording ? s.recIconStop : ''}`} />
+          <div
+            className={`transition-all duration-200 bg-[var(--error)] ${
+              isRecording ? 'w-6 h-6 rounded' : 'w-8 h-8 rounded-full'
+            }`}
+          />
         </button>
-        <span className={`${s.timer} ${isRecording ? s.timerActive : ''}`}>
+        <span
+          className={`font-mono text-[1.1rem] font-semibold min-w-[60px] text-center ${
+            isRecording ? 'text-[var(--error)]' : 'text-[var(--text2)]'
+          }`}
+        >
           {formatTime(elapsed)}
         </span>
         {isRecording && (
-          <span className={s.hint}>
+          <span className="text-[0.78rem] text-[var(--muted)] text-center">
             {elapsed < MIN_SEC
               ? `${MIN_SEC - elapsed}초 더 녹음해주세요`
               : '중지 버튼을 눌러 완료하세요'}
@@ -173,20 +186,22 @@ export default function StepRecording() {
       </div>
 
       {audioBlob && !isRecording && (
-        <p className={s.fileName}>
+        <p className="text-[0.82rem] text-[var(--accent-lt)] text-center">
           {fileName ?? `녹음 완료 (${elapsed}초)`}
         </p>
       )}
 
-      <div className={s.divider}>또는</div>
+      <div className="flex items-center gap-4 w-full max-w-[320px] text-[var(--muted)] text-[0.78rem] before:content-[''] before:flex-1 before:h-px before:bg-[var(--border)] after:content-[''] after:flex-1 after:h-px after:bg-[var(--border)]">
+        또는
+      </div>
 
-      <label className={s.uploadLabel}>
+      <label className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--r-xs)] text-[var(--text2)] text-[0.85rem] cursor-pointer transition-all duration-200 hover:border-[var(--border2)] hover:text-[var(--text)]">
         파일 업로드
         <input
           type="file"
           accept="audio/*"
           onChange={handleFileUpload}
-          className={s.uploadInput}
+          className="hidden"
           disabled={isRecording || submitting}
         />
       </label>

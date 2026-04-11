@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useWarmupStore } from '@/stores/warmupStore';
 import { WarmupCondition, WarmupRoutine, VoiceType } from '@/types';
-import styles from './ConditionForm.module.css';
+import { GlowCard } from '@/components/ui/glow-card';
 
 const ENERGY_OPTIONS: { value: WarmupCondition['energy']; label: string }[] = [
   { value: 'good', label: '좋음' },
@@ -85,19 +85,23 @@ export default function ConditionForm({ onRoutineGenerated }: ConditionFormProps
   }, [canSubmit, energy, goals, voiceType, setCondition, setGenerating, setError, setRoutine, onRoutineGenerated]);
 
   return (
-    <div className={styles.formContainer}>
-      <h2 className={styles.title}>오늘의 워밍업</h2>
-      <p className={styles.subtitle}>현재 컨디션에 맞는 AI 맞춤 워밍업 루틴을 생성합니다.</p>
+    <GlowCard className="max-w-[600px] mx-auto p-8 animate-[slideIn_0.4s_ease-out] max-sm:p-5">
+      <h2 className="text-2xl font-bold text-[var(--text)] mb-2">오늘의 워밍업</h2>
+      <p className="text-sm text-[var(--text2)] mb-7">현재 컨디션에 맞는 AI 맞춤 워밍업 루틴을 생성합니다.</p>
 
       {/* 에너지 수준 */}
-      <div className={styles.section}>
-        <div className={styles.sectionLabel}>오늘 컨디션은 어떤가요?</div>
-        <div className={styles.chipGroup}>
+      <div className="mb-6">
+        <div className="text-sm font-semibold text-[var(--text)] mb-3">오늘 컨디션은 어떤가요?</div>
+        <div className="flex flex-wrap gap-2.5 max-sm:gap-2">
           {ENERGY_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               type="button"
-              className={`${styles.chip} ${energy === opt.value ? styles.chipActive : ''}`}
+              className={`px-[18px] py-2.5 rounded-md border text-sm cursor-pointer transition-all select-none max-sm:px-3.5 max-sm:py-2 max-sm:text-xs ${
+                energy === opt.value
+                  ? 'bg-blue-500/[0.15] border-[var(--accent)] text-[var(--accent-lt)]'
+                  : 'bg-[var(--surface)] border-[var(--border2)] text-[var(--text2)] hover:bg-[var(--surface2)] hover:border-[var(--accent)] hover:text-[var(--text)]'
+              }`}
               onClick={() => setEnergy(opt.value)}
             >
               {opt.label}
@@ -105,9 +109,9 @@ export default function ConditionForm({ onRoutineGenerated }: ConditionFormProps
           ))}
         </div>
         {energy === 'bad' && (
-          <div className={styles.warning}>
-            <span className={styles.warningIcon}>&#9888;</span>
-            <span className={styles.warningText}>
+          <div className="flex items-start gap-2.5 p-3 px-4 bg-yellow-500/[0.08] border border-yellow-500/20 rounded-md mt-4">
+            <span className="shrink-0 text-[var(--warning)] text-base leading-[1.4]">&#9888;</span>
+            <span className="text-xs text-[var(--text2)] leading-relaxed">
               컨디션이 좋지 않을 때는 성대에 무리가 가지 않는 가벼운 연습만 추천됩니다.
               무리하지 말고 컨디션이 회복된 후 본격적인 연습을 진행하세요.
             </span>
@@ -116,12 +120,12 @@ export default function ConditionForm({ onRoutineGenerated }: ConditionFormProps
       </div>
 
       {/* 목표 선택 */}
-      <div className={styles.section}>
-        <div className={styles.sectionLabel}>
+      <div className="mb-6">
+        <div className="text-sm font-semibold text-[var(--text)] mb-3">
           오늘의 목표
-          <span className={styles.sectionHint}>(최대 2개 선택)</span>
+          <span className="text-xs text-[var(--muted)] font-normal ml-1.5">(최대 2개 선택)</span>
         </div>
-        <div className={styles.chipGroup}>
+        <div className="flex flex-wrap gap-2.5 max-sm:gap-2">
           {GOAL_OPTIONS.map((goal) => {
             const isActive = goals.includes(goal);
             const isDisabled = !isActive && goals.length >= 2;
@@ -129,7 +133,13 @@ export default function ConditionForm({ onRoutineGenerated }: ConditionFormProps
               <button
                 key={goal}
                 type="button"
-                className={`${styles.goalChip} ${isActive ? styles.goalChipActive : ''} ${isDisabled ? styles.goalChipDisabled : ''}`}
+                className={`px-4 py-2.5 rounded-md border text-sm cursor-pointer transition-all select-none max-sm:px-3.5 max-sm:py-2 max-sm:text-xs ${
+                  isActive
+                    ? 'bg-purple-500/[0.15] border-[var(--accent2)] text-[var(--accent2-lt)]'
+                    : isDisabled
+                      ? 'bg-[var(--surface)] border-[var(--border2)] text-[var(--text2)] opacity-40 cursor-not-allowed'
+                      : 'bg-[var(--surface)] border-[var(--border2)] text-[var(--text2)] hover:bg-[var(--surface2)] hover:border-[var(--accent2)] hover:text-[var(--text)]'
+                }`}
                 onClick={() => !isDisabled && toggleGoal(goal)}
                 disabled={isDisabled}
               >
@@ -141,14 +151,18 @@ export default function ConditionForm({ onRoutineGenerated }: ConditionFormProps
       </div>
 
       {/* 보이스 타입 */}
-      <div className={styles.section}>
-        <div className={styles.sectionLabel}>보이스 타입</div>
-        <div className={styles.voiceGroup}>
+      <div className="mb-6">
+        <div className="text-sm font-semibold text-[var(--text)] mb-3">보이스 타입</div>
+        <div className="flex gap-2.5">
           {VOICE_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               type="button"
-              className={`${styles.voiceChip} ${voiceType === opt.value ? styles.voiceChipActive : ''}`}
+              className={`px-5 py-2.5 rounded-md border text-sm cursor-pointer transition-all select-none max-sm:px-3.5 max-sm:py-2 max-sm:text-xs ${
+                voiceType === opt.value
+                  ? 'bg-green-500/[0.12] border-[var(--success)] text-[var(--success-lt)]'
+                  : 'bg-[var(--surface)] border-[var(--border2)] text-[var(--text2)] hover:bg-[var(--surface2)] hover:border-[var(--success)] hover:text-[var(--text)]'
+              }`}
               onClick={() => setVoiceType(opt.value)}
             >
               {opt.label}
@@ -158,28 +172,32 @@ export default function ConditionForm({ onRoutineGenerated }: ConditionFormProps
       </div>
 
       {/* 에러 메시지 */}
-      {error && <div className={styles.errorMsg}>{error}</div>}
+      {error && (
+        <div className="mt-3 px-3.5 py-2.5 bg-red-500/[0.08] border border-red-500/20 rounded-md text-xs text-[var(--error-lt)]">
+          {error}
+        </div>
+      )}
 
       {/* 생성 버튼 */}
       <button
         type="button"
-        className={styles.submitBtn}
+        className="flex items-center justify-center gap-2 w-full px-6 py-3.5 mt-7 rounded-md border-none bg-[var(--cta-bg)] text-[var(--cta-text)] text-base font-bold cursor-pointer transition-colors hover:bg-[var(--cta-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
         onClick={handleSubmit}
         disabled={!canSubmit}
       >
         {isGenerating ? (
           <>
             루틴 생성 중
-            <span className={styles.loadingDots}>
-              <span />
-              <span />
-              <span />
+            <span className="inline-flex gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--cta-text)] animate-[dotBounce_1.4s_infinite_ease-in-out]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--cta-text)] animate-[dotBounce_1.4s_infinite_ease-in-out_0.16s]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--cta-text)] animate-[dotBounce_1.4s_infinite_ease-in-out_0.32s]" />
             </span>
           </>
         ) : (
           '루틴 생성'
         )}
       </button>
-    </div>
+    </GlowCard>
   );
 }

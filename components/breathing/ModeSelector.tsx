@@ -2,7 +2,6 @@
 
 import { useBreathingStore } from '@/stores/breathingStore';
 import type { BreathMode } from '@/types';
-import styles from './ModeSelector.module.css';
 
 interface ModeOption {
   mode: BreathMode;
@@ -44,10 +43,10 @@ const MODE_OPTIONS: ModeOption[] = [
   },
 ];
 
-const DIFFICULTY_CLASS: Record<string, string> = {
-  easy: styles.badgeEasy,
-  medium: styles.badgeMedium,
-  hard: styles.badgeHard,
+const DIFFICULTY_BADGE: Record<string, string> = {
+  easy: 'bg-green-500/[0.12] text-[var(--success)]',
+  medium: 'bg-yellow-500/[0.12] text-[var(--warning)]',
+  hard: 'bg-red-500/[0.12] text-[var(--error)]',
 };
 
 export default function ModeSelector() {
@@ -61,29 +60,46 @@ export default function ModeSelector() {
   };
 
   return (
-    <div className={styles.wrapper}>
-      <h2 className={styles.title}>훈련 모드</h2>
-      <div className={styles.cards}>
-        {MODE_OPTIONS.map((opt) => (
-          <button
-            key={opt.mode}
-            type="button"
-            className={`${styles.card} ${mode === opt.mode ? styles.cardActive : ''}`}
-            onClick={() => handleSelect(opt.mode)}
-            disabled={isActive}
-            aria-pressed={mode === opt.mode}
-          >
-            <div className={styles.cardIcon}>{opt.icon}</div>
-            <div className={styles.cardTitle}>{opt.title}</div>
-            <div className={styles.cardDesc}>{opt.description}</div>
-            <div className={styles.cardMeta}>
-              <span className={`${styles.badge} ${DIFFICULTY_CLASS[opt.difficulty]}`}>
-                {opt.difficultyLabel}
-              </span>
-              <span className={styles.time}>{opt.time}</span>
-            </div>
-          </button>
-        ))}
+    <div className="flex flex-col gap-3">
+      <h2 className="text-lg font-bold text-[var(--text)] mb-1">훈련 모드</h2>
+      <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
+        {MODE_OPTIONS.map((opt) => {
+          const isSelected = mode === opt.mode;
+          return (
+            <button
+              key={opt.mode}
+              type="button"
+              className={`flex flex-col gap-2.5 p-5 border rounded-lg cursor-pointer transition-all duration-200 ${
+                isSelected
+                  ? 'bg-blue-500/10 border-blue-500/40 hover:bg-blue-500/[0.14] hover:border-blue-500/50'
+                  : 'bg-[var(--surface)] border-[var(--border)] hover:bg-[var(--surface2)] hover:border-[var(--border2)] hover:-translate-y-0.5'
+              }`}
+              onClick={() => handleSelect(opt.mode)}
+              disabled={isActive}
+              aria-pressed={isSelected}
+            >
+              <div
+                className={`w-10 h-10 flex items-center justify-center rounded-md text-sm font-bold tracking-wide ${
+                  isSelected
+                    ? 'bg-blue-500/20 text-[var(--accent)]'
+                    : 'bg-[var(--surface2)] text-[var(--text2)]'
+                }`}
+              >
+                {opt.icon}
+              </div>
+              <div className="text-base font-semibold text-[var(--text)]">{opt.title}</div>
+              <div className="text-sm text-[var(--text2)] leading-relaxed">{opt.description}</div>
+              <div className="flex items-center gap-3 mt-auto">
+                <span
+                  className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${DIFFICULTY_BADGE[opt.difficulty]}`}
+                >
+                  {opt.difficultyLabel}
+                </span>
+                <span className="text-xs text-[var(--muted)]">{opt.time}</span>
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

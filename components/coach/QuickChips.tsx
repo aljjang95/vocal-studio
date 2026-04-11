@@ -1,7 +1,5 @@
 'use client';
 
-import styles from './QuickChips.module.css';
-
 const QUICK_QUESTIONS = [
   '고음을 편하게 내는 법',
   '호흡 훈련 방법',
@@ -18,11 +16,11 @@ interface QuickChipsProps {
 
 export default function QuickChips({ onSelect, disabled }: QuickChipsProps) {
   return (
-    <div className={styles.chips}>
+    <div className="px-[18px] pt-2.5 pb-4 flex gap-[7px] flex-wrap">
       {QUICK_QUESTIONS.map((q) => (
         <button
           key={q}
-          className={styles.chip}
+          className="px-[13px] py-1.5 bg-[var(--surface2)] border border-[var(--border)] rounded-full text-xs text-[var(--text2)] cursor-pointer font-['Inter','Noto_Sans_KR',sans-serif] transition-all duration-200 hover:enabled:bg-[rgba(59,130,246,0.12)] hover:enabled:text-[var(--text)] hover:enabled:border-[rgba(59,130,246,0.3)] disabled:opacity-40 disabled:cursor-not-allowed"
           onClick={() => onSelect(q)}
           disabled={disabled}
           type="button"

@@ -8,7 +8,6 @@ import {
 } from '@/lib/audio/breathDetector';
 import type { BreathEvent } from '@/lib/audio/breathDetector';
 import type { BreathPhase, BreathRecord } from '@/types';
-import styles from './BreathTimer.module.css';
 
 // ── Rhythm patterns (inhale/hold/exhale in seconds) ──
 const RHYTHM_PATTERNS: { label: string; phases: BreathPhase[] }[] = [
@@ -50,11 +49,11 @@ const PHASE_LABELS: Record<string, string> = {
   rest: '쉬세요',
 };
 
-const PHASE_STYLE: Record<string, string> = {
-  inhale: styles.phaseInhale,
-  hold: styles.phaseHold,
-  exhale: styles.phaseExhale,
-  rest: styles.phaseRest,
+const PHASE_COLOR: Record<string, string> = {
+  inhale: 'text-[var(--accent)]',
+  hold: 'text-[var(--warning)]',
+  exhale: 'text-[var(--success)]',
+  rest: 'text-[var(--muted)]',
 };
 
 export default function BreathTimer() {
@@ -163,7 +162,6 @@ function LongBreathTimer({
             updateExhaleDuration(elapsed);
             setBreathData({ rms: ev.rms, isBreathing: true, durationSec: elapsed });
 
-            // Clear silence timer on breath
             if (silenceTimerRef.current) {
               clearTimeout(silenceTimerRef.current);
               silenceTimerRef.current = null;
@@ -171,7 +169,6 @@ function LongBreathTimer({
           } else {
             setBreathData({ rms: ev.rms, isBreathing: false, durationSec: 0 });
 
-            // If breath was going and now stopped, start a 1s grace period
             if (breathStartRef.current && !silenceTimerRef.current) {
               silenceTimerRef.current = setTimeout(() => {
                 const totalDuration = breathStartRef.current
@@ -223,12 +220,12 @@ function LongBreathTimer({
 
   if (finalDuration !== null) {
     return (
-      <div className={styles.wrapper}>
-        <div className={styles.result}>
-          <span className={styles.resultTitle}>호흡 지속 시간</span>
-          <span className={styles.resultValue}>{finalDuration.toFixed(1)}초</span>
-          <div className={styles.resultActions}>
-            <button type="button" className={styles.retryBtn} onClick={handleRetry}>
+      <div className="flex flex-col items-center gap-5 p-6 bg-[var(--surface)] border border-[var(--border)] rounded-xl max-md:p-4">
+        <div className="flex flex-col items-center gap-3 p-5 bg-blue-500/[0.06] border border-blue-500/20 rounded-lg w-full">
+          <span className="text-sm text-[var(--text2)] font-semibold">호흡 지속 시간</span>
+          <span className="text-[2rem] font-extrabold text-[var(--accent)] tabular-nums">{finalDuration.toFixed(1)}초</span>
+          <div className="flex gap-3 mt-1">
+            <button type="button" className="px-6 py-2.5 bg-[var(--surface2)] text-[var(--text)] text-sm font-semibold border border-[var(--border2)] rounded-md cursor-pointer transition-colors hover:bg-[var(--surface3)]" onClick={handleRetry}>
               다시 하기
             </button>
           </div>
@@ -239,23 +236,23 @@ function LongBreathTimer({
 
   if (calibrating) {
     return (
-      <div className={styles.wrapper}>
-        <div className={styles.calibrating}>
-          <div className={styles.spinner} />
-          <span className={styles.calibratingText}>주변 소음을 측정하고 있습니다...</span>
+      <div className="flex flex-col items-center gap-5 p-6 bg-[var(--surface)] border border-[var(--border)] rounded-xl max-md:p-4">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-[3px] border-[var(--surface3)] border-t-[var(--accent)] rounded-full animate-spin" />
+          <span className="text-sm text-[var(--text2)]">주변 소음을 측정하고 있습니다...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={styles.wrapper}>
+    <div className="flex flex-col items-center gap-5 p-6 bg-[var(--surface)] border border-[var(--border)] rounded-xl max-md:p-4">
       {!isActive ? (
-        <button type="button" className={styles.startBtn} onClick={handleStart}>
+        <button type="button" className="px-10 py-3.5 bg-[var(--accent)] text-white text-base font-semibold border-none rounded-lg cursor-pointer transition-all hover:bg-[var(--accent-lt)] hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0" onClick={handleStart}>
           시작
         </button>
       ) : (
-        <button type="button" className={styles.stopBtn} onClick={handleStop}>
+        <button type="button" className="px-10 py-3.5 bg-[var(--error)] text-white text-base font-semibold border-none rounded-lg cursor-pointer transition-colors hover:bg-[var(--error-lt)]" onClick={handleStop}>
           정지
         </button>
       )}
@@ -310,7 +307,6 @@ function RhythmBreathTimer({
     }, 100);
   };
 
-  // Advance phases
   useEffect(() => {
     if (!isActive) return;
     if (phaseElapsed >= currentPhase.durationSec) {
@@ -325,7 +321,6 @@ function RhythmBreathTimer({
     }
   }, [phaseElapsed, currentPhase.durationSec, phaseIndex, pattern.phases.length, isActive]);
 
-  // Update breath data for visualizer
   useEffect(() => {
     if (!isActive) return;
     const simRms = currentPhase.type === 'exhale' ? 0.15 : currentPhase.type === 'inhale' ? 0.08 : 0.02;
@@ -348,15 +343,19 @@ function RhythmBreathTimer({
   const remaining = Math.max(0, currentPhase.durationSec - phaseElapsed);
 
   return (
-    <div className={styles.wrapper}>
-      <div className={styles.rhythmSection}>
+    <div className="flex flex-col items-center gap-5 p-6 bg-[var(--surface)] border border-[var(--border)] rounded-xl max-md:p-4">
+      <div className="flex flex-col items-center gap-4 w-full">
         {!isActive && (
-          <div className={styles.difficultySelector}>
+          <div className="flex gap-2 max-md:flex-wrap max-md:justify-center">
             {RHYTHM_PATTERNS.map((p, i) => (
               <button
                 key={p.label}
                 type="button"
-                className={`${styles.diffBtn} ${i === diffIndex ? styles.diffBtnActive : ''}`}
+                className={`px-4 py-2 text-sm font-medium border rounded-md cursor-pointer transition-all ${
+                  i === diffIndex
+                    ? 'bg-blue-500/[0.15] text-[var(--accent)] border-blue-500/40'
+                    : 'bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:bg-[var(--surface3)] hover:text-[var(--text)]'
+                }`}
                 onClick={() => setDiffIndex(i)}
               >
                 {p.label}
@@ -366,11 +365,11 @@ function RhythmBreathTimer({
         )}
 
         {!isActive && (
-          <div className={styles.patternDisplay}>
+          <div className="flex items-center gap-1.5 text-sm text-[var(--text2)]">
             {pattern.phases.map((ph, i) => (
               <span key={i}>
-                {i > 0 && <span className={styles.patternSep}> / </span>}
-                <span className={styles.patternPhase}>
+                {i > 0 && <span className="text-[var(--muted)]"> / </span>}
+                <span className="px-2.5 py-1 rounded bg-[var(--surface2)]">
                   {PHASE_LABELS[ph.type]} {ph.durationSec}초
                 </span>
               </span>
@@ -379,18 +378,18 @@ function RhythmBreathTimer({
         )}
 
         {isActive && (
-          <div className={styles.phaseGuide}>
-            <span className={`${styles.phaseText} ${PHASE_STYLE[currentPhase.type]}`}>
+          <div className="flex flex-col items-center gap-2">
+            <span className={`text-[1.4rem] font-bold transition-colors duration-300 ${PHASE_COLOR[currentPhase.type]}`}>
               {PHASE_LABELS[currentPhase.type]}
             </span>
-            <span className={styles.phaseTimer}>{remaining.toFixed(1)}</span>
-            <div className={styles.patternDisplay}>
+            <span className="text-2xl font-extrabold text-[var(--text)] tabular-nums">{remaining.toFixed(1)}</span>
+            <div className="flex items-center gap-1.5 text-sm text-[var(--text2)]">
               {pattern.phases.map((ph, i) => (
                 <span key={i}>
-                  {i > 0 && <span className={styles.patternSep}>/</span>}
+                  {i > 0 && <span className="text-[var(--muted)]">/</span>}
                   <span
-                    className={`${styles.patternPhase} ${
-                      i === phaseIndex ? styles.patternPhaseActive : ''
+                    className={`px-2.5 py-1 rounded ${
+                      i === phaseIndex ? 'bg-blue-500/20 text-[var(--accent)] font-semibold' : 'bg-[var(--surface2)]'
                     }`}
                   >
                     {PHASE_LABELS[ph.type]}
@@ -398,16 +397,16 @@ function RhythmBreathTimer({
                 </span>
               ))}
             </div>
-            <span className={styles.cycleCount}>{cycleCount + 1}번째 사이클</span>
+            <span className="text-sm text-[var(--text2)]">{cycleCount + 1}번째 사이클</span>
           </div>
         )}
 
         {!isActive ? (
-          <button type="button" className={styles.startBtn} onClick={handleStart}>
+          <button type="button" className="px-10 py-3.5 bg-[var(--accent)] text-white text-base font-semibold border-none rounded-lg cursor-pointer transition-all hover:bg-[var(--accent-lt)] hover:-translate-y-px" onClick={handleStart}>
             시작
           </button>
         ) : (
-          <button type="button" className={styles.stopBtn} onClick={handleStop}>
+          <button type="button" className="px-10 py-3.5 bg-[var(--error)] text-white text-base font-semibold border-none rounded-lg cursor-pointer transition-colors hover:bg-[var(--error-lt)]" onClick={handleStop}>
             정지
           </button>
         )}
@@ -465,7 +464,6 @@ function PhraseBreathTimer({
     resetSession();
     breathActiveRef.current = false;
 
-    // Countdown 3-2-1
     setCountdown(3);
     for (let i = 3; i >= 1; i--) {
       setCountdown(i);
@@ -484,7 +482,6 @@ function PhraseBreathTimer({
         },
         () => {
           setCalibrating(false);
-          // Start elapsed timer after calibration
           const startTime = Date.now();
           timerRef.current = setInterval(() => {
             const el = (Date.now() - startTime) / 1000;
@@ -493,12 +490,6 @@ function PhraseBreathTimer({
 
             if (el >= targetSec) {
               finishPhrase(el, true);
-            }
-
-            // If breath stopped for 1s after breathing started, end early
-            if (!breathActiveRef.current && el > 1) {
-              // Give a small grace; if not breathing for detection cycle, stop
-              // We use a simple approach: if elapsed > 2 and not breathing, fail
             }
           }, 100);
         },
@@ -541,18 +532,18 @@ function PhraseBreathTimer({
 
   if (countdown !== null) {
     return (
-      <div className={styles.wrapper}>
-        <span className={styles.countdownOverlay}>{countdown}</span>
+      <div className="flex flex-col items-center gap-5 p-6 bg-[var(--surface)] border border-[var(--border)] rounded-xl max-md:p-4">
+        <span className="text-[3rem] font-extrabold text-[var(--accent)] animate-[countPulse_1s_ease-in-out]">{countdown}</span>
       </div>
     );
   }
 
   if (calibrating) {
     return (
-      <div className={styles.wrapper}>
-        <div className={styles.calibrating}>
-          <div className={styles.spinner} />
-          <span className={styles.calibratingText}>주변 소음을 측정하고 있습니다...</span>
+      <div className="flex flex-col items-center gap-5 p-6 bg-[var(--surface)] border border-[var(--border)] rounded-xl max-md:p-4">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-[3px] border-[var(--surface3)] border-t-[var(--accent)] rounded-full animate-spin" />
+          <span className="text-sm text-[var(--text2)]">주변 소음을 측정하고 있습니다...</span>
         </div>
       </div>
     );
@@ -560,15 +551,15 @@ function PhraseBreathTimer({
 
   if (finished) {
     return (
-      <div className={styles.wrapper}>
-        <div className={styles.result}>
-          <span className={styles.resultTitle}>프레이즈 호흡 결과</span>
-          <span className={styles.resultValue}>{elapsed.toFixed(1)}초 / {targetSec}초</span>
-          <span className={success ? styles.phraseResultSuccess : styles.phraseResult}>
+      <div className="flex flex-col items-center gap-5 p-6 bg-[var(--surface)] border border-[var(--border)] rounded-xl max-md:p-4">
+        <div className="flex flex-col items-center gap-3 p-5 bg-blue-500/[0.06] border border-blue-500/20 rounded-lg w-full">
+          <span className="text-sm text-[var(--text2)] font-semibold">프레이즈 호흡 결과</span>
+          <span className="text-[2rem] font-extrabold text-[var(--accent)] tabular-nums">{elapsed.toFixed(1)}초 / {targetSec}초</span>
+          <span className={success ? 'text-[var(--success)] font-semibold text-sm' : 'text-sm text-[var(--text2)] text-center'}>
             {success ? '목표 달성!' : '아쉽지만 다시 도전해보세요'}
           </span>
-          <div className={styles.resultActions}>
-            <button type="button" className={styles.retryBtn} onClick={handleRetry}>
+          <div className="flex gap-3 mt-1">
+            <button type="button" className="px-6 py-2.5 bg-[var(--surface2)] text-[var(--text)] text-sm font-semibold border border-[var(--border2)] rounded-md cursor-pointer transition-colors hover:bg-[var(--surface3)]" onClick={handleRetry}>
               다시 하기
             </button>
           </div>
@@ -578,15 +569,19 @@ function PhraseBreathTimer({
   }
 
   return (
-    <div className={styles.wrapper}>
-      <div className={styles.phraseSection}>
+    <div className="flex flex-col items-center gap-5 p-6 bg-[var(--surface)] border border-[var(--border)] rounded-xl max-md:p-4">
+      <div className="flex flex-col items-center gap-4 w-full">
         {!isActive && (
-          <div className={styles.targetSelector}>
+          <div className="flex gap-2 max-md:flex-wrap max-md:justify-center">
             {PHRASE_TARGETS.map((t) => (
               <button
                 key={t}
                 type="button"
-                className={`${styles.targetBtn} ${t === targetSec ? styles.targetBtnActive : ''}`}
+                className={`px-5 py-2.5 text-sm font-semibold border rounded-md cursor-pointer transition-all ${
+                  t === targetSec
+                    ? 'bg-blue-500/[0.15] text-[var(--accent)] border-blue-500/40'
+                    : 'bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:bg-[var(--surface3)] hover:text-[var(--text)]'
+                }`}
                 onClick={() => setTargetSec(t)}
               >
                 {t}초
@@ -596,11 +591,14 @@ function PhraseBreathTimer({
         )}
 
         {isActive && (
-          <div className={styles.progressContainer}>
-            <div className={styles.progressBar}>
-              <div className={styles.progressFill} style={{ width: `${progressPct}%` }} />
+          <div className="w-full max-w-[360px]">
+            <div className="w-full h-3 bg-[var(--surface2)] rounded-md overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-[var(--accent)] to-[var(--success)] rounded-md transition-[width] duration-150 ease-out"
+                style={{ width: `${progressPct}%` }}
+              />
             </div>
-            <div className={styles.progressLabel}>
+            <div className="flex justify-between mt-1.5 text-xs text-[var(--text2)]">
               <span>{elapsed.toFixed(1)}초</span>
               <span>목표 {targetSec}초</span>
             </div>
@@ -608,11 +606,11 @@ function PhraseBreathTimer({
         )}
 
         {!isActive ? (
-          <button type="button" className={styles.startBtn} onClick={handleStart}>
+          <button type="button" className="px-10 py-3.5 bg-[var(--accent)] text-white text-base font-semibold border-none rounded-lg cursor-pointer transition-all hover:bg-[var(--accent-lt)] hover:-translate-y-px" onClick={handleStart}>
             시작
           </button>
         ) : (
-          <button type="button" className={styles.stopBtn} onClick={handleStop}>
+          <button type="button" className="px-10 py-3.5 bg-[var(--error)] text-white text-base font-semibold border-none rounded-lg cursor-pointer transition-colors hover:bg-[var(--error-lt)]" onClick={handleStop}>
             정지
           </button>
         )}

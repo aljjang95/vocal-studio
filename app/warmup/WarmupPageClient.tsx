@@ -8,7 +8,6 @@ import ConditionForm from '@/components/warmup/ConditionForm';
 import RoutineView from '@/components/warmup/RoutineView';
 import ExercisePlayer from '@/components/warmup/ExercisePlayer';
 import RoutineHistory from '@/components/warmup/RoutineHistory';
-import styles from './warmup.module.css';
 
 type Phase = 'input' | 'confirm' | 'exercise' | 'complete';
 
@@ -64,28 +63,26 @@ export default function WarmupPageClient() {
   return (
     <>
       <div className="gradient-bg" aria-hidden="true" />
-      <header className={styles.header}>
+      <header className="sticky top-0 z-[100] py-4 bg-[rgba(9,9,11,0.85)] backdrop-blur-[24px] backdrop-saturate-[180%] border-b border-[var(--border)]">
         <div className="container">
-          <div className={styles.headerInner}>
-            <Link href="/" className={styles.backLink}>
+          <div className="flex items-center justify-between max-w-[1400px] mx-auto px-5">
+            <Link href="/" className="font-[Inter] text-[1.1rem] font-bold text-[var(--text)] no-underline transition-colors hover:text-[var(--accent)]">
               &larr; HLB 보컬스튜디오
             </Link>
-            <nav className={styles.headerNav}>
-              <Link href="/coach" className={styles.headerLink}>AI 코치</Link>
-              <Link href="/diagnosis" className={styles.headerLink}>진단</Link>
+            <nav className="flex items-center gap-2">
+              <Link href="/coach" className="px-[18px] py-2 text-[var(--text2)] no-underline text-[0.88rem] rounded-lg transition-all hover:text-[var(--text)] hover:bg-[var(--surface2)]">AI 코치</Link>
+              <Link href="/diagnosis" className="px-[18px] py-2 text-[var(--text2)] no-underline text-[0.88rem] rounded-lg transition-all hover:text-[var(--text)] hover:bg-[var(--surface2)]">진단</Link>
             </nav>
           </div>
         </div>
       </header>
 
-      <main className={styles.main}>
-        <div className={styles.container}>
-          {/* 입력 단계 */}
+      <main className="relative z-[1] py-8 pb-[60px]">
+        <div className="max-w-[800px] mx-auto px-5 flex flex-col gap-8">
           {phase === 'input' && (
             <ConditionForm onRoutineGenerated={handleRoutineGenerated} />
           )}
 
-          {/* 확인 단계 */}
           {phase === 'confirm' && routine && (
             <RoutineView
               routine={routine}
@@ -94,7 +91,6 @@ export default function WarmupPageClient() {
             />
           )}
 
-          {/* 실행 단계 */}
           {phase === 'exercise' && routine && (
             <ExercisePlayer
               routine={routine}
@@ -102,34 +98,33 @@ export default function WarmupPageClient() {
             />
           )}
 
-          {/* 완료 단계 */}
           {phase === 'complete' && completionData && (
-            <div className={styles.completionCard}>
-              <div className={styles.completionIcon} aria-hidden="true">&#10004;</div>
-              <h2 className={styles.completionTitle}>워밍업 완료</h2>
-              <p className={styles.completionSub}>오늘도 수고하셨습니다. 꾸준한 연습이 실력을 만듭니다.</p>
+            <div className="bg-[var(--bg3)] border border-[var(--border2)] rounded-xl px-8 py-12 max-w-[600px] mx-auto text-center animate-[slideIn_0.4s_ease-out] max-sm:px-5 max-sm:py-8">
+              <div className="text-[3rem] mb-4" aria-hidden="true">&#10004;</div>
+              <h2 className="text-2xl font-bold text-[var(--text)] mb-2">워밍업 완료</h2>
+              <p className="text-sm text-[var(--text2)] mb-6">오늘도 수고하셨습니다. 꾸준한 연습이 실력을 만듭니다.</p>
 
-              <div className={styles.completionStats}>
-                <div className={styles.statItem}>
-                  <span className={styles.statValue}>{formatElapsed(completionData.elapsedSec)}</span>
-                  <span className={styles.statLabel}>소요 시간</span>
+              <div className="flex justify-center gap-6 mb-8 max-sm:flex-col max-sm:gap-2.5">
+                <div className="flex flex-col items-center gap-1 px-5 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-md">
+                  <span className="text-lg font-bold text-[var(--accent-lt)] font-mono">{formatElapsed(completionData.elapsedSec)}</span>
+                  <span className="text-xs text-[var(--muted)]">소요 시간</span>
                 </div>
-                <div className={styles.statItem}>
-                  <span className={styles.statValue}>{completionData.stagesCompleted.length}단계</span>
-                  <span className={styles.statLabel}>완료</span>
+                <div className="flex flex-col items-center gap-1 px-5 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-md">
+                  <span className="text-lg font-bold text-[var(--accent-lt)] font-mono">{completionData.stagesCompleted.length}단계</span>
+                  <span className="text-xs text-[var(--muted)]">완료</span>
                 </div>
               </div>
 
-              <div className={styles.completionActions}>
-                <Link href="/practice" className={styles.primaryLink}>
+              <div className="flex flex-col gap-2.5 max-w-[320px] mx-auto">
+                <Link href="/practice" className="block px-6 py-3.5 rounded-md bg-[var(--cta-bg)] text-[var(--cta-text)] text-base font-bold no-underline text-center transition-colors hover:bg-[var(--cta-hover)]">
                   곡 연습하러 가기
                 </Link>
-                <Link href="/coach" className={styles.secondaryLink}>
+                <Link href="/coach" className="block px-6 py-3 rounded-md border border-[var(--border2)] text-[var(--text2)] text-sm font-semibold no-underline text-center transition-all hover:bg-[var(--surface2)] hover:border-[var(--accent)] hover:text-[var(--text)]">
                   AI 코치 받으러 가기
                 </Link>
                 <button
                   type="button"
-                  className={styles.newRoutineBtn}
+                  className="block mt-1 px-6 py-3 rounded-md border border-[var(--border2)] bg-transparent text-[var(--text2)] text-sm font-semibold cursor-pointer transition-all w-full hover:bg-[var(--surface2)] hover:border-[var(--accent)] hover:text-[var(--text)]"
                   onClick={handleNewRoutine}
                 >
                   새 루틴 생성하기
@@ -138,7 +133,6 @@ export default function WarmupPageClient() {
             </div>
           )}
 
-          {/* 하단 기록 */}
           <RoutineHistory />
         </div>
       </main>

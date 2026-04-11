@@ -9,7 +9,6 @@ import {
 import type { PitchData } from '@/lib/audio/pitchDetector';
 import { PITCH_CENTS_GOOD, PITCH_CENTS_OK } from '@/lib/audio/constants';
 import { usePracticeStore } from '@/stores/practiceStore';
-import styles from './PitchDisplay.module.css';
 
 const HISTORY_DURATION_SEC = 5;
 const MAX_HISTORY = 250; // ~50 updates/sec * 5s
@@ -221,46 +220,46 @@ export default function PitchDisplay() {
 
   const centsClass = currentPitch
     ? Math.abs(currentPitch.cents) <= PITCH_CENTS_GOOD
-      ? styles.centsGood
+      ? "text-[var(--success)]"
       : Math.abs(currentPitch.cents) <= PITCH_CENTS_OK
-        ? styles.centsOk
-        : styles.centsBad
+        ? "text-[var(--warning)]"
+        : "text-[var(--error)]"
     : '';
 
   return (
-    <div className={styles.pitchDisplay}>
-      <div className={styles.header}>
-        <span className={styles.title}>음정 모니터</span>
+    <div className="bg-[var(--bg2)] border border-[var(--border)] rounded-xl px-5 py-4">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-semibold text-[var(--text)]">음정 모니터</span>
         <button
-          className={`${styles.micBtn} ${micActive ? styles.micBtnActive : ''}`}
+          className={`${"flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-md text-[var(--text2)] text-xs cursor-pointer transition-all hover:bg-[var(--surface2)] hover:text-[var(--text)]"} ${micActive ? "bg-blue-500/[0.15] border-[var(--accent)] text-[var(--accent-lt)] hover:bg-blue-500/20" : ''}`}
           onClick={toggleMic}
         >
-          <span className={`${styles.micDot} ${micActive ? styles.micDotActive : ''}`} />
+          <span className={`${"w-1.5 h-1.5 rounded-full bg-[var(--muted)]"} ${micActive ? "bg-[var(--accent)] animate-pulse" : ''}`} />
           {micActive ? '마이크 끄기' : '마이크 켜기'}
         </button>
       </div>
 
       {micError ? (
-        <div className={styles.micError}>{micError}</div>
+        <div className="flex items-center justify-center p-5 text-center text-[var(--text2)] text-sm leading-relaxed">{micError}</div>
       ) : (
         <>
-          <div className={styles.canvasWrap}>
+          <div className="relative w-full h-[160px] bg-[var(--bg3)] rounded-md overflow-hidden">
             {micActive ? (
-              <canvas ref={canvasRef} className={styles.canvas} />
+              <canvas ref={canvasRef} className="w-full h-full block" />
             ) : (
-              <div className={styles.inactive}>
+              <div className="flex items-center justify-center h-full text-[var(--muted)] text-sm">
                 마이크를 켜면 실시간 음정이 표시됩니다
               </div>
             )}
           </div>
 
           {micActive && currentPitch && (
-            <div className={styles.pitchInfo}>
-              <span className={styles.noteName}>{currentPitch.noteName}</span>
-              <span className={`${styles.cents} ${centsClass}`}>
+            <div className="flex items-center justify-center gap-4 mt-2.5">
+              <span className="text-2xl font-bold text-[var(--accent-lt)] font-[Inter,monospace]">{currentPitch.noteName}</span>
+              <span className={`${"text-sm text-[var(--text2)] font-[Inter,monospace]"} ${centsClass}`}>
                 {currentPitch.cents > 0 ? '+' : ''}{currentPitch.cents} cents
               </span>
-              <span className={styles.frequency}>
+              <span className="text-xs text-[var(--muted)]">
                 {currentPitch.frequency.toFixed(1)} Hz
               </span>
             </div>

@@ -6,7 +6,6 @@ import ChatMessage, { TypingIndicator } from './ChatMessage';
 import ChatInput from './ChatInput';
 import QuickChips from './QuickChips';
 import { IconMic } from '@/components/shared/Icons';
-import styles from './ChatBox.module.css';
 
 const INITIAL_MESSAGE = {
   id: 'init-0',
@@ -86,22 +85,29 @@ export default function ChatBox() {
   };
 
   return (
-    <div className={`${styles.chatBox} reveal`}>
+    <div className="reveal bg-[var(--bg3)] border border-[var(--border2)] rounded-3xl overflow-hidden shadow-[0_32px_80px_rgba(0,0,0,0.45)]">
       {/* Header */}
-      <div className={styles.chatTop}>
-        <div className={styles.chatAv}><IconMic size={16} /></div>
-        <div>
-          <div className={styles.chatAvName}>HLB 보컬스튜디오 AI 코치</div>
-          <div className={styles.chatAvRole}>7년 경력 보컬 트레이너 커리큘럼 탑재</div>
+      <div className="px-[22px] py-[18px] bg-black/30 border-b border-[var(--border)] flex items-center gap-3">
+        <div className="w-9 h-9 rounded-[10px] bg-gradient-to-br from-[var(--accent)] to-[var(--success)] flex items-center justify-center text-[15px] shrink-0 text-white">
+          <IconMic size={16} />
         </div>
-        <div className={styles.aiOnline}>
-          <div className={styles.aiOnlineDot} />
+        <div>
+          <div className="font-['Inter',sans-serif] text-[0.9rem] font-bold">HLB 보컬스튜디오 AI 코치</div>
+          <div className="text-[0.7rem] text-[var(--text2)]">7년 경력 보컬 트레이너 커리큘럼 탑재</div>
+        </div>
+        <div className="ml-auto flex items-center gap-[5px] text-[0.7rem] text-[var(--success-lt)] font-mono">
+          <div className="w-[5px] h-[5px] bg-[var(--success-lt)] rounded-full animate-[pulse_2s_infinite]" />
           온라인
         </div>
       </div>
 
       {/* Message body */}
-      <div className={styles.chatBody} ref={bodyRef} role="log" aria-live="polite">
+      <div
+        className="p-5 min-h-[320px] max-h-[380px] overflow-y-auto flex flex-col gap-3.5 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[var(--border2)] [&::-webkit-scrollbar-thumb]:rounded-sm"
+        ref={bodyRef}
+        role="log"
+        aria-live="polite"
+      >
         {messages.map((msg) => (
           <ChatMessage key={msg.id} message={msg} />
         ))}

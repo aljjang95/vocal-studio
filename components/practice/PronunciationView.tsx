@@ -2,7 +2,6 @@
 
 import { useState, useCallback } from 'react';
 import type { LyricLine, Song } from '@/types';
-import styles from './PronunciationView.module.css';
 
 type Language = 'en' | 'ja' | 'zh' | 'es';
 
@@ -85,7 +84,7 @@ export default function PronunciationView({ lyrics, currentSong, onUpdate }: Pro
   return (
     <>
       <select
-        className={styles.langSelect}
+        className="px-2 py-1 bg-[var(--surface)] border border-[var(--border)] rounded-md text-[var(--text2)] text-xs cursor-pointer outline-none focus:border-[var(--accent)]"
         value={language}
         onChange={(e) => setLanguage(e.target.value as Language)}
       >
@@ -95,7 +94,11 @@ export default function PronunciationView({ lyrics, currentSong, onUpdate }: Pro
       </select>
 
       <button
-        className={`${styles.pronBtn} ${showPronunciation ? styles.pronBtnActive : ''} ${loading ? styles.pronBtnLoading : ''}`}
+        className={`px-2.5 py-[5px] border rounded-md text-xs cursor-pointer transition-all whitespace-nowrap ${
+          showPronunciation
+            ? 'bg-purple-500/[0.15] border-[var(--accent2)] text-[var(--accent2-lt)] hover:bg-purple-500/20'
+            : 'bg-[var(--surface)] border-[var(--border)] text-[var(--text2)] hover:bg-[var(--surface2)] hover:text-[var(--text)]'
+        } ${loading ? 'opacity-60 pointer-events-none' : ''}`}
         onClick={handleToggle}
         disabled={loading}
       >
@@ -104,7 +107,7 @@ export default function PronunciationView({ lyrics, currentSong, onUpdate }: Pro
 
       {hasPronunciation && !showPronunciation && (
         <button
-          className={`${styles.pronBtn} ${loading ? styles.pronBtnLoading : ''}`}
+          className={`px-2.5 py-[5px] bg-[var(--surface)] border border-[var(--border)] rounded-md text-[var(--text2)] text-xs cursor-pointer transition-all whitespace-nowrap hover:bg-[var(--surface2)] hover:text-[var(--text)] ${loading ? 'opacity-60 pointer-events-none' : ''}`}
           onClick={handleGenerate}
           disabled={loading || lyrics.length === 0}
         >
@@ -113,7 +116,7 @@ export default function PronunciationView({ lyrics, currentSong, onUpdate }: Pro
       )}
 
       {error && (
-        <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--error-lt)' }}>{error}</span>
+        <span className="text-xs text-[var(--error-lt)]">{error}</span>
       )}
     </>
   );

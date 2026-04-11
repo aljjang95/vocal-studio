@@ -5,7 +5,6 @@ import { usePracticeStore } from '@/stores/practiceStore';
 import { saveAnalysis } from '@/lib/storage/songDB';
 import type { LyricLine, SongAnalysis } from '@/types';
 import PronunciationView from './PronunciationView';
-import styles from './LyricsPanel.module.css';
 
 interface Props {
   onSeek: (time: number) => void;
@@ -236,34 +235,34 @@ export default function LyricsPanel({ onSeek }: Props) {
   // No song selected
   if (!currentSongId) {
     return (
-      <div className={styles.lyricsPanel}>
-        <div className={styles.emptyState}>
-          <div className={styles.emptyIcon}>&#9835;</div>
-          <p className={styles.emptyText}>곡을 선택해주세요</p>
+      <div className="bg-[var(--bg2)] border border-[var(--border)] rounded-xl px-5 py-4 flex flex-col gap-3">
+        <div className="flex flex-col items-center justify-center gap-3 px-4 py-8 text-center">
+          <div className="text-2xl opacity-[0.15]">&#9835;</div>
+          <p className="text-sm text-[var(--text2)] leading-relaxed">곡을 선택해주세요</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={styles.lyricsPanel}>
-      <div className={styles.header}>
-        <span className={styles.title}>가사</span>
-        <div className={styles.headerActions}>
+    <div className="bg-[var(--bg2)] border border-[var(--border)] rounded-xl px-5 py-4 flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <span className="text-sm font-semibold text-[var(--text)]">가사</span>
+        <div className="flex items-center gap-1.5">
           {lyrics.length > 0 && !editMode && !syncMode && (
             <>
-              <button className={styles.actionBtn} onClick={handleEditStart}>
+              <button className="px-2.5 py-[5px] bg-[var(--surface)] border border-[var(--border)] rounded-md text-[var(--text2)] text-xs cursor-pointer transition-all whitespace-nowrap hover:bg-[var(--surface2)] hover:text-[var(--text)]" onClick={handleEditStart}>
                 가사 편집
               </button>
               {isPlaying && (
-                <button className={styles.actionBtn} onClick={handleSyncStart}>
+                <button className="px-2.5 py-[5px] bg-[var(--surface)] border border-[var(--border)] rounded-md text-[var(--text2)] text-xs cursor-pointer transition-all whitespace-nowrap hover:bg-[var(--surface2)] hover:text-[var(--text)]" onClick={handleSyncStart}>
                   싱크
                 </button>
               )}
             </>
           )}
           <button
-            className={`${styles.actionBtn} ${loadingSuggestion ? styles.actionBtnLoading : ''}`}
+            className={`${"px-2.5 py-[5px] bg-[var(--surface)] border border-[var(--border)] rounded-md text-[var(--text2)] text-xs cursor-pointer transition-all whitespace-nowrap hover:bg-[var(--surface2)] hover:text-[var(--text)]"} ${loadingSuggestion ? "opacity-60 pointer-events-none" : ''}`}
             onClick={handleAISuggest}
             disabled={loadingSuggestion}
           >
@@ -277,19 +276,19 @@ export default function LyricsPanel({ onSeek }: Props) {
         </div>
       </div>
 
-      {error && <div className={styles.errorMsg}>{error}</div>}
+      {error && <div className="px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-md text-xs text-[var(--error-lt)]">{error}</div>}
 
       {/* Sync mode bar */}
       {syncMode && lyrics.length > 0 && (
-        <div className={styles.syncBar}>
-          <span className={styles.syncDot} />
-          <span className={styles.syncText}>
+        <div className="flex items-center gap-2 px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-md">
+          <span className="w-2 h-2 rounded-full bg-[var(--success)] animate-pulse" />
+          <span className="text-xs text-[var(--success-lt)] flex-1">
             싱크 모드 - 줄 {syncLineIndex + 1}/{lyrics.length}: &quot;{lyrics[syncLineIndex]?.text.slice(0, 30)}&quot;
           </span>
-          <button className={styles.syncBtn} onClick={handleSyncTap}>
+          <button className="px-3 py-1 bg-[var(--success)] border-none rounded-md text-white text-xs font-semibold cursor-pointer transition-colors hover:bg-[var(--success-lt)]" onClick={handleSyncTap}>
             싱크
           </button>
-          <button className={styles.syncStopBtn} onClick={handleSyncStop}>
+          <button className="px-3 py-1 bg-[var(--surface)] border border-[var(--border)] rounded-md text-[var(--text2)] text-xs cursor-pointer" onClick={handleSyncStop}>
             종료
           </button>
         </div>
@@ -297,16 +296,16 @@ export default function LyricsPanel({ onSeek }: Props) {
 
       {/* AI Suggestion */}
       {suggestedLyrics && (
-        <div className={styles.suggestion}>
-          <div className={styles.suggestionHeader}>
-            <span className={styles.suggestionTitle}>AI 가사 제안</span>
+        <div className="bg-[var(--bg3)] border border-[var(--border)] rounded-md p-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-[var(--accent-lt)]">AI 가사 제안</span>
           </div>
-          <div className={styles.suggestionText}>{suggestedLyrics}</div>
-          <div className={styles.suggestionActions}>
-            <button className={styles.cancelBtn} onClick={() => setSuggestedLyrics(null)}>
+          <div className="text-sm text-[var(--text2)] leading-[1.8] whitespace-pre-wrap max-h-[200px] overflow-y-auto">{suggestedLyrics}</div>
+          <div className="flex gap-2 mt-2 justify-end">
+            <button className="px-4 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-md text-[var(--text2)] text-xs cursor-pointer transition-all hover:bg-[var(--surface2)] hover:text-[var(--text)]" onClick={() => setSuggestedLyrics(null)}>
               취소
             </button>
-            <button className={styles.saveBtn} onClick={handleApplySuggestion}>
+            <button className="px-4 py-1.5 bg-[var(--accent)] border-none rounded-md text-white text-xs font-semibold cursor-pointer transition-colors hover:bg-[var(--accent-lt)]" onClick={handleApplySuggestion}>
               적용
             </button>
           </div>
@@ -317,58 +316,58 @@ export default function LyricsPanel({ onSeek }: Props) {
       {editMode ? (
         <>
           <textarea
-            className={styles.editArea}
+            className="w-full min-h-[200px] p-3 bg-[var(--bg3)] border border-[var(--border)] rounded-md text-[var(--text)] text-sm font-[Inter,Noto_Sans_KR,sans-serif] leading-[1.8] resize-y outline-none focus:border-[var(--accent)]"
             value={editText}
             onChange={(e) => setEditText(e.target.value)}
             placeholder="가사를 입력하세요 (줄바꿈으로 구분)"
           />
-          <div className={styles.editActions}>
-            <button className={styles.cancelBtn} onClick={handleEditCancel}>
+          <div className="flex gap-2 justify-end">
+            <button className="px-4 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-md text-[var(--text2)] text-xs cursor-pointer transition-all hover:bg-[var(--surface2)] hover:text-[var(--text)]" onClick={handleEditCancel}>
               취소
             </button>
-            <button className={styles.saveBtn} onClick={handleEditSave}>
+            <button className="px-4 py-1.5 bg-[var(--accent)] border-none rounded-md text-white text-xs font-semibold cursor-pointer transition-colors hover:bg-[var(--accent-lt)]" onClick={handleEditSave}>
               저장
             </button>
           </div>
         </>
       ) : lyrics.length > 0 ? (
         /* Lyrics display */
-        <div ref={scrollRef} className={styles.lyricsScroll}>
+        <div ref={scrollRef} className="max-h-[320px] overflow-y-auto scroll-smooth py-1">
           {lyrics.map((line, i) => (
             <div
               key={i}
               ref={(el) => { lineRefs.current[i] = el; }}
-              className={`${styles.lyricLine} ${
+              className={`${"px-3 py-1.5 rounded-md cursor-pointer transition-all leading-relaxed hover:bg-[var(--surface)]"} ${
                 syncMode && i === syncLineIndex
-                  ? styles.lyricLineActive
+                  ? "bg-blue-500/[0.12] text-[var(--accent-lt)]"
                   : !syncMode && i === activeLineIndex
-                    ? styles.lyricLineActive
+                    ? "bg-blue-500/[0.12] text-[var(--accent-lt)]"
                     : ''
               }`}
               onClick={() => handleLineClick(i)}
             >
-              <span className={styles.lyricText}>{line.text || '\u00A0'}</span>
+              <span className="text-sm text-[var(--text)]">{line.text || '\u00A0'}</span>
               {line.startTime !== null && (
-                <span className={styles.lyricTimeTag}>
+                <span className="text-[10px] text-[var(--muted)] font-[Inter,monospace] ml-2">
                   {Math.floor(line.startTime / 60)}:{Math.floor(line.startTime % 60).toString().padStart(2, '0')}
                 </span>
               )}
               {line.pronunciation && (
-                <div className={styles.lyricPronunciation}>{line.pronunciation}</div>
+                <div className="text-xs text-[var(--accent2-lt)] mt-0.5 opacity-80">{line.pronunciation}</div>
               )}
             </div>
           ))}
         </div>
       ) : (
         /* Empty state */
-        <div className={styles.emptyState}>
-          <div className={styles.emptyIcon}>&#128196;</div>
-          <p className={styles.emptyText}>
+        <div className="flex flex-col items-center justify-center gap-3 px-4 py-8 text-center">
+          <div className="text-2xl opacity-[0.15]">&#128196;</div>
+          <p className="text-sm text-[var(--text2)] leading-relaxed">
             가사를 입력하세요.
             <br />
             &quot;AI 가사 제안&quot; 버튼으로 자동 생성할 수도 있습니다.
           </p>
-          <button className={styles.actionBtn} onClick={handleEditStart}>
+          <button className="px-2.5 py-[5px] bg-[var(--surface)] border border-[var(--border)] rounded-md text-[var(--text2)] text-xs cursor-pointer transition-all whitespace-nowrap hover:bg-[var(--surface2)] hover:text-[var(--text)]" onClick={handleEditStart}>
             가사 입력
           </button>
         </div>

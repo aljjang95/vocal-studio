@@ -7,7 +7,6 @@ import ConditionCheck from '@/components/coach/ConditionCheck';
 import LessonPlayer from '@/components/coach/LessonPlayer';
 import JudgmentResult from '@/components/coach/JudgmentResult';
 import SessionSummary from '@/components/coach/SessionSummary';
-import styles from './coach.module.css';
 
 export default function CoachPageClient() {
   const phase = useCoachStore((s) => s.phase);
@@ -15,23 +14,23 @@ export default function CoachPageClient() {
   return (
     <>
       <div className="gradient-bg" aria-hidden="true" />
-      <header className={styles.header}>
+      <header className="sticky top-0 z-[100] py-4 bg-[rgba(9,9,11,0.85)] backdrop-blur-[24px] backdrop-saturate-[180%] border-b border-[var(--border)]">
         <div className="container">
-          <div className={styles.headerInner}>
-            <Link href="/" className={styles.backLink}>
+          <div className="flex items-center justify-between max-w-[1400px] mx-auto px-5">
+            <Link href="/" className="font-['Inter',sans-serif] text-[1.1rem] font-bold text-[var(--text)] no-underline transition-colors duration-200 hover:text-[var(--accent)]">
               &larr; HLB 보컬스튜디오
             </Link>
-            <nav className={styles.headerNav}>
-              <Link href="/practice" className={styles.headerLink}>연습실</Link>
-              <Link href="/warmup" className={styles.headerLink}>워밍업</Link>
-              <Link href="/breathing" className={styles.headerLink}>호흡</Link>
+            <nav className="flex items-center gap-2">
+              <Link href="/practice" className="px-[18px] py-2 text-[var(--text2)] no-underline text-[0.88rem] rounded-lg transition-all duration-200 hover:text-[var(--text)] hover:bg-[var(--surface2)]">연습실</Link>
+              <Link href="/warmup" className="px-[18px] py-2 text-[var(--text2)] no-underline text-[0.88rem] rounded-lg transition-all duration-200 hover:text-[var(--text)] hover:bg-[var(--surface2)]">워밍업</Link>
+              <Link href="/breathing" className="px-[18px] py-2 text-[var(--text2)] no-underline text-[0.88rem] rounded-lg transition-all duration-200 hover:text-[var(--text)] hover:bg-[var(--surface2)]">호흡</Link>
             </nav>
           </div>
         </div>
       </header>
 
-      <main className={styles.main}>
-        <div className={styles.container}>
+      <main className="relative z-[1] pt-8 pb-[60px]">
+        <div className="max-w-[800px] mx-auto px-5 flex flex-col gap-8">
           {phase === 'home' && <LessonHome />}
           {phase === 'condition' && <ConditionCheck />}
           {phase === 'lesson' && <LessonPlayer />}

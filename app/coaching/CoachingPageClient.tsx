@@ -2,26 +2,25 @@
 
 import Link from 'next/link';
 import CoachingLayout from '@/components/coaching/CoachingLayout';
-import styles from './coaching.module.css';
 
 export default function CoachingPageClient() {
   return (
     <>
       <div className="gradient-bg" aria-hidden="true" />
-      <header className={styles.header}>
+      <header className="sticky top-0 z-[100] py-4 bg-[rgba(9,9,11,0.85)] backdrop-blur-[24px] backdrop-saturate-[180%] border-b border-[var(--border)]">
         <div className="container">
-          <div className={styles.headerInner}>
-            <Link href="/" className={styles.backLink}>
+          <div className="flex items-center justify-between max-w-[1400px] mx-auto px-5">
+            <Link href="/" className="font-['Inter',sans-serif] text-[1.1rem] font-bold text-[var(--text)] no-underline transition-colors duration-200 hover:text-[var(--accent)]">
               &larr; HLB 보컬스튜디오
             </Link>
-            <nav className={styles.headerNav}>
-              <Link href="/diagnosis" className={styles.headerLink}>진단</Link>
+            <nav className="flex items-center gap-2">
+              <Link href="/diagnosis" className="px-[18px] py-2 text-[var(--text2)] no-underline text-[0.88rem] rounded-lg transition-all duration-200 hover:text-[var(--text)] hover:bg-[var(--surface2)]">진단</Link>
             </nav>
           </div>
         </div>
       </header>
-      <main className={styles.main}>
-        <div className={styles.container}>
+      <main className="relative z-[1] py-5 pb-10">
+        <div className="max-w-[1400px] mx-auto px-5">
           <CoachingLayout />
         </div>
       </main>

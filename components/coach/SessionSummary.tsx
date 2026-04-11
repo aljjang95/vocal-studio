@@ -3,7 +3,6 @@
 import { useMemo, useCallback } from 'react';
 import { useCoachStore } from '@/stores/coachStore';
 import { getStageById } from '@/lib/data/hlbCurriculum';
-import styles from './SessionSummary.module.css';
 
 function formatDuration(ms: number): string {
   const sec = Math.floor(ms / 1000);
@@ -31,8 +30,6 @@ export default function SessionSummary() {
     const now = Date.now();
     const elapsed = sessionStartTime ? now - sessionStartTime : 0;
 
-    // Count stages attempted and passed in this session
-    // Look at the most recent session's data
     const latestSession = sessionHistory.length > 0
       ? sessionHistory[sessionHistory.length - 1]
       : null;
@@ -60,7 +57,6 @@ export default function SessionSummary() {
 
   const currentStage = getStageById(currentStageId);
 
-  // Generate a simple encouragement
   const comment = useMemo(() => {
     if (summary.stagesPassed > 0) {
       return `오늘 ${summary.stagesPassed}개의 단계를 합격했어요! 꾸준한 연습이 실력을 만듭니다. 내일도 같은 시간에 연습해보세요.`;
@@ -72,7 +68,6 @@ export default function SessionSummary() {
   }, [summary.stagesPassed, failStreak]);
 
   const handleGoHome = useCallback(() => {
-    // Save session to history
     const store = useCoachStore.getState();
     const session = {
       id: `session-${Date.now()}`,
@@ -93,7 +88,6 @@ export default function SessionSummary() {
         : 0,
     };
 
-    // Add to session history
     useCoachStore.setState((s) => ({
       sessionHistory: [...s.sessionHistory, session],
     }));
@@ -103,37 +97,32 @@ export default function SessionSummary() {
   }, [resetSession, setPhase]);
 
   return (
-    <div className={styles.container}>
-      <h2 className={styles.title}>오늘의 레슨 요약</h2>
-      <p className={styles.subtitle}>수고하셨습니다.</p>
+    <div className="bg-[var(--bg3)] border border-[var(--border2)] rounded-[var(--r)] p-8 max-[768px]:px-5 max-[768px]:py-6 max-w-[600px] mx-auto text-center animate-[slideIn_0.4s_ease-out]">
+      <h2 className="text-[var(--fs-h2)] font-bold text-[var(--text)] mb-2">오늘의 레슨 요약</h2>
+      <p className="text-[var(--fs-sm)] text-[var(--text2)] mb-7">수고하셨습니다.</p>
 
-      <div className={styles.statsGrid}>
-        <div className={styles.statCard}>
-          <span className={styles.statValue}>{summary.duration}</span>
-          <span className={styles.statLabel}>연습 시간</span>
-        </div>
-        <div className={styles.statCard}>
-          <span className={styles.statValue}>{summary.stagesAttempted}</span>
-          <span className={styles.statLabel}>진행 단계</span>
-        </div>
-        <div className={styles.statCard}>
-          <span className={styles.statValue}>{summary.stagesPassed}</span>
-          <span className={styles.statLabel}>합격 수</span>
-        </div>
-        <div className={styles.statCard}>
-          <span className={styles.statValue}>{summary.avgScore}</span>
-          <span className={styles.statLabel}>평균 점수</span>
-        </div>
+      <div className="grid grid-cols-2 gap-3 max-[768px]:gap-2.5 mb-6">
+        {[
+          { value: summary.duration, label: '연습 시간' },
+          { value: summary.stagesAttempted, label: '진행 단계' },
+          { value: summary.stagesPassed, label: '합격 수' },
+          { value: summary.avgScore, label: '평균 점수' },
+        ].map((stat) => (
+          <div key={stat.label} className="flex flex-col items-center gap-1 px-3 py-4 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--r-xs)]">
+            <span className="text-[var(--fs-h3)] font-bold text-[var(--accent-lt)] font-mono">{stat.value}</span>
+            <span className="text-[var(--fs-xs)] text-[var(--muted)]">{stat.label}</span>
+          </div>
+        ))}
       </div>
 
-      <div className={styles.commentSection}>
-        <div className={styles.commentText}>{comment}</div>
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--r-sm)] p-5 mb-6 text-left">
+        <div className="text-[var(--fs-sm)] text-[var(--text2)] leading-relaxed">{comment}</div>
       </div>
 
-      <div className={styles.actions}>
+      <div className="flex flex-col gap-2.5 max-w-[320px] mx-auto">
         <button
           type="button"
-          className={styles.primaryBtn}
+          className="px-6 py-3.5 border-none rounded-[var(--r-xs)] bg-[var(--cta-bg)] text-[var(--cta-text)] text-[var(--fs-body)] font-bold cursor-pointer transition-colors duration-200 hover:bg-[var(--cta-hover)]"
           onClick={handleGoHome}
         >
           레슨 홈으로

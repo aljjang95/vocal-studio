@@ -8,7 +8,6 @@ import { gradeLesson } from '@/lib/coach/pitchGrader';
 import * as lessonEngine from '@/lib/coach/lessonEngine';
 import ScaleDisplay from './ScaleDisplay';
 import PitchMonitor from './PitchMonitor';
-import styles from './LessonPlayer.module.css';
 
 type LessonState = 'guide' | 'countdown' | 'playing' | 'timer';
 
@@ -33,7 +32,6 @@ export default function LessonPlayer() {
   const stage = getStageById(currentStageId);
   const isNonVocal = stage ? stage.pattern.length === 0 : false;
 
-  // Generate guide text based on stage
   const guideText = stage
     ? stage.scaleType === '비발성'
       ? stage.name.includes('바람')
@@ -42,7 +40,6 @@ export default function LessonPlayer() {
       : `"${stage.pronunciation}"을(를) ${stage.scaleType} 패턴으로 발성하세요.\n피아노 소리에 맞춰 정확한 음정을 유지합니다.`
     : '';
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       lessonEngine.stopLesson();
@@ -61,7 +58,6 @@ export default function LessonPlayer() {
           if (countdownRef.current) clearInterval(countdownRef.current);
           countdownRef.current = null;
 
-          // Start the actual lesson
           if (isNonVocal) {
             setLessonState('timer');
             setTimerSeconds(10);
@@ -72,7 +68,6 @@ export default function LessonPlayer() {
                 if (s <= 1) {
                   if (timerRef.current) clearInterval(timerRef.current);
                   timerRef.current = null;
-                  // Complete non-vocal lesson with 100 score
                   completeLesson(100);
                   setPhase('judgment');
                   return 0;
@@ -83,7 +78,7 @@ export default function LessonPlayer() {
           } else {
             setLessonState('playing');
             const keyRangeSemitones = getKeyRange(condition ?? 'normal');
-            const startKey = 48; // C3
+            const startKey = 48;
 
             lessonEngine.startLesson(
               currentStageId,
@@ -91,12 +86,8 @@ export default function LessonPlayer() {
               startKey,
               keyRangeSemitones,
               {
-                onNotePlay: () => {
-                  // Store updates handled by lessonEngine callbacks
-                },
-                onKeyChange: () => {
-                  // Store updates handled by lessonEngine callbacks
-                },
+                onNotePlay: () => {},
+                onKeyChange: () => {},
                 onPatternComplete: (patternScore) => {
                   useCoachStore.getState().completePattern(
                     patternScore.rootNote,
@@ -119,11 +110,8 @@ export default function LessonPlayer() {
   }, [isNonVocal, currentStageId, currentBpm, condition, setIsPlaying, completeLesson, setPhase]);
 
   const handlePause = useCallback(() => {
-    // Simple stop - in production would implement pause/resume
     lessonEngine.stopLesson();
     setIsPlaying(false);
-
-    // Calculate score from what we have so far
     const scores = lessonEngine.getCurrentPatternScores();
     const score = scores.length > 0 ? gradeLesson(scores) : 0;
     completeLesson(score);
@@ -137,7 +125,6 @@ export default function LessonPlayer() {
       timerRef.current = null;
     }
     setIsPlaying(false);
-
     const scores = lessonEngine.getCurrentPatternScores();
     const score = scores.length > 0 ? gradeLesson(scores) : 0;
     completeLesson(score);
@@ -147,24 +134,28 @@ export default function LessonPlayer() {
   if (!stage) return null;
 
   return (
-    <div className={styles.container}>
+    <div className="max-w-[680px] mx-auto animate-[slideIn_0.4s_ease-out]">
       {/* Stage header */}
-      <div className={styles.stageHeader}>
-        <div className={styles.blockLabel}>
+      <div className="text-center px-5 py-6 max-[768px]:px-4 max-[768px]:py-5 bg-[var(--bg3)] border border-[var(--border2)] rounded-[var(--r)] mb-4">
+        <div className="text-[var(--fs-xs)] text-[var(--muted)] uppercase tracking-wider mb-1">
           {stage.block} / Stage {currentStageId}
         </div>
-        <h2 className={styles.stageTitle}>{stage.name}</h2>
-        <div className={styles.pronunciation}>{stage.pronunciation}</div>
-        <span className={styles.bpmBadge}>{currentBpm} BPM</span>
+        <h2 className="text-[var(--fs-h2)] font-bold text-[var(--text)] mb-2">{stage.name}</h2>
+        <div className="text-[clamp(1.5rem,4vw,2.5rem)] font-extrabold text-[var(--accent-lt)] tracking-wider mb-2">
+          {stage.pronunciation}
+        </div>
+        <span className="inline-block px-3 py-1 bg-[var(--surface2)] rounded-xl text-[var(--fs-xs)] text-[var(--muted)] font-mono">
+          {currentBpm} BPM
+        </span>
       </div>
 
       {/* Guide text (pre-start) */}
       {lessonState === 'guide' && (
-        <div className={styles.guideSection}>
-          <div className={styles.guideText}>{guideText}</div>
+        <div className="bg-[var(--bg3)] border border-[var(--border2)] rounded-[var(--r)] p-6 max-[768px]:px-4 max-[768px]:py-5 text-center mb-4">
+          <div className="text-[var(--fs-sm)] text-[var(--text2)] leading-relaxed mb-5 whitespace-pre-line">{guideText}</div>
           <button
             type="button"
-            className={styles.readyBtn}
+            className="inline-block px-10 py-3.5 border-none rounded-[var(--r-xs)] bg-[var(--cta-bg)] text-[var(--cta-text)] text-[var(--fs-body)] font-bold cursor-pointer transition-colors duration-200 hover:bg-[var(--cta-hover)]"
             onClick={handleReady}
           >
             준비됐어요
@@ -174,27 +165,29 @@ export default function LessonPlayer() {
 
       {/* Countdown */}
       {lessonState === 'countdown' && countdownValue > 0 && (
-        <div className={styles.countdown}>
-          <div className={styles.countdownNumber}>{countdownValue}</div>
+        <div className="flex items-center justify-center px-5 py-12 bg-[var(--bg3)] border border-[var(--border2)] rounded-[var(--r)] mb-4">
+          <div className="text-[clamp(4rem,10vw,6rem)] font-extrabold text-[var(--accent-lt)] font-mono animate-[countPulse_1s_ease-in-out_infinite]">
+            {countdownValue}
+          </div>
         </div>
       )}
 
       {/* Playing: vocal stage */}
       {lessonState === 'playing' && (
-        <div className={styles.playArea}>
+        <div className="flex flex-col gap-4 mb-4">
           <ScaleDisplay />
           <PitchMonitor />
-          <div className={styles.controls}>
+          <div className="flex justify-center gap-3 max-[768px]:flex-wrap">
             <button
               type="button"
-              className={styles.pauseBtn}
+              className="px-6 py-3 max-[768px]:flex-1 max-[768px]:min-w-[120px] rounded-[var(--r-xs)] border border-[var(--border2)] bg-[var(--surface)] text-[var(--text2)] text-[var(--fs-sm)] font-semibold cursor-pointer transition-all duration-200 hover:bg-[var(--surface2)] hover:border-[var(--accent)] hover:text-[var(--text)]"
               onClick={handlePause}
             >
               일시정지
             </button>
             <button
               type="button"
-              className={styles.stopBtn}
+              className="px-6 py-3 max-[768px]:flex-1 max-[768px]:min-w-[120px] rounded-[var(--r-xs)] border border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.08)] text-[var(--error-lt)] text-[var(--fs-sm)] font-semibold cursor-pointer transition-all duration-200 hover:bg-[rgba(239,68,68,0.15)] hover:border-[var(--error)]"
               onClick={handleStop}
             >
               중단
@@ -205,16 +198,18 @@ export default function LessonPlayer() {
 
       {/* Timer mode: non-vocal stage */}
       {lessonState === 'timer' && (
-        <div className={styles.playArea}>
-          <div className={styles.timerMode}>
-            <div className={styles.timerGuide}>{guideText}</div>
-            <div className={styles.timerCountdown}>{timerSeconds}</div>
-            <div className={styles.timerLabel}>초 남음</div>
+        <div className="flex flex-col gap-4 mb-4">
+          <div className="bg-[var(--bg3)] border border-[var(--border2)] rounded-[var(--r)] px-5 py-8 text-center">
+            <div className="text-[var(--fs-sm)] text-[var(--text2)] leading-relaxed mb-5">{guideText}</div>
+            <div className="text-[clamp(2rem,6vw,3.5rem)] font-extrabold text-[var(--accent-lt)] font-mono mb-2">
+              {timerSeconds}
+            </div>
+            <div className="text-[var(--fs-xs)] text-[var(--muted)]">초 남음</div>
           </div>
-          <div className={styles.controls}>
+          <div className="flex justify-center gap-3">
             <button
               type="button"
-              className={styles.stopBtn}
+              className="px-6 py-3 rounded-[var(--r-xs)] border border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.08)] text-[var(--error-lt)] text-[var(--fs-sm)] font-semibold cursor-pointer transition-all duration-200 hover:bg-[rgba(239,68,68,0.15)] hover:border-[var(--error)]"
               onClick={handleStop}
             >
               중단

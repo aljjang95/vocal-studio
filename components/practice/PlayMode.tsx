@@ -11,7 +11,6 @@ import {
 } from '@/lib/audio/pitchDetector';
 import type { PitchData } from '@/lib/audio/pitchDetector';
 import type { Song, MelodyPoint, SessionScore } from '@/types';
-import styles from './PlayMode.module.css';
 
 function formatTime(sec: number): string {
   if (!isFinite(sec) || sec < 0) return '0:00';
@@ -257,39 +256,39 @@ export default function PlayMode({ song }: Props) {
   const separationStatus = song.separationStatus ?? 'done';
 
   return (
-    <div className={styles.playMode}>
+    <div className="bg-[var(--bg2)] border border-[var(--border)] rounded-xl p-6 flex flex-col gap-5">
       {/* Song header */}
-      <div className={styles.songHeader}>
-        <div className={styles.songTitle}>{song.title}</div>
-        <div className={styles.songArtist}>{song.artist}</div>
+      <div className="text-center">
+        <div className="text-2xl font-bold text-[var(--text)]">{song.title}</div>
+        <div className="text-sm text-[var(--text2)] mt-1">{song.artist}</div>
       </div>
 
       {separationStatus === 'pending' && (
-        <div className={styles.pendingNotice}>
+        <div className="text-center px-4 py-2.5 bg-yellow-500/10 border border-yellow-500/20 rounded-md text-[var(--warning)] text-xs">
           보컬 분리 진행 중입니다. 원본 파일로 MR이 재생됩니다.
         </div>
       )}
 
       {/* Pitch display */}
-      <div className={styles.pitchArea}>
-        <div className={styles.currentNote}>{currentNote}</div>
+      <div className="flex flex-col items-center justify-center px-5 py-10 bg-[var(--bg3)] rounded-lg min-h-[160px]">
+        <div className="text-[4rem] font-extrabold text-[var(--accent-lt)] font-[Inter,monospace] leading-none">{currentNote}</div>
         {currentFreq > 0 && (
-          <div className={styles.currentFreq}>{currentFreq.toFixed(1)} Hz</div>
+          <div className="text-sm text-[var(--muted)] mt-2">{currentFreq.toFixed(1)} Hz</div>
         )}
       </div>
 
       {/* Lyrics placeholder */}
-      <div className={styles.lyricsPlaceholder}>
-        <span className={styles.placeholderText}>가사 표시 영역 (향후 업데이트)</span>
+      <div className="flex items-center justify-center px-4 py-8 bg-[var(--surface)] rounded-md border border-dashed border-[var(--border)] min-h-[80px]">
+        <span className="text-sm text-[var(--muted)]">가사 표시 영역 (향후 업데이트)</span>
       </div>
 
       {/* Progress */}
       {phase === 'playing' && (
-        <div className={styles.progressSection}>
-          <div className={styles.progressBar}>
-            <div className={styles.progressFill} style={{ width: `${Math.min(100, progress)}%` }} />
+        <div className="flex flex-col gap-1.5">
+          <div className="h-1.5 bg-[var(--surface2)] rounded-sm overflow-hidden">
+            <div className="h-full bg-[var(--accent)] rounded-sm transition-[width] duration-150" style={{ width: `${Math.min(100, progress)}%` }} />
           </div>
-          <div className={styles.timeDisplay}>
+          <div className="flex justify-between text-xs text-[var(--muted)]">
             <span>{formatTime(currentTime)}</span>
             <span>{formatTime(duration)}</span>
           </div>
@@ -297,10 +296,10 @@ export default function PlayMode({ song }: Props) {
       )}
 
       {/* Controls */}
-      <div className={styles.controls}>
+      <div className="flex justify-center">
         {phase === 'ready' && (
           <button
-            className={styles.startBtn}
+            className="px-12 py-3.5 bg-[var(--accent)] text-white border-none rounded-lg text-base font-bold cursor-pointer transition-all hover:opacity-90 hover:-translate-y-px disabled:opacity-40 disabled:cursor-not-allowed"
             onClick={handleStart}
             disabled={!mrBufferRef.current}
           >
@@ -310,7 +309,7 @@ export default function PlayMode({ song }: Props) {
 
         {phase === 'playing' && (
           <button
-            className={styles.stopBtn}
+            className="px-8 py-3 bg-transparent text-[var(--error-lt)] border border-[var(--error)] rounded-lg text-sm font-semibold cursor-pointer transition-colors hover:bg-red-500/10"
             onClick={handleStopRequest}
           >
             중간에 그만두기
@@ -318,7 +317,7 @@ export default function PlayMode({ song }: Props) {
         )}
 
         {phase === 'scoring' && (
-          <div className={styles.scoringText}>
+          <div className="text-sm text-[var(--accent-lt)] font-semibold animate-pulse">
             채점 중...
           </div>
         )}
@@ -326,16 +325,16 @@ export default function PlayMode({ song }: Props) {
 
       {/* Stop confirmation */}
       {showStopConfirm && (
-        <div className={styles.confirmOverlay} onClick={handleStopCancel}>
-          <div className={styles.confirmDialog} onClick={(e) => e.stopPropagation()}>
-            <p className={styles.confirmText}>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[200]" onClick={handleStopCancel}>
+          <div className="bg-[var(--bg2)] border border-[var(--border2)] rounded-xl p-7 max-w-[360px] w-[90%] text-center" onClick={(e) => e.stopPropagation()}>
+            <p className="text-base font-semibold text-[var(--text)] mb-6">
               여기까지 채점할까요?
             </p>
-            <div className={styles.confirmActions}>
-              <button className={styles.confirmCancel} onClick={handleStopCancel}>
+            <div className="flex gap-2.5 justify-center">
+              <button className="px-5 py-2.5 bg-[var(--surface2)] text-[var(--text2)] border border-[var(--border)] rounded-md text-sm cursor-pointer transition-colors hover:bg-[var(--surface3)]" onClick={handleStopCancel}>
                 계속 부르기
               </button>
-              <button className={styles.confirmOk} onClick={handleStopConfirm}>
+              <button className="px-5 py-2.5 bg-[var(--accent)] text-white border-none rounded-md text-sm font-semibold cursor-pointer transition-opacity hover:opacity-90" onClick={handleStopConfirm}>
                 채점하기
               </button>
             </div>

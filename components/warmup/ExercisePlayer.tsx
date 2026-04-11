@@ -5,7 +5,7 @@ import { WarmupRoutine } from '@/types';
 import { useWarmupStore } from '@/stores/warmupStore';
 import * as scheduler from '@/lib/audio/scheduler';
 import { resumeAudioContext } from '@/lib/audio/audioEngine';
-import styles from './ExercisePlayer.module.css';
+import { GlowCard } from '@/components/ui/glow-card';
 
 interface ExercisePlayerProps {
   routine: WarmupRoutine;
@@ -37,7 +37,6 @@ export default function ExercisePlayer({ routine, onComplete }: ExercisePlayerPr
   const isLastStage = currentStageIndex >= totalStages - 1;
   const progress = totalStages > 0 ? ((currentStageIndex) / totalStages) * 100 : 0;
 
-  // 타이머
   useEffect(() => {
     if (isPlaying && !isPaused) {
       timerRef.current = setInterval(() => {
@@ -57,12 +56,10 @@ export default function ExercisePlayer({ routine, onComplete }: ExercisePlayerPr
     };
   }, [isPlaying, isPaused]);
 
-  // BPM 변경 시 scheduler에 반영
   useEffect(() => {
     scheduler.setBpm(currentBpm);
   }, [currentBpm]);
 
-  // 현재 단계 변경 시 BPM 세팅
   useEffect(() => {
     if (currentStage) {
       setCurrentBpm(currentStage.suggestedBpm);
@@ -82,9 +79,7 @@ export default function ExercisePlayer({ routine, onComplete }: ExercisePlayerPr
     scheduler.setRepeatCount(stage.repetitions);
     scheduler.setSectionRange(null, null);
     scheduler.setCallbacks({
-      onComplete: () => {
-        // 패턴 재생 완료 시 아무 추가 동작 없음 -- 사용자가 다음으로 넘길 수 있음
-      },
+      onComplete: () => {},
     });
     scheduler.start();
   }, [currentBpm]);
@@ -144,7 +139,6 @@ export default function ExercisePlayer({ routine, onComplete }: ExercisePlayerPr
     handleSkip();
   }, [handleSkip]);
 
-  // cleanup
   useEffect(() => {
     return () => {
       scheduler.stop();
@@ -154,83 +148,83 @@ export default function ExercisePlayer({ routine, onComplete }: ExercisePlayerPr
   if (!currentStage) return null;
 
   return (
-    <div className={styles.container}>
+    <GlowCard className="max-w-[680px] mx-auto p-8 animate-[slideIn_0.4s_ease-out] max-sm:p-5">
       {/* 진행률 바 */}
-      <div className={styles.progressBar}>
-        <div className={styles.progressTrack}>
-          <div className={styles.progressFill} style={{ width: `${progress}%` }} />
+      <div className="flex items-center gap-3 mb-6">
+        <div className="flex-1 h-1 bg-[var(--surface2)] rounded-sm overflow-hidden">
+          <div className="h-full bg-gradient-to-r from-[var(--accent)] to-[var(--accent2)] rounded-sm transition-[width] duration-300 ease-out" style={{ width: `${progress}%` }} />
         </div>
-        <span className={styles.progressText}>{currentStageIndex + 1}/{totalStages}</span>
+        <span className="text-xs text-[var(--muted)] font-mono whitespace-nowrap">{currentStageIndex + 1}/{totalStages}</span>
       </div>
 
       {/* 현재 단계 정보 */}
-      <div className={styles.currentStage}>
-        <div className={styles.stageLabel}>
+      <div className="text-center px-5 py-8 mb-6 bg-[var(--surface)] border border-[var(--border)] rounded-lg">
+        <div className="text-xs text-[var(--muted)] uppercase tracking-widest mb-2">
           STAGE {currentStageIndex + 1}
         </div>
-        <div className={styles.stageName}>{currentStage.name}</div>
-        <div className={styles.pronunciation}>{currentStage.pronunciation}</div>
-        <div className={styles.guideText}>{currentStage.guideText}</div>
+        <div className="text-2xl font-bold text-[var(--text)] mb-3">{currentStage.name}</div>
+        <div className="text-[clamp(2rem,5vw,3.5rem)] font-extrabold text-[var(--accent-lt)] mb-3 tracking-wide max-sm:text-[2rem]">{currentStage.pronunciation}</div>
+        <div className="text-sm text-[var(--text2)] leading-relaxed max-w-[400px] mx-auto">{currentStage.guideText}</div>
       </div>
 
       {/* 메타 정보 */}
-      <div className={styles.metaRow}>
-        <div className={styles.metaItem}>
-          <span className={styles.metaLabel}>반복</span>
-          <span className={styles.metaValue}>{currentStage.repetitions}회</span>
+      <div className="flex justify-center gap-5 mb-6 flex-wrap">
+        <div className="flex flex-col items-center gap-1 px-[18px] py-2.5 bg-[var(--surface)] rounded-md border border-[var(--border)]">
+          <span className="text-xs text-[var(--muted)]">반복</span>
+          <span className="text-base font-bold text-[var(--text)] font-mono">{currentStage.repetitions}회</span>
         </div>
-        <div className={styles.metaItem}>
-          <span className={styles.metaLabel}>예상 시간</span>
-          <span className={styles.metaValue}>{currentStage.durationMin}분</span>
+        <div className="flex flex-col items-center gap-1 px-[18px] py-2.5 bg-[var(--surface)] rounded-md border border-[var(--border)]">
+          <span className="text-xs text-[var(--muted)]">예상 시간</span>
+          <span className="text-base font-bold text-[var(--text)] font-mono">{currentStage.durationMin}분</span>
         </div>
-        <div className={styles.metaItem}>
-          <span className={styles.metaLabel}>BPM 범위</span>
-          <span className={styles.metaValue}>{currentStage.bpmRange[0]}-{currentStage.bpmRange[1]}</span>
+        <div className="flex flex-col items-center gap-1 px-[18px] py-2.5 bg-[var(--surface)] rounded-md border border-[var(--border)]">
+          <span className="text-xs text-[var(--muted)]">BPM 범위</span>
+          <span className="text-base font-bold text-[var(--text)] font-mono">{currentStage.bpmRange[0]}-{currentStage.bpmRange[1]}</span>
         </div>
       </div>
 
       {/* BPM 슬라이더 */}
-      <div className={styles.bpmControl}>
-        <span className={styles.bpmLabel}>BPM</span>
+      <div className="flex items-center gap-3.5 px-5 py-3.5 bg-[var(--surface)] border border-[var(--border)] rounded-md mb-6">
+        <span className="text-sm text-[var(--text2)] whitespace-nowrap">BPM</span>
         <input
           type="range"
-          className={styles.bpmSlider}
+          className="flex-1 h-1 appearance-none bg-[var(--surface3)] rounded-sm outline-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--accent)] [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-[var(--bg3)]"
           min={currentStage.bpmRange[0]}
           max={currentStage.bpmRange[1]}
           value={currentBpm}
           onChange={(e) => setCurrentBpm(Number(e.target.value))}
         />
-        <span className={styles.bpmValue}>{currentBpm} BPM</span>
+        <span className="text-sm font-bold text-[var(--accent-lt)] font-mono min-w-[60px] text-right">{currentBpm} BPM</span>
       </div>
 
       {/* 경과 시간 */}
-      <div className={styles.timer}>
-        <div className={styles.timerValue}>{formatTime(elapsedSec)}</div>
-        <div className={styles.timerLabel}>경과 시간</div>
+      <div className="text-center mb-6">
+        <div className="text-[clamp(1.5rem,3vw,2rem)] font-bold text-[var(--text)] font-mono">{formatTime(elapsedSec)}</div>
+        <div className="text-xs text-[var(--muted)] mt-0.5">경과 시간</div>
       </div>
 
       {/* 컨트롤 */}
-      <div className={styles.controls}>
+      <div className="flex justify-center gap-3 max-sm:flex-wrap">
         {isPlaying && !isPaused ? (
-          <button type="button" className={styles.controlBtn} onClick={handlePause}>
+          <button type="button" className="px-6 py-3 rounded-md border border-[var(--border2)] bg-[var(--surface)] text-[var(--text2)] text-sm font-semibold cursor-pointer transition-all hover:bg-[var(--surface2)] hover:border-[var(--accent)] hover:text-[var(--text)] max-sm:flex-1 max-sm:min-w-[100px]" onClick={handlePause}>
             일시정지
           </button>
         ) : (
-          <button type="button" className={styles.playBtn} onClick={handlePlay}>
+          <button type="button" className="px-8 py-3 rounded-md border-none bg-[var(--cta-bg)] text-[var(--cta-text)] text-base font-bold cursor-pointer transition-colors hover:bg-[var(--cta-hover)] max-sm:flex-1 max-sm:min-w-[100px]" onClick={handlePlay}>
             {isPaused ? '재개' : '재생'}
           </button>
         )}
-        <button type="button" className={styles.controlBtn} onClick={handleSkip}>
+        <button type="button" className="px-6 py-3 rounded-md border border-[var(--border2)] bg-[var(--surface)] text-[var(--text2)] text-sm font-semibold cursor-pointer transition-all hover:bg-[var(--surface2)] hover:border-[var(--accent)] hover:text-[var(--text)] max-sm:flex-1 max-sm:min-w-[100px]" onClick={handleSkip}>
           건너뛰기
         </button>
         <button
           type="button"
-          className={styles.nextBtn}
+          className="px-6 py-3 rounded-md border border-[var(--accent)] bg-blue-500/10 text-[var(--accent-lt)] text-sm font-semibold cursor-pointer transition-all hover:bg-blue-500/20 disabled:opacity-40 disabled:cursor-not-allowed max-sm:flex-1 max-sm:min-w-[100px]"
           onClick={handleNext}
         >
           {isLastStage ? '완료' : '다음 단계'}
         </button>
       </div>
-    </div>
+    </GlowCard>
   );
 }
