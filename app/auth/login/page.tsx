@@ -35,16 +35,16 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2 bg-[#030712]">
+    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2 bg-[#080C0A]">
       {/* 브랜딩 */}
-      <div className="hidden md:flex flex-col justify-center p-16 bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] relative overflow-hidden">
-        <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(99,102,241,0.15)_0%,transparent_70%)]" />
-        <div className="absolute -bottom-[60px] -left-[60px] w-60 h-60 rounded-full bg-[radial-gradient(circle,rgba(139,92,246,0.12)_0%,transparent_70%)]" />
+      <div className="hidden md:flex flex-col justify-center p-16 bg-gradient-to-br from-[#0a1210] via-[#122218] to-[#0e1a14] relative overflow-hidden">
+        <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(91,140,110,0.15)_0%,transparent_70%)]" />
+        <div className="absolute -bottom-[60px] -left-[60px] w-60 h-60 rounded-full bg-[radial-gradient(circle,rgba(110,170,128,0.12)_0%,transparent_70%)]" />
         <div className="relative z-10">
-          <div className="text-[0.8rem] tracking-[0.15em] text-indigo-300/70 uppercase mb-4">HLB 보컬스튜디오</div>
+          <div className="text-[0.8rem] tracking-[0.15em] text-[var(--accent-bright)]/70 uppercase mb-4">HLB 보컬스튜디오</div>
           <h1 className="text-[2.5rem] font-extrabold text-white leading-[1.2] mb-6">
             목이 조이는 이유,<br />
-            <span className="text-indigo-400">이제 알 수 있습니다</span>
+            <span className="text-[var(--accent-light)]">이제 알 수 있습니다</span>
           </h1>
           <p className="text-base text-white/[0.55] leading-[1.7] max-w-[360px]">
             후두·혀뿌리·턱의 긴장을 AI가 실시간으로 분석하고,
@@ -58,7 +58,7 @@ export default function LoginPage() {
               { label: '18단계 무료', desc: '신용카드 불필요' },
             ].map((item) => (
               <div key={item.label} className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-[10px] shrink-0 bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-xs font-bold text-indigo-400">
+                <div className="w-10 h-10 rounded-[10px] shrink-0 bg-[var(--accent)]/15 border border-[var(--accent)]/30 flex items-center justify-center text-xs font-bold text-[var(--accent-light)]">
                   {item.label.replace(/[가-힣·]/g, '').trim() || item.label.slice(0, 2)}
                 </div>
                 <div>
@@ -87,7 +87,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full py-3.5 px-4 rounded-xl border border-white/[0.08] bg-white/[0.04] text-white text-[0.9375rem] outline-none focus:border-indigo-500/60 transition-colors"
+                className="w-full py-3.5 px-4 rounded-xl border border-white/[0.08] bg-white/[0.04] text-white text-[0.9375rem] outline-none focus:border-[var(--accent)]/60 transition-colors"
                 placeholder="vocal@example.com"
               />
             </div>
@@ -101,7 +101,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full py-3.5 px-4 rounded-xl border border-white/[0.08] bg-white/[0.04] text-white text-[0.9375rem] outline-none focus:border-indigo-500/60 transition-colors"
+                className="w-full py-3.5 px-4 rounded-xl border border-white/[0.08] bg-white/[0.04] text-white text-[0.9375rem] outline-none focus:border-[var(--accent)]/60 transition-colors"
                 placeholder="6자 이상"
               />
             </div>
@@ -118,7 +118,7 @@ export default function LoginPage() {
               className={`w-full py-3.5 rounded-xl border-none text-white text-[0.9375rem] font-semibold mt-1 transition-colors ${
                 loading
                   ? 'bg-gray-700 cursor-not-allowed'
-                  : 'bg-gradient-to-br from-indigo-600 to-purple-600 cursor-pointer hover:opacity-90'
+                  : 'bg-[var(--accent)] cursor-pointer hover:bg-[var(--accent-hover)]'
               }`}
             >
               {loading ? '로그인 중...' : '로그인'}
@@ -127,7 +127,7 @@ export default function LoginPage() {
 
           <p className="text-center mt-6 text-gray-500 text-sm">
             계정이 없으신가요?{' '}
-            <Link href="/auth/signup" className="text-indigo-400 no-underline font-medium">
+            <Link href="/auth/signup" className="text-[var(--accent-light)] no-underline font-medium">
               무료로 시작하기
             </Link>
           </p>

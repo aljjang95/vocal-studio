@@ -43,10 +43,10 @@ export default function SignupPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#030712] p-6">
+      <div className="min-h-screen flex items-center justify-center bg-[#080C0A] p-6">
         <div className="text-center max-w-[440px]">
-          <div className="w-16 h-16 rounded-full bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center mx-auto mb-6">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth="2">
+          <div className="w-16 h-16 rounded-full bg-[var(--accent)]/15 border border-[var(--accent)]/30 flex items-center justify-center mx-auto mb-6">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent-light)" strokeWidth="2">
               <path d="M20 13V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7"/>
               <path d="M2 13l10 8 10-8"/>
             </svg>
@@ -55,7 +55,7 @@ export default function SignupPage() {
             이메일을 확인해주세요
           </h2>
           <p className="text-gray-500 text-[0.9375rem] leading-relaxed">
-            <span className="text-indigo-400 font-medium">{email}</span>로<br />
+            <span className="text-[var(--accent-light)] font-medium">{email}</span>로<br />
             인증 링크를 보냈습니다.
           </p>
           <Link href="/auth/login" className="inline-block mt-8 py-3 px-8 rounded-xl border border-white/10 text-white/70 no-underline text-sm">
@@ -67,16 +67,16 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2 bg-[#030712]">
+    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2 bg-[#080C0A]">
       {/* 브랜딩 */}
-      <div className="hidden md:flex flex-col justify-center p-16 bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] relative overflow-hidden">
-        <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(99,102,241,0.15)_0%,transparent_70%)]" />
-        <div className="absolute -bottom-[60px] -left-[60px] w-60 h-60 rounded-full bg-[radial-gradient(circle,rgba(139,92,246,0.12)_0%,transparent_70%)]" />
+      <div className="hidden md:flex flex-col justify-center p-16 bg-gradient-to-br from-[#0a1210] via-[#122218] to-[#0e1a14] relative overflow-hidden">
+        <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(91,140,110,0.15)_0%,transparent_70%)]" />
+        <div className="absolute -bottom-[60px] -left-[60px] w-60 h-60 rounded-full bg-[radial-gradient(circle,rgba(110,170,128,0.12)_0%,transparent_70%)]" />
         <div className="relative z-10">
-          <div className="text-[0.8rem] tracking-[0.15em] text-indigo-300/70 uppercase mb-4">HLB 보컬스튜디오</div>
+          <div className="text-[0.8rem] tracking-[0.15em] text-[var(--accent-bright)]/70 uppercase mb-4">HLB 보컬스튜디오</div>
           <h1 className="text-[2.5rem] font-extrabold text-white leading-[1.2] mb-6">
             목소리의 변화를,<br />
-            <span className="text-indigo-400">직접 느껴보세요</span>
+            <span className="text-[var(--accent-light)]">직접 느껴보세요</span>
           </h1>
           <p className="text-base text-white/[0.55] leading-[1.7] max-w-[360px]">
             18단계까지 무료. 신용카드 불필요.<br />
@@ -95,8 +95,8 @@ export default function SignupPage() {
             ].map((item) => (
               <div key={item} className="flex items-center gap-2.5 mb-2.5">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
-                  <circle cx="8" cy="8" r="7.5" stroke="rgba(99,102,241,0.4)" />
-                  <path d="M5 8l2 2 4-4" stroke="#818cf8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <circle cx="8" cy="8" r="7.5" stroke="rgba(91,140,110,0.4)" />
+                  <path d="M5 8l2 2 4-4" stroke="var(--accent-light)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
                 <span className="text-sm text-white/65">{item}</span>
               </div>
@@ -118,7 +118,7 @@ export default function SignupPage() {
               </label>
               <input
                 type="text" value={name} onChange={(e) => setName(e.target.value)} required
-                className="w-full py-3.5 px-4 rounded-xl border border-white/[0.08] bg-white/[0.04] text-white text-[0.9375rem] outline-none focus:border-indigo-500/60 transition-colors"
+                className="w-full py-3.5 px-4 rounded-xl border border-white/[0.08] bg-white/[0.04] text-white text-[0.9375rem] outline-none focus:border-[var(--accent)]/60 transition-colors"
                 placeholder="홍길동"
               />
             </div>
@@ -129,7 +129,7 @@ export default function SignupPage() {
               </label>
               <input
                 type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
-                className="w-full py-3.5 px-4 rounded-xl border border-white/[0.08] bg-white/[0.04] text-white text-[0.9375rem] outline-none focus:border-indigo-500/60 transition-colors"
+                className="w-full py-3.5 px-4 rounded-xl border border-white/[0.08] bg-white/[0.04] text-white text-[0.9375rem] outline-none focus:border-[var(--accent)]/60 transition-colors"
                 placeholder="vocal@example.com"
               />
             </div>
@@ -140,7 +140,7 @@ export default function SignupPage() {
               </label>
               <input
                 type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6}
-                className="w-full py-3.5 px-4 rounded-xl border border-white/[0.08] bg-white/[0.04] text-white text-[0.9375rem] outline-none focus:border-indigo-500/60 transition-colors"
+                className="w-full py-3.5 px-4 rounded-xl border border-white/[0.08] bg-white/[0.04] text-white text-[0.9375rem] outline-none focus:border-[var(--accent)]/60 transition-colors"
                 placeholder="6자 이상"
               />
             </div>
@@ -156,7 +156,7 @@ export default function SignupPage() {
               className={`w-full py-3.5 rounded-xl border-none text-white text-[0.9375rem] font-semibold mt-1 transition-colors ${
                 loading
                   ? 'bg-gray-700 cursor-not-allowed'
-                  : 'bg-gradient-to-br from-indigo-600 to-purple-600 cursor-pointer hover:opacity-90'
+                  : 'bg-[var(--accent)] cursor-pointer hover:bg-[var(--accent-hover)]'
               }`}
             >
               {loading ? '가입 중...' : '무료로 시작하기'}
@@ -165,7 +165,7 @@ export default function SignupPage() {
 
           <p className="text-center mt-6 text-gray-500 text-sm">
             이미 계정이 있으신가요?{' '}
-            <Link href="/auth/login" className="text-indigo-400 no-underline font-medium">
+            <Link href="/auth/login" className="text-[var(--accent-light)] no-underline font-medium">
               로그인
             </Link>
           </p>
