@@ -23,7 +23,7 @@ export default function HowItWorks() {
         <div className="max-w-[1200px] mx-auto px-7 grid grid-cols-1 md:grid-cols-4 gap-6">
           {STEPS.map((step) => (
             <GlowCard key={step.num} className="p-6 text-center">
-              <div className="text-5xl font-mono font-bold text-[var(--accent)]/20 mb-3">{step.num}</div>
+              <div className="text-5xl font-mono font-bold mb-3" style={{ color: 'var(--accent)', opacity: 0.2 }}>{step.num}</div>
               <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">{step.title}</h3>
               <p className="text-sm text-[var(--text-secondary)]">{step.desc}</p>
             </GlowCard>

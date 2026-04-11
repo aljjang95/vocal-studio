@@ -6,7 +6,7 @@ import { GlowCard } from '@/components/ui/glow-card';
 const FEATURES = [
   {
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/>
         <path d="M19 10v2a7 7 0 01-14 0v-2"/>
         <line x1="12" y1="19" x2="12" y2="22"/>
@@ -18,7 +18,7 @@ const FEATURES = [
   },
   {
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M3 6h18M3 12h18M3 18h18"/>
         <circle cx="7" cy="6" r="1" fill="currentColor"/>
         <circle cx="7" cy="12" r="1" fill="currentColor"/>
@@ -31,7 +31,7 @@ const FEATURES = [
   },
   {
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <rect x="2" y="6" width="20" height="12" rx="2"/>
         <path d="M7 6V4M12 6V4M17 6V4"/>
       </svg>
@@ -42,7 +42,7 @@ const FEATURES = [
   },
   {
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <circle cx="12" cy="12" r="10"/>
         <path d="M12 6v6l4 2"/>
       </svg>
@@ -53,7 +53,7 @@ const FEATURES = [
   },
   {
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
       </svg>
     ),
@@ -63,7 +63,7 @@ const FEATURES = [
   },
   {
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M9 18V5l12-2v13"/>
         <circle cx="6" cy="18" r="3"/>
         <circle cx="18" cy="16" r="3"/>
@@ -95,7 +95,7 @@ export default function Features() {
         <div className="max-w-[1200px] mx-auto px-7 grid grid-cols-1 md:grid-cols-3 gap-6">
           {FEATURES.map((f) => (
             <GlowCard key={f.title} className="p-6">
-              <div className="w-10 h-10 rounded-lg bg-[var(--accent)]/10 flex items-center justify-center text-[var(--accent-light)] mb-4">
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center text-[var(--accent-light)] mb-4" style={{ background: 'rgba(59,130,246,0.1)' }}>
                 {f.icon}
               </div>
               <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">{f.title}</h3>

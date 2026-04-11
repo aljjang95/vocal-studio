@@ -33,7 +33,7 @@ export default function JourneyClient() {
         </div>
       </nav>
 
-      <div className="max-w-[520px] mx-auto px-5 pb-[60px]">
+      <div className="max-w-[640px] mx-auto px-5 pb-[60px]">
         <header className="pt-8 pb-6">
           <h1 className="font-[family-name:var(--font-display)] text-xl text-[var(--text-primary)] font-bold tracking-tight text-[26px]">소리의 길</h1>
           <p className="text-[13px] text-[var(--text-muted)] mt-1.5">
@@ -44,10 +44,10 @@ export default function JourneyClient() {
         <div className="flex flex-col gap-8">
           {Object.entries(blocks).map(([blockName, stages]) => (
             <section key={blockName}>
-              <h2 className="font-[family-name:var(--font-display)] text-xl text-[var(--text-primary)] text-xs font-semibold text-[var(--text-muted)] tracking-wide mb-2.5 pl-0.5">
+              <h2 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-2.5 pl-0.5">
                 {blockName}
               </h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="flex flex-col gap-2">
                 {stages.map((stage) => {
                   const status = getStageStatus(stage.id);
                   const prog = progress[stage.id];
