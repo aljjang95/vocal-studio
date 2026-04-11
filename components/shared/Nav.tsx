@@ -43,8 +43,8 @@ export default function Nav() {
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 right-0 z-[200] py-5 bg-[rgba(9,9,11,0.3)] backdrop-blur-[8px] transition-all duration-[400ms] border-b border-transparent ${
-          scrolled ? 'py-3.5 !bg-[rgba(9,9,11,0.85)] !backdrop-blur-[30px] saturate-[180%] !border-[var(--border)]' : ''
+        className={`fixed top-0 left-0 right-0 z-[200] py-5 bg-[var(--glass-bg)]/30 backdrop-blur-[8px] transition-all duration-[400ms] border-b border-transparent ${
+          scrolled ? 'py-3.5 !bg-[var(--glass-bg)] !backdrop-blur-[30px] saturate-[180%] !border-[var(--border)]' : ''
         }`}
         id="mainNav"
       >
@@ -96,7 +96,7 @@ export default function Nav() {
 
       {/* Mobile Menu */}
       <div
-        className={`fixed inset-0 z-[300] bg-[rgba(9,9,11,0.97)] backdrop-blur-[24px] flex-col items-center justify-center gap-[22px] ${
+        className={`fixed inset-0 z-[300] bg-[var(--bg-base)]/97 backdrop-blur-[24px] flex-col items-center justify-center gap-[22px] ${
           menuOpen ? 'flex' : 'hidden'
         }`}
         role="dialog"

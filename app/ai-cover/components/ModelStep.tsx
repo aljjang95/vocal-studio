@@ -86,13 +86,13 @@ export default function ModelStep() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="bg-[#141414] border border-[#2a2a2a] rounded-xl p-5">
-        <h2 className="text-[1.1rem] font-semibold text-[#e5e5e5] mb-3">새 모델 만들기</h2>
+      <div className="bg-[var(--bg-raised)] border border-[var(--border)] rounded-xl p-5">
+        <h2 className="text-[1.1rem] font-semibold text-[var(--text-primary)] mb-3">새 모델 만들기</h2>
 
         {recordings.length > 0 && (
           <div className="flex flex-col gap-2 mb-4">
             {recordings.map((path) => (
-              <label key={path} className="flex items-center gap-2 text-[0.85rem] text-[#e5e5e5] cursor-pointer">
+              <label key={path} className="flex items-center gap-2 text-[0.85rem] text-[var(--text-primary)] cursor-pointer">
                 <input
                   type="checkbox"
                   checked={selectedPaths.includes(path)}
@@ -106,7 +106,7 @@ export default function ModelStep() {
         )}
 
         <input
-          className="w-full py-2.5 px-3 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg text-[#e5e5e5] text-[0.9rem] mb-3 outline-none focus:border-purple-600 transition-colors"
+          className="w-full py-2.5 px-3 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] text-[0.9rem] mb-3 outline-none focus:border-purple-600 transition-colors"
           placeholder="모델 이름 (예: 내 목소리 v1)"
           value={modelName}
           onChange={(e) => setModelName(e.target.value)}
@@ -124,22 +124,22 @@ export default function ModelStep() {
       </div>
 
       {models.length > 0 && (
-        <div className="bg-[#141414] border border-[#2a2a2a] rounded-xl p-5">
-          <h2 className="text-[1.1rem] font-semibold text-[#e5e5e5] mb-3">내 모델</h2>
+        <div className="bg-[var(--bg-raised)] border border-[var(--border)] rounded-xl p-5">
+          <h2 className="text-[1.1rem] font-semibold text-[var(--text-primary)] mb-3">내 모델</h2>
           <ul className="list-none p-0 m-0 flex flex-col gap-2">
             {models.map((model) => (
               <li
                 key={model.id}
-                className={`flex items-center justify-between p-3 bg-[#1a1a1a] border rounded-lg transition-colors ${
-                  selectedModelId === model.id ? 'border-purple-600' : 'border-[#2a2a2a]'
+                className={`flex items-center justify-between p-3 bg-[var(--bg-elevated)] border rounded-lg transition-colors ${
+                  selectedModelId === model.id ? 'border-purple-600' : 'border-[var(--border)]'
                 }`}
               >
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-[0.9rem] text-[#e5e5e5] font-medium">{model.name}</span>
+                  <span className="text-[0.9rem] text-[var(--text-primary)] font-medium">{model.name}</span>
                   <span
                     className={`text-xs ${
                       model.status === 'completed' ? 'text-green-500' :
-                      model.status === 'failed' ? 'text-red-500' : 'text-[#888]'
+                      model.status === 'failed' ? 'text-red-500' : 'text-[var(--text-secondary)]'
                     }`}
                   >
                     {statusLabel[model.status] ?? model.status}
@@ -161,7 +161,7 @@ export default function ModelStep() {
 
       <div className="flex gap-3">
         <button
-          className="flex-1 py-3 border border-[#2a2a2a] rounded-xl bg-transparent text-[#e5e5e5] text-[0.95rem] cursor-pointer hover:bg-[#1e1e1e]"
+          className="flex-1 py-3 border border-[var(--border)] rounded-xl bg-transparent text-[var(--text-primary)] text-[0.95rem] cursor-pointer hover:bg-[var(--bg-hover)]"
           onClick={() => setStep('record')}
         >
           이전

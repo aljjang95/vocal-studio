@@ -118,13 +118,13 @@ export default function VocalReportClient() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#030712] text-white flex items-start justify-center p-12 max-sm:p-6">
+    <div className="min-h-screen bg-[var(--bg-base)] text-white flex items-start justify-center p-12 max-sm:p-6">
       <div className="w-full max-w-[560px] flex flex-col gap-8">
 
         {/* 상단 네비 */}
         <div className="flex items-center justify-between mb-2">
-          <Link href="/" className="text-[13px] text-[#666] no-underline">&larr; HLB 보컬스튜디오</Link>
-          <Link href="/journey" className="text-[13px] text-[#666] no-underline">소리의 길</Link>
+          <Link href="/" className="text-[13px] text-[var(--text-muted)] no-underline">&larr; HLB 보컬스튜디오</Link>
+          <Link href="/journey" className="text-[13px] text-[var(--text-muted)] no-underline">소리의 길</Link>
         </div>
 
         {/* 헤더 */}

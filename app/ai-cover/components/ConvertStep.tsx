@@ -69,24 +69,24 @@ export default function ConvertStep() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="bg-[#141414] border border-[#2a2a2a] rounded-xl p-5">
-        <h2 className="text-[1.1rem] font-semibold text-[#e5e5e5] mb-1">선택된 모델</h2>
+      <div className="bg-[var(--bg-raised)] border border-[var(--border)] rounded-xl p-5">
+        <h2 className="text-[1.1rem] font-semibold text-[var(--text-primary)] mb-1">선택된 모델</h2>
         <p className="text-[0.95rem] text-purple-600 font-medium">{selectedModel?.name ?? '모델 미선택'}</p>
       </div>
 
-      <div className="bg-[#141414] border border-[#2a2a2a] rounded-xl p-5">
-        <h2 className="text-[1.1rem] font-semibold text-[#e5e5e5] mb-1">노래 업로드</h2>
-        <p className="text-[0.85rem] text-[#888] mb-4">변환하고 싶은 노래 파일을 업로드하세요.</p>
+      <div className="bg-[var(--bg-raised)] border border-[var(--border)] rounded-xl p-5">
+        <h2 className="text-[1.1rem] font-semibold text-[var(--text-primary)] mb-1">노래 업로드</h2>
+        <p className="text-[0.85rem] text-[var(--text-secondary)] mb-4">변환하고 싶은 노래 파일을 업로드하세요.</p>
         <FileDropZone
           onFileSelected={(file) => setSongFile(file)}
           disabled={converting || status === 'completed'}
         />
       </div>
 
-      <div className="bg-[#141414] border border-[#2a2a2a] rounded-xl p-5">
-        <h2 className="text-[1.1rem] font-semibold text-[#e5e5e5] mb-1">피치 조정</h2>
+      <div className="bg-[var(--bg-raised)] border border-[var(--border)] rounded-xl p-5">
+        <h2 className="text-[1.1rem] font-semibold text-[var(--text-primary)] mb-1">피치 조정</h2>
         <div className="flex items-center gap-3 mt-2">
-          <span className="text-xs text-[#888] min-w-7 text-center">-24</span>
+          <span className="text-xs text-[var(--text-secondary)] min-w-7 text-center">-24</span>
           <input
             type="range"
             min={-24}
@@ -96,17 +96,17 @@ export default function ConvertStep() {
             onChange={(e) => setPitchShift(Number(e.target.value))}
             className="flex-1 accent-purple-600 h-1.5"
           />
-          <span className="text-xs text-[#888] min-w-7 text-center">+24</span>
+          <span className="text-xs text-[var(--text-secondary)] min-w-7 text-center">+24</span>
         </div>
-        <p className="text-center text-[0.85rem] text-[#e5e5e5] mt-2">
+        <p className="text-center text-[0.85rem] text-[var(--text-primary)] mt-2">
           {pitchShift > 0 ? `+${pitchShift}` : pitchShift} 반음
         </p>
       </div>
 
       {status && (
-        <div className="bg-[#141414] border border-[#2a2a2a] rounded-xl p-5">
-          <p className="text-[0.95rem] text-[#e5e5e5] font-medium mb-2">{STATUS_LABEL[status] ?? status}</p>
-          <div className="h-1.5 bg-[#2a2a2a] rounded overflow-hidden">
+        <div className="bg-[var(--bg-raised)] border border-[var(--border)] rounded-xl p-5">
+          <p className="text-[0.95rem] text-[var(--text-primary)] font-medium mb-2">{STATUS_LABEL[status] ?? status}</p>
+          <div className="h-1.5 bg-[var(--bg-elevated)] rounded overflow-hidden">
             <div
               className={`h-full rounded transition-[width] duration-500 ${status === 'failed' ? 'bg-red-500' : 'bg-purple-600'}`}
               style={{ width: `${progressPct}%` }}
@@ -127,7 +127,7 @@ export default function ConvertStep() {
       ) : (
         <div className="flex gap-3">
           <button
-            className="flex-1 py-3 border border-[#2a2a2a] rounded-xl bg-transparent text-[#e5e5e5] text-[0.95rem] cursor-pointer hover:bg-[#1e1e1e]"
+            className="flex-1 py-3 border border-[var(--border)] rounded-xl bg-transparent text-[var(--text-primary)] text-[0.95rem] cursor-pointer hover:bg-[var(--bg-hover)]"
             onClick={() => setStep('model')}
           >
             이전

@@ -45,5 +45,5 @@ export default function PitchVisualizer({ targetPitches, currentPitch, isActive 
     }
   }, [targetPitches, currentPitch, isActive]);
 
-  return <canvas ref={canvasRef} width={320} height={160} style={{ width: '100%', borderRadius: 8, border: '1px solid #1f2937' }} />;
+  return <canvas ref={canvasRef} width={320} height={160} style={{ width: '100%', borderRadius: 8, border: '1px solid var(--border)' }} />;
 }

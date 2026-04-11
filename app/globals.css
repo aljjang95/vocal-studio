@@ -126,6 +126,38 @@
   --sidebar-ring:     oklch(0.55 0.12 155);
 }
 
+/* ── LIGHT MODE OVERRIDE (custom tokens) ── */
+/* next-themes adds .dark to <html> for dark mode, no class for light */
+/* :root defaults are dark, so we override to light values here */
+html:not(.dark) {
+  --bg-base:     #F6F8F7;
+  --bg-raised:   #EEF1EF;
+  --bg-elevated: #E6EBE8;
+  --bg-hover:    #DCE3DE;
+
+  --text-primary:   #1A2420;
+  --text-secondary: #5A6A60;
+  --text-muted:     #8A9A90;
+  --text-dim:       #A0AEA6;
+
+  --accent:         #4A7A5D;
+  --accent-hover:   #3D6B50;
+  --accent-light:   #5B8C6E;
+  --accent-bright:  #6EAA80;
+  --accent-muted:   rgba(74,122,93,0.12);
+  --accent-glow:    rgba(74,122,93,0.20);
+
+  --border-subtle:  rgba(0,0,0,0.05);
+  --border-default: rgba(0,0,0,0.08);
+  --border-strong:  rgba(0,0,0,0.13);
+
+  /* Legacy aliases re-mapped for light */
+  --surface:   rgba(0,0,0,0.02);
+  --surface2:  rgba(0,0,0,0.04);
+  --surface3:  rgba(0,0,0,0.07);
+  --glass-bg:  rgba(246,248,247,0.80);
+}
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; font-size: 16px; }
 

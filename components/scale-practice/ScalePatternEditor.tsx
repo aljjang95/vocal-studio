@@ -44,7 +44,7 @@ export default function ScalePatternEditor() {
               background: active
                 ? 'linear-gradient(135deg, #d97706, #b45309)'
                 : 'rgba(255,255,255,0.06)',
-              color: active ? '#fff' : '#9ca3af',
+              color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
               boxShadow: active ? '0 2px 12px rgba(217,119,6,0.3)' : 'none',
             }}>
               {name}
@@ -55,7 +55,7 @@ export default function ScalePatternEditor() {
 
       {/* 패턴 숫자 */}
       <div style={{ marginBottom: 14 }}>
-        <span style={{ color: '#6b7280', fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>패턴</span>
+        <span style={{ color: 'var(--text-muted)', fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>패턴</span>
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6, alignItems: 'center' }}>
           {pattern.map((val, i) => (
             <input
@@ -68,9 +68,9 @@ export default function ScalePatternEditor() {
                 width: 38, height: 34, textAlign: 'center' as const, borderRadius: 8,
                 border: '1px solid rgba(255,255,255,0.1)',
                 background: val < 0
-                  ? 'linear-gradient(135deg, #7c3aed, #6d28d9)'
+                  ? 'linear-gradient(135deg, var(--accent), var(--accent-hover))'
                   : 'rgba(255,255,255,0.04)',
-                color: val < 0 ? '#e9d5ff' : '#e5e7eb',
+                color: val < 0 ? 'var(--text-primary)' : 'var(--text-primary)',
                 fontSize: 14, fontWeight: 600,
                 fontFamily: "'SF Mono', 'Fira Code', monospace",
                 outline: 'none',
@@ -79,7 +79,7 @@ export default function ScalePatternEditor() {
             />
           ))}
           <button onClick={() => setPattern([...pattern, 0])} style={smallBtn}>+</button>
-          <button onClick={() => setPattern([...pattern, -1])} style={{ ...smallBtn, background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', color: '#e9d5ff' }}>쉼</button>
+          <button onClick={() => setPattern([...pattern, -1])} style={{ ...smallBtn, background: 'linear-gradient(135deg, var(--accent), var(--accent-hover))', color: 'var(--text-primary)' }}>쉼</button>
           {pattern.length > 1 && <button onClick={() => setPattern(pattern.slice(0, -1))} style={smallBtn}>−</button>}
         </div>
       </div>
@@ -94,9 +94,9 @@ export default function ScalePatternEditor() {
         </label>
 
         <label style={labelStyle}>
-          <span>BPM <strong style={{ color: '#fbbf24' }}>{bpm}</strong></span>
+          <span>BPM <strong style={{ color: 'var(--streak-gold)' }}>{bpm}</strong></span>
           <input type="range" min={40} max={200} value={bpm} onChange={(e) => setBpm(Number(e.target.value))}
-            style={{ width: 90, accentColor: '#d97706' }} />
+            style={{ width: 90, accentColor: 'var(--warning)' }} />
         </label>
 
         <label style={labelStyle}>
@@ -104,7 +104,7 @@ export default function ScalePatternEditor() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <input type="number" min={-12} max={0} value={transposeRange[0]}
               onChange={(e) => setTransposeRange([Number(e.target.value), transposeRange[1]])} style={numStyle} />
-            <span style={{ color: '#4b5563' }}>~</span>
+            <span style={{ color: 'var(--text-muted)' }}>~</span>
             <input type="number" min={0} max={24} value={transposeRange[1]}
               onChange={(e) => setTransposeRange([transposeRange[0], Number(e.target.value)])} style={numStyle} />
           </div>
@@ -116,18 +116,18 @@ export default function ScalePatternEditor() {
 
 const smallBtn: React.CSSProperties = {
   width: 34, height: 34, borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)',
-  background: 'rgba(255,255,255,0.04)', color: '#9ca3af', fontSize: 16,
+  background: 'rgba(255,255,255,0.04)', color: 'var(--text-secondary)', fontSize: 16,
   cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
 };
 
 const labelStyle: React.CSSProperties = {
   display: 'flex', flexDirection: 'column', gap: 4,
-  fontSize: 11, color: '#6b7280', fontWeight: 600,
+  fontSize: 11, color: 'var(--text-muted)', fontWeight: 600,
   letterSpacing: '0.05em',
 };
 
 const selectStyle: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.04)', color: '#e5e7eb',
+  background: 'rgba(255,255,255,0.04)', color: 'var(--text-primary)',
   border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6,
   padding: '4px 8px', fontSize: 13, fontWeight: 600,
   fontFamily: "'SF Mono', monospace",
@@ -136,6 +136,6 @@ const selectStyle: React.CSSProperties = {
 const numStyle: React.CSSProperties = {
   width: 38, height: 28, textAlign: 'center' as const, borderRadius: 6,
   border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)',
-  color: '#e5e7eb', fontSize: 13, fontWeight: 600,
+  color: 'var(--text-primary)', fontSize: 13, fontWeight: 600,
   fontFamily: "'SF Mono', monospace",
 };

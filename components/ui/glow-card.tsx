@@ -50,7 +50,7 @@ const GlowCard = forwardRef<HTMLDivElement, GlowCardProps>(
           'shadow-[0_4px_24px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.04)]',
           'hover:border-white/[0.10] hover:shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.06)]',
           active && [
-            'border-t-2 border-t-[#5B8C6E]/60',
+            'border-t-2 border-t-[var(--accent)]/60',
             'shadow-[0_4px_24px_rgba(80,180,120,0.15),0_0_40px_rgba(80,180,120,0.08),inset_0_1px_0_rgba(255,255,255,0.06)]',
           ],
           glow && 'after:absolute after:w-32 after:h-32 after:rounded-full after:bg-[rgba(80,180,120,0.12)] after:blur-3xl after:pointer-events-none after:transition-opacity after:opacity-0 hover:after:opacity-100 after:left-[var(--glow-x)] after:top-[var(--glow-y)] after:-translate-x-1/2 after:-translate-y-1/2',

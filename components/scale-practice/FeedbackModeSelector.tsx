@@ -29,10 +29,10 @@ export default function FeedbackModeSelector() {
           }}>
             <div style={{ fontSize: 20, marginBottom: 4 }}>{m.icon}</div>
             <div style={{
-              fontSize: 12, fontWeight: 700, color: active ? '#fbbf24' : '#9ca3af',
+              fontSize: 12, fontWeight: 700, color: active ? 'var(--streak-gold)' : 'var(--text-secondary)',
               letterSpacing: '0.03em',
             }}>{m.label}</div>
-            <div style={{ fontSize: 9, color: '#6b7280', marginTop: 2 }}>{m.desc}</div>
+            <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 2 }}>{m.desc}</div>
           </button>
         );
       })}

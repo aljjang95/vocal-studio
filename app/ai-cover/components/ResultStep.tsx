@@ -26,7 +26,7 @@ export default function ResultStep() {
   }, [conversionId]);
 
   if (loading) {
-    return <p className="text-center text-[#888] py-12">결과를 불러오는 중...</p>;
+    return <p className="text-center text-[var(--text-secondary)] py-12">결과를 불러오는 중...</p>;
   }
 
   if (!conversion || !conversion.output_path) {
@@ -61,8 +61,8 @@ export default function ResultStep() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="bg-[#141414] border border-[#2a2a2a] rounded-xl p-5">
-        <h2 className="text-[1.1rem] font-semibold text-[#e5e5e5] mb-4">변환 결과</h2>
+      <div className="bg-[var(--bg-raised)] border border-[var(--border)] rounded-xl p-5">
+        <h2 className="text-[1.1rem] font-semibold text-[var(--text-primary)] mb-4">변환 결과</h2>
         <AudioPlayer
           src={outputUrl}
           compareSrc={originalUrl}
@@ -100,7 +100,7 @@ export default function ResultStep() {
         <button className="flex-1 py-3 border-none rounded-xl bg-purple-600 text-white text-[0.95rem] font-semibold cursor-pointer hover:opacity-90" onClick={handleRestart}>
           다시 변환하기
         </button>
-        <button className="flex-1 py-3 border border-[#2a2a2a] rounded-xl bg-transparent text-[#e5e5e5] text-[0.95rem] cursor-pointer hover:bg-[#1e1e1e]" onClick={reset}>
+        <button className="flex-1 py-3 border border-[var(--border)] rounded-xl bg-transparent text-[var(--text-primary)] text-[0.95rem] cursor-pointer hover:bg-[var(--bg-hover)]" onClick={reset}>
           처음부터 다시
         </button>
       </div>

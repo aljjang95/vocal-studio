@@ -81,7 +81,7 @@ export default function PianoKeyboard() {
     return (
       <div style={{
         fontSize: isAccidental ? 8 : 10, fontWeight: 600,
-        color: isCurrent ? '#fbbf24' : isDetected ? '#34d399' : isAccidental ? 'rgba(255,255,255,0.4)' : '#999',
+        color: isCurrent ? 'var(--streak-gold)' : isDetected ? 'var(--success)' : isAccidental ? 'rgba(255,255,255,0.4)' : 'var(--text-muted)',
         userSelect: 'none', textAlign: 'center',
       }}>
         {midiLabel(midiNumber, keyLabel)}
@@ -95,7 +95,7 @@ export default function PianoKeyboard() {
         height: 200, borderRadius: 16,
         background: 'linear-gradient(180deg, #18182a, #0e0e1a)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: '#555', fontSize: 14, fontFamily: "'Pretendard', sans-serif",
+        color: 'var(--text-muted)', fontSize: 14, fontFamily: "'Pretendard', sans-serif",
         border: '1px solid rgba(255,255,255,0.05)',
       }}>
         🎹 피아노 로딩 중...
@@ -128,12 +128,12 @@ export default function PianoKeyboard() {
         fontSize: 13, fontFamily: "'Pretendard', sans-serif",
       }}>
         {currentNote && (
-          <span style={{ color: '#fbbf24', fontWeight: 700, textShadow: '0 0 10px rgba(251,191,36,0.35)' }}>
+          <span style={{ color: 'var(--streak-gold)', fontWeight: 700, textShadow: '0 0 10px rgba(251,191,36,0.35)' }}>
             🎹 {Note.fromMidi(currentNote)}
           </span>
         )}
         {detectedPitch && (
-          <span style={{ color: '#34d399', fontWeight: 600 }}>
+          <span style={{ color: 'var(--success)', fontWeight: 600 }}>
             🎤 {Math.round(detectedPitch)}Hz
           </span>
         )}
@@ -157,7 +157,7 @@ export default function PianoKeyboard() {
                 renderNoteLabel={renderNoteLabel}
               />
               {isLoading && (
-                <div style={{ textAlign: 'center', color: '#666', fontSize: 11, marginTop: 6 }}>
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 11, marginTop: 6 }}>
                   그랜드 피아노 샘플 로딩 중...
                 </div>
               )}

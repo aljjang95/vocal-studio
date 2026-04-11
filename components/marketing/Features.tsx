@@ -87,7 +87,7 @@ export default function Features() {
             다른 앱과 다른 점 하나
           </h2>
           <p className="section-desc">
-            "잘 못하는 것"을 말해주는 앱은 많습니다.
+            &ldquo;잘 못하는 것&rdquo;을 말해주는 앱은 많습니다.
             HLB는 <strong>왜 안 되는지</strong>를 찾아서, 어떻게 고치는지 알려줍니다.
           </p>
         </div>

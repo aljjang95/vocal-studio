@@ -63,7 +63,7 @@ export default function WarmupPageClient() {
   return (
     <>
       <div className="gradient-bg" aria-hidden="true" />
-      <header className="sticky top-0 z-[100] py-4 bg-[rgba(9,9,11,0.85)] backdrop-blur-[24px] backdrop-saturate-[180%] border-b border-[var(--border)]">
+      <header className="sticky top-0 z-[100] py-4 bg-[var(--glass-bg)] backdrop-blur-[24px] backdrop-saturate-[180%] border-b border-[var(--border)]">
         <div className="container">
           <div className="flex items-center justify-between max-w-[1400px] mx-auto px-5">
             <Link href="/" className="font-[Inter] text-[1.1rem] font-bold text-[var(--text)] no-underline transition-colors hover:text-[var(--accent)]">

@@ -14,7 +14,7 @@ const EXIT_ANIMATION_MS = 300;
 
 const TYPE_CLASSES: Record<ToastType, string> = {
   positive: 'bg-emerald-500/[0.15] border border-emerald-500/30 text-emerald-300',
-  neutral: 'bg-gray-400/[0.15] border border-gray-400/30 text-gray-300',
+  neutral: 'bg-[var(--bg-hover)]/[0.15] border border-[var(--text-muted)]/30 text-[var(--text-secondary)]',
   correction: 'bg-orange-400/[0.15] border border-orange-400/30 text-orange-300',
 };
 

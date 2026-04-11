@@ -35,9 +35,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2 bg-[#080C0A]">
+    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2 bg-[var(--bg-base)]">
       {/* 브랜딩 */}
-      <div className="hidden md:flex flex-col justify-center p-16 bg-gradient-to-br from-[#0a1210] via-[#122218] to-[#0e1a14] relative overflow-hidden">
+      <div className="hidden md:flex flex-col justify-center p-16 bg-gradient-to-br from-[var(--bg-raised)] via-[var(--bg-elevated)] to-[var(--bg-raised)] relative overflow-hidden">
         <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(91,140,110,0.15)_0%,transparent_70%)]" />
         <div className="absolute -bottom-[60px] -left-[60px] w-60 h-60 rounded-full bg-[radial-gradient(circle,rgba(110,170,128,0.12)_0%,transparent_70%)]" />
         <div className="relative z-10">
@@ -75,11 +75,11 @@ export default function LoginPage() {
       <div className="flex flex-col justify-start pt-16 md:justify-center items-center px-6 md:p-16">
         <div className="w-full max-w-[380px] md:max-w-[380px]">
           <h2 className="text-[1.75rem] font-bold text-white mb-2">로그인</h2>
-          <p className="text-sm text-gray-500 mb-8">계속하려면 로그인하세요</p>
+          <p className="text-sm text-[var(--text-muted)] mb-8">계속하려면 로그인하세요</p>
 
           <form onSubmit={handleLogin} className="flex flex-col gap-5">
             <div>
-              <label className="block text-[0.8rem] font-medium text-gray-400 mb-2 tracking-[0.05em]">
+              <label className="block text-[0.8rem] font-medium text-[var(--text-secondary)] mb-2 tracking-[0.05em]">
                 이메일
               </label>
               <input
@@ -93,7 +93,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-[0.8rem] font-medium text-gray-400 mb-2 tracking-[0.05em]">
+              <label className="block text-[0.8rem] font-medium text-[var(--text-secondary)] mb-2 tracking-[0.05em]">
                 비밀번호
               </label>
               <input
@@ -117,7 +117,7 @@ export default function LoginPage() {
               disabled={loading}
               className={`w-full py-3.5 rounded-xl border-none text-white text-[0.9375rem] font-semibold mt-1 transition-colors ${
                 loading
-                  ? 'bg-gray-700 cursor-not-allowed'
+                  ? 'bg-[var(--bg-elevated)] cursor-not-allowed'
                   : 'bg-[var(--accent)] cursor-pointer hover:bg-[var(--accent-hover)]'
               }`}
             >
@@ -125,7 +125,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="text-center mt-6 text-gray-500 text-sm">
+          <p className="text-center mt-6 text-[var(--text-muted)] text-sm">
             계정이 없으신가요?{' '}
             <Link href="/auth/signup" className="text-[var(--accent-light)] no-underline font-medium">
               무료로 시작하기

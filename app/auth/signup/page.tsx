@@ -43,7 +43,7 @@ export default function SignupPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#080C0A] p-6">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--bg-base)] p-6">
         <div className="text-center max-w-[440px]">
           <div className="w-16 h-16 rounded-full bg-[var(--accent)]/15 border border-[var(--accent)]/30 flex items-center justify-center mx-auto mb-6">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent-light)" strokeWidth="2">
@@ -54,7 +54,7 @@ export default function SignupPage() {
           <h2 className="text-white text-2xl font-bold mb-3">
             이메일을 확인해주세요
           </h2>
-          <p className="text-gray-500 text-[0.9375rem] leading-relaxed">
+          <p className="text-[var(--text-muted)] text-[0.9375rem] leading-relaxed">
             <span className="text-[var(--accent-light)] font-medium">{email}</span>로<br />
             인증 링크를 보냈습니다.
           </p>
@@ -67,9 +67,9 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2 bg-[#080C0A]">
+    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2 bg-[var(--bg-base)]">
       {/* 브랜딩 */}
-      <div className="hidden md:flex flex-col justify-center p-16 bg-gradient-to-br from-[#0a1210] via-[#122218] to-[#0e1a14] relative overflow-hidden">
+      <div className="hidden md:flex flex-col justify-center p-16 bg-gradient-to-br from-[var(--bg-raised)] via-[var(--bg-elevated)] to-[var(--bg-raised)] relative overflow-hidden">
         <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(91,140,110,0.15)_0%,transparent_70%)]" />
         <div className="absolute -bottom-[60px] -left-[60px] w-60 h-60 rounded-full bg-[radial-gradient(circle,rgba(110,170,128,0.12)_0%,transparent_70%)]" />
         <div className="relative z-10">
@@ -109,11 +109,11 @@ export default function SignupPage() {
       <div className="flex flex-col justify-start pt-16 md:justify-center items-center px-6 md:p-16">
         <div className="w-full max-w-full md:max-w-[380px]">
           <h2 className="text-[1.75rem] font-bold text-white mb-2">무료로 시작하기</h2>
-          <p className="text-sm text-gray-500 mb-8">계정을 만들면 바로 레슨을 시작합니다</p>
+          <p className="text-sm text-[var(--text-muted)] mb-8">계정을 만들면 바로 레슨을 시작합니다</p>
 
           <form onSubmit={handleSignup} className="flex flex-col gap-5">
             <div>
-              <label className="block text-[0.8rem] font-medium text-gray-400 mb-2 tracking-[0.05em]">
+              <label className="block text-[0.8rem] font-medium text-[var(--text-secondary)] mb-2 tracking-[0.05em]">
                 이름
               </label>
               <input
@@ -124,7 +124,7 @@ export default function SignupPage() {
             </div>
 
             <div>
-              <label className="block text-[0.8rem] font-medium text-gray-400 mb-2 tracking-[0.05em]">
+              <label className="block text-[0.8rem] font-medium text-[var(--text-secondary)] mb-2 tracking-[0.05em]">
                 이메일
               </label>
               <input
@@ -135,7 +135,7 @@ export default function SignupPage() {
             </div>
 
             <div>
-              <label className="block text-[0.8rem] font-medium text-gray-400 mb-2 tracking-[0.05em]">
+              <label className="block text-[0.8rem] font-medium text-[var(--text-secondary)] mb-2 tracking-[0.05em]">
                 비밀번호
               </label>
               <input
@@ -155,7 +155,7 @@ export default function SignupPage() {
               type="submit" disabled={loading}
               className={`w-full py-3.5 rounded-xl border-none text-white text-[0.9375rem] font-semibold mt-1 transition-colors ${
                 loading
-                  ? 'bg-gray-700 cursor-not-allowed'
+                  ? 'bg-[var(--bg-elevated)] cursor-not-allowed'
                   : 'bg-[var(--accent)] cursor-pointer hover:bg-[var(--accent-hover)]'
               }`}
             >
@@ -163,7 +163,7 @@ export default function SignupPage() {
             </button>
           </form>
 
-          <p className="text-center mt-6 text-gray-500 text-sm">
+          <p className="text-center mt-6 text-[var(--text-muted)] text-sm">
             이미 계정이 있으신가요?{' '}
             <Link href="/auth/login" className="text-[var(--accent-light)] no-underline font-medium">
               로그인

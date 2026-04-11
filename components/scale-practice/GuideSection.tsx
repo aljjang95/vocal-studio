@@ -22,7 +22,7 @@ export default function GuideSection({ videoId, instructions, stageName }: Props
         onClick={() => setOpen(!open)}
         style={{
           width: '100%', padding: '14px 16px', backgroundColor: 'transparent', border: 'none',
-          color: '#d1d5db', fontSize: 14, cursor: 'pointer', textAlign: 'left' as const,
+          color: 'var(--text-primary)', fontSize: 14, cursor: 'pointer', textAlign: 'left' as const,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           fontFamily: "'SF Pro Display', -apple-system, sans-serif",
         }}
@@ -36,7 +36,7 @@ export default function GuideSection({ videoId, instructions, stageName }: Props
           <span style={{ fontWeight: 600 }}>{stageName} 연습 가이드</span>
         </span>
         <span style={{
-          fontSize: 11, color: '#6b7280', padding: '3px 10px', borderRadius: 12,
+          fontSize: 11, color: 'var(--text-muted)', padding: '3px 10px', borderRadius: 12,
           background: 'rgba(255,255,255,0.04)',
           transition: 'transform 0.3s',
           transform: open ? 'rotate(180deg)' : 'none',
@@ -78,14 +78,14 @@ export default function GuideSection({ videoId, instructions, stageName }: Props
                     background: 'linear-gradient(135deg, rgba(217,119,6,0.3), rgba(217,119,6,0.1))',
                     color: '#fbbf24',
                   }}>{i + 1}</span>
-                  <span style={{ color: '#a1a1aa', fontSize: 13, lineHeight: 1.6 }}>{text}</span>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.6 }}>{text}</span>
                 </li>
               ))}
             </ol>
           )}
 
           {!videoId && instructions.length === 0 && (
-            <p style={{ color: '#4b5563', fontSize: 13, textAlign: 'center' as const, padding: '12px 0' }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center' as const, padding: '12px 0' }}>
               이 단계의 가이드가 준비 중입니다.
             </p>
           )}

@@ -17,6 +17,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'path 파라미터가 필요합니다', code: 'NO_PATH' }, { status: 400 });
   }
 
+  // 경로 순회 방어: feedback/ 하위 경로만 허용
+  // '..' 포함 또는 허용된 접두사가 아닌 경우 차단
+  const normalizedPath = path.replace(/\\/g, '/');
+  if (normalizedPath.includes('..') || !normalizedPath.startsWith('feedback/')) {
+    return NextResponse.json({ error: '허용되지 않는 경로입니다', code: 'FORBIDDEN' }, { status: 403 });
+  }
+
   const { data, error } = await supabase.storage
     .from('ai-cover-songs')
     .createSignedUrl(path, 3600); // 1시간 유효

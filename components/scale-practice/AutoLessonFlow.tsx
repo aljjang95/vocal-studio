@@ -207,16 +207,16 @@ export default function AutoLessonFlow({ stage }: Props) {
         }
         .af-coach-dot {
           width: 8px; height: 8px; border-radius: 50%;
-          background: #333; margin-top: 6px; flex-shrink: 0;
+          background: var(--text-dim); margin-top: 6px; flex-shrink: 0;
           transition: background 0.3s;
         }
-        .af-coach-dot[data-active="true"] { background: #e5e5e5; }
+        .af-coach-dot[data-active="true"] { background: var(--text-primary); }
         .af-coach-text {
-          font-size: 15px; line-height: 1.7; color: #ccc; margin: 0;
+          font-size: 15px; line-height: 1.7; color: var(--text-secondary); margin: 0;
         }
         .af-cursor {
           display: inline-block; width: 1.5px; height: 14px;
-          background: #666; margin-left: 1px; vertical-align: text-bottom;
+          background: var(--text-muted); margin-left: 1px; vertical-align: text-bottom;
           animation: blink 0.7s step-end infinite;
         }
         @keyframes blink { 50% { opacity: 0; } }
@@ -248,48 +248,48 @@ export default function AutoLessonFlow({ stage }: Props) {
         .af-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
         .af-tags span {
           font-size: 11px; padding: 3px 8px; border-radius: 4px;
-          background: #1a1a1a; color: #777;
+          background: var(--bg-raised); color: var(--text-secondary);
         }
-        .af-tag-level { color: #aaa !important; }
+        .af-tag-level { color: var(--text-primary) !important; }
 
         .af-steps {
           list-style: none; padding: 0; margin: 0 0 16px;
           display: flex; flex-direction: column; gap: 10px;
         }
         .af-steps li {
-          font-size: 13px; color: #888; line-height: 1.5;
+          font-size: 13px; color: var(--text-secondary); line-height: 1.5;
           padding-left: 20px; position: relative;
         }
         .af-steps li::before {
           content: counter(list-item);
           counter-increment: list-item;
-          position: absolute; left: 0; color: #444;
+          position: absolute; left: 0; color: var(--text-muted);
           font-size: 12px; font-weight: 600;
         }
 
         .af-question {
-          font-size: 14px; color: #888; text-align: center;
+          font-size: 14px; color: var(--text-secondary); text-align: center;
           padding: 14px 0; margin: 0 0 16px;
-          border-top: 1px solid #1a1a1a; border-bottom: 1px solid #1a1a1a;
+          border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
         }
 
         .af-btn-primary {
           width: 100%; padding: 14px; border: none; border-radius: 8px;
-          background: #e5e5e5; color: #111; font-size: 14px; font-weight: 600;
+          background: var(--text-primary); color: var(--bg-base); font-size: 14px; font-weight: 600;
           cursor: pointer; transition: background 0.15s;
         }
-        .af-btn-primary:hover { background: #d5d5d5; }
+        .af-btn-primary:hover { background: var(--text-secondary); }
 
         .af-btn-secondary {
-          flex: 1; padding: 14px; border: 1px solid #2a2a2a; border-radius: 8px;
-          background: transparent; color: #999; font-size: 14px; font-weight: 500;
+          flex: 1; padding: 14px; border: 1px solid var(--border); border-radius: 8px;
+          background: transparent; color: var(--text-secondary); font-size: 14px; font-weight: 500;
           cursor: pointer; transition: all 0.15s;
         }
-        .af-btn-secondary:hover { border-color: #3a3a3a; color: #bbb; }
+        .af-btn-secondary:hover { border-color: var(--border-subtle); color: var(--text-primary); }
 
         .af-btn-stop {
-          width: 100%; padding: 12px; border: 1px solid #2a2a2a; border-radius: 8px;
-          background: transparent; color: #999; font-size: 13px; font-weight: 500;
+          width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px;
+          background: transparent; color: var(--text-secondary); font-size: 13px; font-weight: 500;
           cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
           margin-top: 12px; transition: all 0.15s;
         }
@@ -297,26 +297,26 @@ export default function AutoLessonFlow({ stage }: Props) {
 
         .af-start-circle {
           width: 80px; height: 80px; border-radius: 50%;
-          border: 2px solid #333; background: transparent;
-          color: #999; cursor: pointer;
+          border: 2px solid var(--border); background: transparent;
+          color: var(--text-secondary); cursor: pointer;
           display: flex; align-items: center; justify-content: center;
           transition: all 0.2s; margin: 16px 0;
         }
-        .af-start-circle:hover { border-color: #e5e5e5; color: #e5e5e5; }
+        .af-start-circle:hover { border-color: var(--text-primary); color: var(--text-primary); }
 
-        .af-hint { font-size: 12px; color: #555; margin: 0; }
-        .af-retry { font-size: 11px; color: #444; }
+        .af-hint { font-size: 12px; color: var(--text-muted); margin: 0; }
+        .af-retry { font-size: 11px; color: var(--text-muted); }
 
         .af-live {
-          font-size: 13px; color: #888; text-align: center;
+          font-size: 13px; color: var(--text-secondary); text-align: center;
           padding: 10px 14px; margin: 0 0 12px;
-          background: #161616; border-radius: 8px;
+          background: var(--bg-elevated); border-radius: 8px;
         }
-        .af-live-warn { color: #c88; background: #1a1515; }
+        .af-live-warn { color: var(--warning); background: var(--bg-elevated); }
 
         .af-spinner {
           width: 24px; height: 24px; border-radius: 50%;
-          border: 2px solid #222; border-top-color: #888;
+          border: 2px solid var(--border); border-top-color: var(--text-secondary);
           animation: spin 0.8s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -330,17 +330,17 @@ export default function AutoLessonFlow({ stage }: Props) {
           font-variant-numeric: tabular-nums;
         }
         .af-verdict { font-size: 16px; font-weight: 600; }
-        .af-pass { color: #e5e5e5; }
-        .af-fail { color: #888; }
+        .af-pass { color: var(--text-primary); }
+        .af-fail { color: var(--text-secondary); }
 
         .af-metrics {
           display: flex; flex-direction: column; gap: 12px;
           padding: 16px 0; margin-bottom: 8px;
-          border-top: 1px solid #1a1a1a;
+          border-top: 1px solid var(--border);
         }
 
         .af-feedback {
-          font-size: 14px; color: #888; line-height: 1.6; margin: 0 0 20px;
+          font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin: 0 0 20px;
         }
 
         .af-actions { display: flex; gap: 8px; }
@@ -348,12 +348,12 @@ export default function AutoLessonFlow({ stage }: Props) {
         .af-skip {
           width: 100%; padding: 8px; margin-top: 8px;
           border: none; background: transparent;
-          color: #444; font-size: 12px; cursor: pointer;
+          color: var(--text-muted); font-size: 12px; cursor: pointer;
         }
-        .af-skip:hover { color: #666; }
+        .af-skip:hover { color: var(--text-secondary); }
 
         .af-error {
-          font-size: 13px; color: #c66; text-align: center;
+          font-size: 13px; color: var(--error); text-align: center;
           padding: 10px; margin: 0;
         }
       `}</style>

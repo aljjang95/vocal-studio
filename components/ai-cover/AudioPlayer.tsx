@@ -146,7 +146,7 @@ export default function AudioPlayer({
         ref={canvasRef}
         width={800}
         height={120}
-        className="w-full rounded-xl bg-[#1a1a2e]"
+        className="w-full rounded-xl bg-[var(--bg-elevated)]"
       />
 
       <div className="flex items-center gap-4">

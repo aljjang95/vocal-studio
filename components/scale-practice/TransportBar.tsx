@@ -15,7 +15,7 @@ const iconBtn = (active: boolean, color: string, glow: string): React.CSSPropert
   background: active
     ? `linear-gradient(135deg, ${color}, ${color}dd)`
     : 'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))',
-  color: active ? '#fff' : '#6b7280',
+  color: active ? 'var(--text-primary)' : 'var(--text-muted)',
   boxShadow: active
     ? `0 4px 20px ${glow}, inset 0 1px 0 rgba(255,255,255,0.2)`
     : '0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)',
@@ -56,7 +56,7 @@ export default function TransportBar({ onPlay, onStop, onRecordToggle }: Props) 
         <div style={{
           padding: '6px 14px', borderRadius: 20,
           background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.2)',
-          fontSize: 13, color: '#fbbf24', fontWeight: 600,
+          fontSize: 13, color: 'var(--streak-gold)', fontWeight: 600,
           fontFamily: "'SF Mono', 'Fira Code', monospace",
           letterSpacing: '0.05em',
         }}>

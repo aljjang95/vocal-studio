@@ -80,15 +80,15 @@ export default function RecordStep({ userId }: RecordStepProps) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="bg-[#141414] border border-[#2a2a2a] rounded-xl p-5">
-        <h2 className="text-[1.1rem] font-semibold text-[#e5e5e5] mb-1">음성 녹음</h2>
-        <p className="text-[0.85rem] text-[#888] mb-4">모델 학습에 사용할 목소리를 녹음하세요. 최소 30초 이상 권장합니다.</p>
+      <div className="bg-[var(--bg-raised)] border border-[var(--border)] rounded-xl p-5">
+        <h2 className="text-[1.1rem] font-semibold text-[var(--text-primary)] mb-1">음성 녹음</h2>
+        <p className="text-[0.85rem] text-[var(--text-secondary)] mb-4">모델 학습에 사용할 목소리를 녹음하세요. 최소 30초 이상 권장합니다.</p>
         <AudioRecorder onRecordingComplete={handleRecordingComplete} />
       </div>
 
-      <div className="bg-[#141414] border border-[#2a2a2a] rounded-xl p-5">
-        <h2 className="text-[1.1rem] font-semibold text-[#e5e5e5] mb-1">파일 업로드</h2>
-        <p className="text-[0.85rem] text-[#888] mb-4">이미 녹음된 파일이 있다면 업로드하세요.</p>
+      <div className="bg-[var(--bg-raised)] border border-[var(--border)] rounded-xl p-5">
+        <h2 className="text-[1.1rem] font-semibold text-[var(--text-primary)] mb-1">파일 업로드</h2>
+        <p className="text-[0.85rem] text-[var(--text-secondary)] mb-4">이미 녹음된 파일이 있다면 업로드하세요.</p>
         <FileDropZone onFileSelected={handleFileSelected} disabled={uploading} />
       </div>
 
@@ -96,16 +96,16 @@ export default function RecordStep({ userId }: RecordStepProps) {
       {error && <p className="text-[0.85rem] text-red-500 text-center">{error}</p>}
 
       {recordings.length > 0 && (
-        <div className="bg-[#141414] border border-[#2a2a2a] rounded-xl p-5">
-          <h2 className="text-[1.1rem] font-semibold text-[#e5e5e5] mb-1">녹음 목록</h2>
+        <div className="bg-[var(--bg-raised)] border border-[var(--border)] rounded-xl p-5">
+          <h2 className="text-[1.1rem] font-semibold text-[var(--text-primary)] mb-1">녹음 목록</h2>
           <ul className="list-none p-0 m-0 flex flex-col gap-2">
             {recordings.map((r) => (
-              <li key={r.path} className="flex items-center gap-2 px-3 py-2 bg-[#1a1a1a] rounded-lg">
+              <li key={r.path} className="flex items-center gap-2 px-3 py-2 bg-[var(--bg-elevated)] rounded-lg">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2">
                   <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
                   <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
                 </svg>
-                <span className="text-[0.85rem] text-[#e5e5e5] overflow-hidden text-ellipsis whitespace-nowrap">{r.name}</span>
+                <span className="text-[0.85rem] text-[var(--text-primary)] overflow-hidden text-ellipsis whitespace-nowrap">{r.name}</span>
               </li>
             ))}
           </ul>

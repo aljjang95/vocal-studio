@@ -162,8 +162,8 @@ export default function ScalePracticeClient({ stageId }: Props) {
       <style jsx>{`
         .sc-root {
           min-height: 100vh;
-          background: #030712;
-          color: #e5e5e5;
+          background: var(--bg-base);
+          color: var(--text-primary);
         }
         .sc-container {
           max-width: 720px;
@@ -176,19 +176,19 @@ export default function ScalePracticeClient({ stageId }: Props) {
           gap: 12px;
           margin-bottom: 24px;
           padding-bottom: 16px;
-          border-bottom: 1px solid #1a1a1a;
+          border-bottom: 1px solid var(--border);
         }
         .sc-back {
           width: 32px; height: 32px; border-radius: 8px;
-          border: 1px solid #222; background: transparent;
-          color: #666; cursor: pointer;
+          border: 1px solid var(--border); background: transparent;
+          color: var(--text-secondary); cursor: pointer;
           display: flex; align-items: center; justify-content: center;
           transition: all 0.15s;
         }
-        .sc-back:hover { border-color: #333; color: #999; }
+        .sc-back:hover { border-color: var(--border-subtle); color: var(--text-secondary); }
         .sc-title-group { flex: 1; }
         .sc-block-label {
-          display: block; font-size: 11px; color: #555;
+          display: block; font-size: 11px; color: var(--text-muted);
           margin-bottom: 2px;
         }
         .sc-title {
@@ -197,16 +197,16 @@ export default function ScalePracticeClient({ stageId }: Props) {
         }
         .sc-mode-toggle {
           display: flex; border-radius: 6px; overflow: hidden;
-          border: 1px solid #222;
+          border: 1px solid var(--border);
         }
         .sc-mode-toggle button {
           padding: 5px 12px; border: none; font-size: 12px;
           font-weight: 500; cursor: pointer;
-          background: transparent; color: #555;
+          background: transparent; color: var(--text-muted);
           transition: all 0.15s;
         }
         .sc-mode-toggle button.active {
-          background: #222; color: #e5e5e5;
+          background: var(--bg-elevated); color: var(--text-primary);
         }
         .sc-live {
           width: 6px; height: 6px; border-radius: 50%;
@@ -218,14 +218,14 @@ export default function ScalePracticeClient({ stageId }: Props) {
           50% { opacity: 0.3; }
         }
         .sc-empty {
-          min-height: 100vh; background: #030712; color: #e5e5e5;
+          min-height: 100vh; background: var(--bg-base); color: var(--text-primary);
           display: flex; flex-direction: column;
           align-items: center; justify-content: center;
           gap: 12px; padding: 24px; text-align: center;
         }
         .sc-link-btn {
           padding: 10px 20px; border-radius: 8px; border: none;
-          background: #e5e5e5; color: #111;
+          background: var(--text-primary); color: var(--bg-base);
           font-size: 13px; font-weight: 600; cursor: pointer;
         }
         .sc-free-tags {
@@ -233,7 +233,7 @@ export default function ScalePracticeClient({ stageId }: Props) {
         }
         .sc-free-tags span {
           font-size: 11px; padding: 3px 8px; border-radius: 4px;
-          background: #1a1a1a; color: #666;
+          background: var(--bg-raised); color: var(--text-secondary);
         }
         .sc-error {
           font-size: 13px; color: #c66; text-align: center;
@@ -241,12 +241,12 @@ export default function ScalePracticeClient({ stageId }: Props) {
         }
         .sc-tension-box {
           padding: 16px; border-radius: 8px;
-          background: #161616; margin-bottom: 12px;
+          background: var(--bg-elevated); margin-bottom: 12px;
         }
         .sc-question {
-          font-size: 14px; color: #666; text-align: center;
+          font-size: 14px; color: var(--text-secondary); text-align: center;
           padding: 16px 0; margin: 0;
-          border-top: 1px solid #1a1a1a;
+          border-top: 1px solid var(--border);
         }
       `}</style>
     </div>

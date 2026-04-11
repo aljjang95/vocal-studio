@@ -153,7 +153,7 @@ export default function WeeklyChart() {
                   x={PAD_LEFT - 8}
                   y={y + 4}
                   textAnchor="end"
-                  fill="#71717A"
+                  fill="var(--text-muted)"
                   fontSize={10}
                 >
                   {val}
@@ -197,7 +197,7 @@ export default function WeeklyChart() {
                     x={x + barWidth / 2}
                     y={SVG_H - 8}
                     textAnchor="middle"
-                    fill="#71717A"
+                    fill="var(--text-muted)"
                     fontSize={9}
                     transform={`rotate(-30 ${x + barWidth / 2} ${SVG_H - 8})`}
                   >

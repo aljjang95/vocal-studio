@@ -209,6 +209,28 @@ class TestScalePracticeAdvanced:
         assert result.score == 54
 
 
+class TestPitchScoreEdgeCases:
+    """calculate_pitch_score 엣지 케이스."""
+
+    def test_zero_target_pitch_treated_as_max_error(self) -> None:
+        """target이 0이면 최대 오차(1200 cent)로 처리되어 낮은 점수 반환 (lines 95-96 커버)."""
+        # t=0 → 최대 오차로 처리
+        score = calculate_pitch_score([0.0, 440.0], [440.0, 440.0])
+        # 한 쌍은 0cent, 한 쌍은 1200cent → 평균 600cent → (1-600/300)*100=0
+        assert score == 0
+
+    def test_zero_actual_pitch_treated_as_max_error(self) -> None:
+        """actual이 0이면 최대 오차(1200 cent)로 처리 (lines 95-96 커버)."""
+        score = calculate_pitch_score([440.0], [0.0])
+        assert score == 0
+
+    def test_negative_actual_pitch_treated_as_max_error(self) -> None:
+        """음수 피치도 최대 오차로 처리 (line 95 커버)."""
+        score = calculate_pitch_score([440.0, 440.0], [-1.0, 440.0])
+        # -1.0 → 1200cent, 440→440 → 0cent, 평균=600 → 0점
+        assert score == 0
+
+
 class TestScalePracticeResult:
     """ScalePracticeResult 구조 검증."""
 

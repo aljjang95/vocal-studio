@@ -15,6 +15,8 @@ import subprocess
 
 router = APIRouter(prefix="/onboarding", tags=["onboarding"])
 
+MAX_AUDIO_SIZE = 20 * 1024 * 1024  # 20MB
+
 
 class OnboardingTensionResponse(BaseModel):
     overall: float
@@ -50,6 +52,8 @@ async def analyze(audio: UploadFile):
         ext = Path(audio.filename or "audio.webm").suffix or ".webm"
         src_path = tmp_dir / f"{uuid.uuid4().hex}{ext}"
         content = await audio.read()
+        if len(content) > MAX_AUDIO_SIZE:
+            raise HTTPException(413, "파일이 너무 큽니다 (최대 20MB)")
         src_path.write_bytes(content)
 
         # 2) WAV 변환

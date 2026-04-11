@@ -75,26 +75,26 @@ export default function ScalePracticePage() {
       <style jsx global>{`
         .sp-root {
           min-height: 100vh;
-          background: #030712;
-          color: #e5e5e5;
+          background: var(--bg-base);
+          color: var(--text-primary);
         }
         .sp-nav {
           position: sticky; top: 0; z-index: 100;
-          background: rgba(3,7,18,0.9); backdrop-filter: blur(20px);
-          border-bottom: 1px solid #1a1a1a;
+          background: var(--glass-bg); backdrop-filter: blur(20px);
+          border-bottom: 1px solid var(--border);
           display: flex; align-items: center; justify-content: space-between;
           padding: 0 20px; height: 52px;
         }
         .sp-nav-logo {
-          font-weight: 700; font-size: 15px; color: #e5e5e5; text-decoration: none;
+          font-weight: 700; font-size: 15px; color: var(--text-primary); text-decoration: none;
         }
         .sp-nav-links { display: flex; gap: 4px; }
         @media (max-width: 600px) { .sp-nav-links { display: none; } }
         .sp-nav-link {
-          font-size: 13px; color: #666; text-decoration: none;
+          font-size: 13px; color: var(--text-secondary); text-decoration: none;
           padding: 6px 10px; border-radius: 6px;
         }
-        .sp-nav-link:hover { color: #e5e5e5; background: #1a1a1a; }
+        .sp-nav-link:hover { color: var(--text-primary); background: var(--bg-hover); }
         .sp-container {
           max-width: 520px;
           margin: 0 auto;
@@ -111,7 +111,7 @@ export default function ScalePracticePage() {
         }
         .sp-sub {
           font-size: 13px;
-          color: #666;
+          color: var(--text-muted);
           margin: 6px 0 0;
         }
         .sp-tiers {
@@ -124,8 +124,8 @@ export default function ScalePracticePage() {
           font-weight: 500;
           padding: 4px 10px;
           border-radius: 4px;
-          color: #888;
-          background: #1a1a1a;
+          color: var(--text-secondary);
+          background: var(--bg-raised);
         }
         .sp-tier[data-tier="relax"] { color: #b8a080; background: #1d1915; }
         .sp-tier[data-tier="pitch"] { color: #8090b8; background: #15171d; }
@@ -136,7 +136,7 @@ export default function ScalePracticePage() {
         .sp-block-title {
           font-size: 12px;
           font-weight: 600;
-          color: #555;
+          color: var(--text-muted);
           letter-spacing: 0.03em;
           margin: 0 0 8px;
           padding-left: 2px;
@@ -147,33 +147,33 @@ export default function ScalePracticePage() {
           gap: 1px;
           border-radius: 10px;
           overflow: hidden;
-          background: #1a1a1a;
+          background: var(--border);
         }
         .sp-item {
           display: flex;
           align-items: center;
           gap: 14px;
           padding: 14px 16px;
-          background: #161616;
+          background: var(--bg-raised);
           color: inherit;
           text-decoration: none;
           transition: background 0.15s;
           cursor: pointer;
         }
         .sp-item:hover {
-          background: #1c1c1c;
+          background: var(--bg-elevated);
         }
         .sp-item.sp-locked {
           opacity: 0.3;
           cursor: default;
         }
         .sp-item.sp-locked:hover {
-          background: #161616;
+          background: var(--bg-raised);
         }
         .sp-num {
           font-size: 13px;
           font-weight: 600;
-          color: #555;
+          color: var(--text-muted);
           width: 24px;
           text-align: right;
           flex-shrink: 0;
@@ -191,15 +191,15 @@ export default function ScalePracticePage() {
         .sp-meta {
           display: block;
           font-size: 12px;
-          color: #555;
+          color: var(--text-muted);
           margin-top: 1px;
         }
         .sp-arrow {
-          color: #444;
+          color: var(--text-dim);
           flex-shrink: 0;
         }
         .sp-lock {
-          color: #333;
+          color: var(--text-muted);
           flex-shrink: 0;
         }
       `}</style>

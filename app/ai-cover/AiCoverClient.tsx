@@ -26,8 +26,8 @@ export default function AiCoverClient({ userId }: AiCoverClientProps) {
 
   return (
     <div className="max-w-[800px] mx-auto px-4 py-8 max-sm:px-3 max-sm:py-4">
-      <h1 className="text-[1.75rem] font-bold text-[#e5e5e5] mb-1 max-sm:text-[1.4rem]">AI 커버</h1>
-      <p className="text-[#888] text-[0.95rem] mb-8">내 목소리로 좋아하는 노래를 불러보세요</p>
+      <h1 className="text-[1.75rem] font-bold text-[var(--text-primary)] mb-1 max-sm:text-[1.4rem]">AI 커버</h1>
+      <p className="text-[var(--text-secondary)] text-[0.95rem] mb-8">내 목소리로 좋아하는 노래를 불러보세요</p>
 
       <StepIndicator currentStep={currentStep} />
       <UsageCounter usage={monthlyUsage} limit={monthlyLimit} />

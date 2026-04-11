@@ -13,7 +13,7 @@ function formatDuration(sec: number): string {
 }
 
 function getScoreGrade(score: number): { label: string; className: string } {
-  if (score >= 90) return { label: 'S', className: "text-[#FFD700]" };
+  if (score >= 90) return { label: 'S', className: "text-[var(--streak-gold)]" };
   if (score >= 80) return { label: 'A', className: "text-[var(--success)]" };
   if (score >= 70) return { label: 'B', className: "text-[var(--accent-lt)]" };
   if (score >= 60) return { label: 'C', className: "text-[var(--warning)]" };

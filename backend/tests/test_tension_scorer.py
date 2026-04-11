@@ -44,3 +44,18 @@ class TestTensionScorer:
         score = calculate_tension_score(_make_analysis(
             voice_quality=VoiceQuality(jitter_local=3.0, shimmer_local=8.0, hnr=12.0, h1_h2=-3.0)))
         assert len(score.detail) > 0
+
+    def test_normalize_degenerate_high_equals_low(self):
+        """_normalize: high <= low → 0.0 반환 (line 7 커버)."""
+        from services.tension_scorer import _normalize
+        assert _normalize(5.0, 5.0, 5.0) == 0.0
+        assert _normalize(10.0, 10.0, 5.0) == 0.0  # high < low
+
+    def test_tongue_root_tension_in_detail(self):
+        """혀뿌리 긴장이 감지되면 detail에 포함 (line 48 커버)."""
+        # f1_mean=680 → tongue_root 높음, hnr 낮음으로 추가 강화
+        score = calculate_tension_score(_make_analysis(
+            formant=FormantData(f1_mean=700, f2_mean=1500, f1_std=30, f2_std=50, vsa=1500),
+            voice_quality=VoiceQuality(jitter_local=1.0, shimmer_local=3.0, hnr=20.0, h1_h2=-5.0),
+        ))
+        assert "혀뿌리" in score.detail or score.tongue_root_tension > 50

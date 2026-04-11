@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { anthropic } from '@/lib/anthropic';
+import { createClient } from '@/lib/supabase/server';
 
 const AI_MODEL = process.env.AI_MODEL ?? 'claude-haiku-4-5-20251001';
 
@@ -9,6 +10,12 @@ const AI_MODEL = process.env.AI_MODEL ?? 'claude-haiku-4-5-20251001';
  * body: { sessions: Array<{ date, score, tension, pitchAccuracy }>, period: "weekly" | "daily" }
  */
 export async function POST(request: NextRequest) {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return NextResponse.json({ error: '로그인이 필요합니다', code: 'UNAUTHORIZED' }, { status: 401 });
+  }
+
   try {
     const body = await request.json() as {
       sessions?: Array<{ date: string; score: number; tension: number; pitchAccuracy: number }>;

@@ -1,6 +1,7 @@
 """실시간 분석 서비스 + WebSocket 테스트."""
 from __future__ import annotations
 import json
+from unittest.mock import MagicMock, patch
 from starlette.testclient import TestClient
 from main import app
 from models.tension import TensionScore
@@ -153,3 +154,83 @@ class TestWebSocket:
             report = ws.receive_json()
             assert report["type"] == "report"
             assert report["stats"]["chunk_count"] == 1
+
+    def test_ws_empty_bytes_skipped(self, monkeypatch):
+        """빈 바이너리 청크는 무시되고 분석 메시지를 보내지 않는다 (line 62 커버)."""
+        client = TestClient(app)
+        with client.websocket_connect("/ws/evaluate") as ws:
+            ws.send_text(json.dumps({"type": "start", "stage_id": 1}))
+            ws.receive_json()  # started
+
+            # 빈 바이트 전송 — continue 분기 실행
+            ws.send_bytes(b"")
+
+            # 세션 종료 → 리포트만 받아야 함 (빈 청크는 무시됨)
+            ws.send_text(json.dumps({"type": "end"}))
+            report = ws.receive_json()
+            assert report["type"] == "report"
+            assert report["stats"]["chunk_count"] == 0  # 빈 청크 처리 안 됨
+
+
+# ── 세션 리포트 (Claude API mock) ────────────────────────────────────────────
+
+class TestSessionReport:
+    """generate_session_report 함수 테스트."""
+
+    def test_empty_session_returns_fallback(self):
+        """청크 없는 세션 → 폴백 응답 반환."""
+        from services.session_report import generate_session_report
+        session = SessionAccumulator(stage_id=1)
+        report = generate_session_report(session)
+        assert "summary" in report
+        assert "녹음" in report["summary"]
+
+    def test_claude_success_path(self):
+        """Claude API 성공 시 JSON 파싱 (lines 62-65 커버)."""
+        from services.session_report import generate_session_report
+
+        session = SessionAccumulator(stage_id=2)
+        score = TensionScore(
+            overall=45.0, laryngeal_tension=55.0, tongue_root_tension=30.0,
+            jaw_tension=20.0, register_break=40.0, tension_detected=True, detail="후두 긴장",
+        )
+        session.add(score, "피드백1")
+        session.add(score, "피드백2")
+        session.add(score, "피드백3")
+
+        mock_response_json = (
+            '{"summary": "세션 잘 됐어요", "improvements": "좋아졌어요", '
+            '"focus_area": "후두 이완", "exercise": "허밍", '
+            '"encouragement": "수고했어요"}'
+        )
+
+        mock_content = MagicMock()
+        mock_content.text = mock_response_json
+        mock_response = MagicMock()
+        mock_response.content = [mock_content]
+        mock_client = MagicMock()
+        mock_client.messages.create.return_value = mock_response
+
+        with patch("services.session_report.anthropic.Anthropic", return_value=mock_client):
+            report = generate_session_report(session)
+
+        assert report["summary"] == "세션 잘 됐어요"
+        assert report["improvements"] == "좋아졌어요"
+        assert report["focus_area"] == "후두 이완"
+
+    def test_claude_failure_uses_fallback(self):
+        """Claude API 실패 시 폴백 템플릿 반환."""
+        from services.session_report import generate_session_report
+
+        session = SessionAccumulator(stage_id=3)
+        score = TensionScore(
+            overall=30.0, laryngeal_tension=35.0, tongue_root_tension=25.0,
+            jaw_tension=20.0, register_break=30.0, tension_detected=False, detail="이완",
+        )
+        session.add(score, "fb")
+
+        with patch("services.session_report.anthropic.Anthropic", side_effect=Exception("API error")):
+            report = generate_session_report(session)
+
+        assert "summary" in report
+        assert "1구간" in report["summary"]

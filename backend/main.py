@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os as _os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers.evaluate import router as evaluate_router
@@ -9,8 +11,6 @@ from routers.ws_scale import router as ws_scale_router
 from routers.onboarding import router as onboarding_router
 
 app = FastAPI(title="VocalMind AI Backend", version="0.1.0")
-
-import os as _os
 
 _allowed_origins = [
     "http://localhost:3000",

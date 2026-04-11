@@ -33,7 +33,7 @@ export default function StepIndicator({ currentStep }: StepIndicatorProps) {
                 'w-8 h-8 rounded-full flex items-center justify-center text-[0.8rem] font-semibold shrink-0 transition-all border-2',
                 isCompleted ? 'border-purple-600 bg-purple-600 text-white' : '',
                 isCurrent ? 'border-purple-600 text-purple-600 bg-purple-600/10' : '',
-                !isCompleted && !isCurrent ? 'text-[#888] bg-[#1e1e1e] border-[#2a2a2a]' : '',
+                !isCompleted && !isCurrent ? 'text-[var(--text-secondary)] bg-[var(--bg-elevated)] border-[var(--border)]' : '',
               ].filter(Boolean).join(' ')}
             >
               {isCompleted ? (
@@ -47,9 +47,9 @@ export default function StepIndicator({ currentStep }: StepIndicatorProps) {
             <span
               className={[
                 'text-[0.85rem] whitespace-nowrap transition-colors',
-                isCurrent ? 'text-[#e5e5e5] font-semibold' : '',
+                isCurrent ? 'text-[var(--text-primary)] font-semibold' : '',
                 isCompleted ? 'text-purple-600' : '',
-                !isCurrent && !isCompleted ? 'text-[#555]' : '',
+                !isCurrent && !isCompleted ? 'text-[var(--text-muted)]' : '',
               ].filter(Boolean).join(' ')}
             >
               {step.label}
@@ -58,7 +58,7 @@ export default function StepIndicator({ currentStep }: StepIndicatorProps) {
               <div
                 className={[
                   'flex-1 h-0.5 mx-1 transition-colors',
-                  idx < currentIdx ? 'bg-purple-600' : 'bg-[#2a2a2a]',
+                  idx < currentIdx ? 'bg-purple-600' : 'bg-[var(--border)]',
                 ].join(' ')}
               />
             )}

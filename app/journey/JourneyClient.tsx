@@ -22,7 +22,7 @@ export default function JourneyClient() {
   return (
     <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)]">
       {/* 상단 네비 */}
-      <nav className="sticky top-0 z-[100] bg-[rgba(3,7,18,0.9)] backdrop-blur-[20px] border-b border-[#1a1a1a] flex items-center justify-between px-5 h-[52px]">
+      <nav className="sticky top-0 z-[100] bg-[var(--glass-bg)] backdrop-blur-[20px] border-b border-[var(--border)] flex items-center justify-between px-5 h-[52px]">
         <Link href="/" className="font-bold text-[15px] text-[var(--text-primary)] no-underline">
           HLB 보컬스튜디오
         </Link>

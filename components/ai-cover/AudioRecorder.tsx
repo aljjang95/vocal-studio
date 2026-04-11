@@ -233,8 +233,8 @@ export default function AudioRecorder({ onRecordingComplete }: AudioRecorderProp
                 style={{
                   height: `${active ? barHeight : 4}px`,
                   backgroundColor: active
-                    ? i < 16 ? '#7c3aed' : i < 20 ? '#a855f7' : '#ef4444'
-                    : '#2a2a3e',
+                    ? i < 16 ? 'var(--accent)' : i < 20 ? 'var(--accent-light)' : 'var(--error)'
+                    : 'var(--bg-hover)',
                 }}
               />
             );

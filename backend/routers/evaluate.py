@@ -30,6 +30,7 @@ class EvaluateResponse(BaseModel):
 
 
 PASSING_SCORE = 80
+MAX_AUDIO_SIZE = 20 * 1024 * 1024  # 20MB
 
 
 @router.post("/evaluate", response_model=EvaluateResponse)
@@ -44,6 +45,8 @@ async def evaluate(
         ext = Path(audio.filename or "audio.webm").suffix or ".webm"
         src_path = tmp_dir / f"{uuid.uuid4().hex}{ext}"
         content = await audio.read()
+        if len(content) > MAX_AUDIO_SIZE:
+            raise HTTPException(413, "파일이 너무 큽니다 (최대 20MB)")
         src_path.write_bytes(content)
 
         # 2) WAV 변환 (이미 WAV면 그대로 사용)
@@ -122,6 +125,8 @@ async def evaluate_scale_practice(
         ext = Path(audio.filename or "audio.webm").suffix or ".webm"
         src_path = tmp_dir / f"{uuid.uuid4().hex}{ext}"
         content = await audio.read()
+        if len(content) > MAX_AUDIO_SIZE:
+            raise HTTPException(413, "파일이 너무 큽니다 (최대 20MB)")
         src_path.write_bytes(content)
 
         if ext.lower() == ".wav":

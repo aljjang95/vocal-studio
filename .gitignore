@@ -41,3 +41,6 @@ public/audio/*.wav
 backend/.claude-edit-count
 
 .vercel
+.claude-edit-count
+.claude-edit-count.lock
+backend/.coverage
