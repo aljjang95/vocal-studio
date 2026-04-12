@@ -158,7 +158,9 @@ html:not(.dark) {
   --glass-bg:  rgba(246,248,247,0.80);
 }
 
-*, *::before, *::after { box-sizing: border-box; }
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+}
 html { scroll-behavior: smooth; font-size: 16px; }
 
 body {
