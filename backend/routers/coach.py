@@ -18,10 +18,15 @@ class CoachRequest(BaseModel):
     hnr_db: float = 0.0
     avg_pitch_hz: float = 0.0
 
+class VideoRef(BaseModel):
+    video_id: str
+    timestamp: float
+
 class CoachResponse(BaseModel):
     feedback: str
     next_exercise: str
     encouragement: str
+    references: list[VideoRef] = []
 
 @router.post("/coach", response_model=CoachResponse)
 async def coach(req: CoachRequest):

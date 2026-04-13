@@ -78,15 +78,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * GET /api/report
- * 현재는 빈 리포트를 반환. Supabase 연동 시 저장된 리포트 조회로 교체.
- */
-export async function GET() {
-  return NextResponse.json({
-    summary: '연습 데이터가 쌓이면 AI가 성장 리포트를 생성합니다.',
-    improvements: [],
-    recommendations: ['스케일 연습에서 첫 단계를 시작해보세요'],
-    stats: { avgScore: 0, avgTension: 0, avgPitch: 0, sessionCount: 0 },
-  });
-}

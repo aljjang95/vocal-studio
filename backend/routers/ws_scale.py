@@ -1,9 +1,12 @@
 """WebSocket /ws/scale-practice — 스케일 연습 실시간 분석 + TTS 음성."""
 from __future__ import annotations
 import json
+import logging
 import shutil
 import tempfile
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from services.realtime_analyzer import (
     SessionAccumulator,
@@ -47,7 +50,11 @@ async def ws_scale_practice(ws: WebSocket):
             message = await ws.receive()
 
             if "text" in message:
-                data = json.loads(message["text"])
+                try:
+                    data = json.loads(message["text"])
+                except (json.JSONDecodeError, TypeError):
+                    await ws.send_json({"type": "error", "message": "잘못된 메시지 형식"})
+                    continue
                 msg_type = data.get("type", "")
 
                 if msg_type == "start":
@@ -133,7 +140,7 @@ async def ws_scale_practice(ws: WebSocket):
                                 await ws.send_bytes(voice_bytes)
 
                 except Exception:
-                    pass  # 청크 분석 실패 무시
+                    logger.warning("[ws/scale] 청크 분석 실패", exc_info=True)
 
     except WebSocketDisconnect:
         pass

@@ -4,6 +4,7 @@
  */
 
 import type { HLBCurriculumStage } from '@/types';
+import { stageDemoAudioUrl } from './stageDemoAudio';
 
 /* Reusable scale patterns */
 const ROUNDING = [0, 2, 4, 5, 7, 5, 4, 2, 0];
@@ -708,6 +709,12 @@ export const hlbCurriculum: HLBCurriculumStage[] = [
 /** id로 단계 조회 */
 export function getStageById(id: number): HLBCurriculumStage | undefined {
   return hlbCurriculum.find((s) => s.id === id);
+}
+
+// 시범 오디오 URL 자동 주입
+for (const stage of hlbCurriculum) {
+  const url = stageDemoAudioUrl[stage.id];
+  if (url) stage.demoAudioUrl = url;
 }
 
 /** 블록 이름 목록 (순서 유지, 중복 제거) */

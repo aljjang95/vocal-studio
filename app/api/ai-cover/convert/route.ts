@@ -88,23 +88,29 @@ export async function POST(request: NextRequest) {
 
   // Modal 변환 함수 비동기 호출 (응답을 기다리지 않음)
   const modalUrl = process.env.MODAL_CONVERSION_URL;
-  if (modalUrl) {
-    fetch(modalUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        conversion_id: conversion.id,
-        song_path: songPath,
-        model_path: model.model_path,
-        index_path: model.index_path,
-        pitch_shift: pitchShift,
-        user_id: user.id,
-        song_id: songId,
-      }),
-    }).catch(() => {
-      // 비동기 호출 — 실패 시 Modal 쪽에서 DB 상태를 failed로 업데이트
-    });
+  if (!modalUrl) {
+    await supabase.from('ai_cover_conversions').update({ status: 'failed' }).eq('id', conversion.id);
+    return NextResponse.json(
+      { error: 'AI 커버 변환 서비스가 준비 중입니다. 잠시 후 다시 시도해주세요.', code: 'SERVICE_NOT_CONFIGURED' },
+      { status: 503 },
+    );
   }
+
+  fetch(modalUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      conversion_id: conversion.id,
+      song_path: songPath,
+      model_path: model.model_path,
+      index_path: model.index_path,
+      pitch_shift: pitchShift,
+      user_id: user.id,
+      song_id: songId,
+    }),
+  }).catch(() => {
+    // 비동기 호출 — 실패 시 Modal 쪽에서 DB 상태를 failed로 업데이트
+  });
 
   return NextResponse.json({ conversionId: conversion.id });
 }

@@ -1,9 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import type { HLBCurriculumStage } from '@/types';
 import { useTTS } from '@/lib/hooks/useTTS';
 import { Button } from '@/components/ui/button';
 import { GlowCard } from '@/components/ui/glow-card';
+import DemoAudioPlayer from '@/components/shared/DemoAudioPlayer';
 
 interface Props {
   stage: HLBCurriculumStage;
@@ -12,6 +14,8 @@ interface Props {
 
 export default function WhyPhase({ stage, onNext }: Props) {
   const tts = useTTS(stage.whyText);
+  const [showTtsFallback, setShowTtsFallback] = useState(false);
+  const hasAudioUrl = !!stage.whyAudioUrl;
 
   return (
     <div className="flex flex-col gap-5 min-h-[calc(100vh-180px)] pt-2 pb-6 [&>:last-child]:mt-auto">
@@ -20,15 +24,27 @@ export default function WhyPhase({ stage, onNext }: Props) {
         <div className="text-[15px] leading-[1.7] text-white/85">{stage.whyText}</div>
       </GlowCard>
 
-      <div className="flex items-center gap-3">
-        <button
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-[13px] text-white/70 bg-white/[0.06] border border-white/[0.12] rounded-lg cursor-pointer transition-all hover:bg-white/10 hover:text-white/90 disabled:opacity-50 disabled:cursor-default"
-          onClick={tts.play}
-          disabled={tts.isLoading}
-        >
-          {tts.isLoading ? '로딩...' : tts.isPlaying ? '정지' : '음성으로 듣기'}
-        </button>
-      </div>
+      {hasAudioUrl && !showTtsFallback ? (
+        <DemoAudioPlayer
+          url={stage.whyAudioUrl!}
+          label="선생님 설명"
+          onError={() => setShowTtsFallback(true)}
+        />
+      ) : (
+        <div className="flex items-center gap-3">
+          <button
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-[13px] text-white/70 bg-white/[0.06] border border-white/[0.12] rounded-lg cursor-pointer transition-all hover:bg-white/10 hover:text-white/90 disabled:opacity-50 disabled:cursor-default"
+            onClick={tts.play}
+            disabled={tts.isLoading}
+          >
+            {tts.isLoading ? '로딩...' : tts.isPlaying ? '정지' : '음성으로 듣기'}
+          </button>
+        </div>
+      )}
+
+      {hasAudioUrl && showTtsFallback && (
+        <p className="text-xs text-[var(--text-muted)]">음성 파일을 불러올 수 없어 TTS로 재생합니다</p>
+      )}
 
       {/* 이번 레슨 정보 */}
       <div className="grid grid-cols-2 gap-2.5">

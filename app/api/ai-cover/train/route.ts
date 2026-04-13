@@ -31,21 +31,27 @@ export async function POST(request: NextRequest) {
 
   // Modal 학습 함수 비동기 호출 (응답을 기다리지 않음)
   const modalUrl = process.env.MODAL_TRAINING_URL;
-  if (modalUrl) {
-    fetch(modalUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model_id: model.id,
-        recording_paths: recordingPaths,
-        user_id: user.id,
-        model_name: modelName.trim(),
-        epochs,
-      }),
-    }).catch(() => {
-      // 비동기 호출 — 실패해도 이미 DB에 training 상태로 기록됨
-    });
+  if (!modalUrl) {
+    await supabase.from('voice_models').update({ status: 'failed' }).eq('id', model.id);
+    return NextResponse.json(
+      { error: 'AI 커버 학습 서비스가 준비 중입니다. 잠시 후 다시 시도해주세요.', code: 'SERVICE_NOT_CONFIGURED' },
+      { status: 503 },
+    );
   }
+
+  fetch(modalUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model_id: model.id,
+      recording_paths: recordingPaths,
+      user_id: user.id,
+      model_name: modelName.trim(),
+      epochs,
+    }),
+  }).catch(() => {
+    // 비동기 호출 — 실패해도 이미 DB에 training 상태로 기록됨
+  });
 
   return NextResponse.json({ modelId: model.id });
 }

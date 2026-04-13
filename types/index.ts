@@ -270,6 +270,12 @@ export interface HLBCurriculumStage {
   somaticFeedback: SomaticFeedback;
   whyText: string;
   demoScript: string;
+  demoAudioUrl?: string;
+  demoVideoUrl?: string;
+  demoVideoId?: string;
+  demoStartSec?: number;
+  demoEndSec?: number;
+  whyAudioUrl?: string;
 }
 
 export interface PitchData {
@@ -453,10 +459,16 @@ export interface EvaluationResult {
   passed: boolean;
 }
 
+export interface VideoReference {
+  videoId: string;
+  timestamp: number;
+}
+
 export interface CoachingFeedback {
   feedback: string;
   nextExercise: string;
   encouragement: string;
+  references?: VideoReference[];
 }
 
 // ── 스케일 연습 (Scale Practice) ────────────────────────

@@ -39,18 +39,41 @@ def _get_chroma_context(query: str, n_results: int = 3) -> str:
         logger.warning("ChromaDB curriculum 검색 실패: %s", e)
         return ""
 
-def _get_feedback_context(jitter: float, shimmer: float, hnr_db: float, avg_pitch_hz: float, n_results: int = 3) -> str:
-    """vocal_feedback 컬렉션에서 유사 음성 질감 → 실제 선생님 피드백 검색."""
+def _get_feedback_context(
+    jitter: float, shimmer: float, hnr_db: float, avg_pitch_hz: float, n_results: int = 3,
+) -> tuple[str, list[dict]]:
+    """vocal_feedback 컬렉션에서 유사 음성 질감 → 실제 선생님 피드백 검색.
+
+    Returns:
+        (context_text, references) — references는 [{video_id, timestamp}] 목록.
+    """
     try:
         client = chromadb.PersistentClient(path=CHROMA_DB_PATH)
         collection = client.get_collection("vocal_feedback")
         query = f"Jitter={jitter:.3f} Shimmer={shimmer:.3f} HNR={hnr_db:.1f}dB 피치={avg_pitch_hz:.0f}Hz"
-        results = collection.query(query_texts=[query], n_results=n_results)
+        results = collection.query(query_texts=[query], n_results=n_results, include=["documents", "metadatas"])
         documents = results.get("documents", [[]])[0]
-        return "\n---\n".join(documents) if documents else ""
+        metadatas = results.get("metadatas", [[]])[0]
+
+        # 참고 영상 references 추출 (중복 제거)
+        seen: set[str] = set()
+        references: list[dict] = []
+        for meta in metadatas:
+            if not meta:
+                continue
+            vid = meta.get("video_id")
+            ts = meta.get("timestamp")
+            if vid and ts is not None:
+                key = f"{vid}_{ts}"
+                if key not in seen:
+                    seen.add(key)
+                    references.append({"video_id": vid, "timestamp": float(ts)})
+
+        context = "\n---\n".join(documents) if documents else ""
+        return context, references
     except Exception as e:
         logger.warning("ChromaDB feedback 검색 실패: %s", e)
-        return ""
+        return "", []
 
 def get_coaching_feedback(
     stage_id: int,
@@ -68,8 +91,9 @@ def get_coaching_feedback(
 
     # 음성 질감 데이터가 있으면 실제 선생님 피드백 사례 검색
     feedback_context = ""
+    references: list[dict] = []
     if jitter > 0 or shimmer > 0 or hnr_db != 0:
-        feedback_context = _get_feedback_context(jitter, shimmer, hnr_db, avg_pitch_hz)
+        feedback_context, references = _get_feedback_context(jitter, shimmer, hnr_db, avg_pitch_hz)
 
     tension_section = ""
     if tension_detail:
@@ -105,9 +129,13 @@ def get_coaching_feedback(
     )
     text = response.content[0].text
     json_match = re.search(r'\{[\s\S]*\}', text)
+    result: dict
     if json_match:
         try:
-            return json.loads(json_match.group())
+            result = json.loads(json_match.group())
         except json.JSONDecodeError:
-            pass
-    return {"feedback": text[:200], "next_exercise": "천천히 다시 한번 해볼까요?", "encouragement": "잘하고 있어요!"}
+            result = {"feedback": text[:200], "next_exercise": "천천히 다시 한번 해볼까요?", "encouragement": "잘하고 있어요!"}
+    else:
+        result = {"feedback": text[:200], "next_exercise": "천천히 다시 한번 해볼까요?", "encouragement": "잘하고 있어요!"}
+    result["references"] = references
+    return result

@@ -54,7 +54,11 @@ async def ws_evaluate(ws: WebSocket, token: str | None = Query(default=None)):
 
             # 텍스트 메시지: start/end 제어
             if "text" in message:
-                data = json.loads(message["text"])
+                try:
+                    data = json.loads(message["text"])
+                except (json.JSONDecodeError, TypeError):
+                    await ws.send_json({"type": "error", "message": "잘못된 메시지 형식"})
+                    continue
                 msg_type = data.get("type", "")
 
                 if msg_type == "start":

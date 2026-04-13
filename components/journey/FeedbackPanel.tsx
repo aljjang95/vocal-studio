@@ -56,6 +56,24 @@ export default function FeedbackPanel({ evaluation, coaching, isLoading }: Feedb
           <p className="text-[var(--text-primary)] text-sm m-0">{coaching.feedback}</p>
           {coaching.nextExercise && <p className="text-[var(--accent-light)] text-sm mt-2 mb-0">💡 {coaching.nextExercise}</p>}
           {coaching.encouragement && <p className="text-[var(--success)] text-sm mt-1 mb-0">{coaching.encouragement}</p>}
+          {coaching.references && coaching.references.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-[var(--accent)]/20">
+              <div className="text-xs font-medium text-[var(--text-muted)] mb-1.5">참고 영상</div>
+              <div className="flex flex-col gap-1">
+                {coaching.references.map((ref, i) => (
+                  <a
+                    key={`${ref.videoId}-${ref.timestamp}`}
+                    href={`https://youtube.com/watch?v=${ref.videoId}&t=${Math.floor(ref.timestamp)}s`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-[var(--accent-light)] hover:underline"
+                  >
+                    선생님 시범 #{i + 1} ({Math.floor(ref.timestamp / 60)}:{String(Math.floor(ref.timestamp % 60)).padStart(2, '0')})
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

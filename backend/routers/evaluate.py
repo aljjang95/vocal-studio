@@ -68,7 +68,10 @@ async def evaluate(
             raise HTTPException(500, f"음성 분석 실패: {e}")
 
         # 4) 채점
-        pitches = json.loads(target_pitches)
+        try:
+            pitches = json.loads(target_pitches)
+        except (json.JSONDecodeError, TypeError):
+            raise HTTPException(400, "target_pitches가 올바른 JSON 형식이 아닙니다")
         pitch_accuracy = calculate_pitch_score(pitches, analysis["pitch_values"])
         score, tension_detected, tension_detail = calculate_stage_score_v2(
             float(pitch_accuracy), analysis["tone_stability"], analysis.get("tension_score")
@@ -145,7 +148,10 @@ async def evaluate_scale_practice(
         except Exception as e:
             raise HTTPException(500, f"음성 분석 실패: {e}")
 
-        pitches = json.loads(target_pitches)
+        try:
+            pitches = json.loads(target_pitches)
+        except (json.JSONDecodeError, TypeError):
+            raise HTTPException(400, "target_pitches가 올바른 JSON 형식이 아닙니다")
         pitch_accuracy = calculate_pitch_score(pitches, analysis["pitch_values"])
         tension_overall = 0.0
         if analysis.get("tension_score"):

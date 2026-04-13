@@ -157,9 +157,6 @@ export default function FeedbackRequestClient() {
             <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
               녹음과 요청사항이 접수되었습니다. 선생님이 확인 후 피드백을 보내드립니다.
             </p>
-            <p className="text-sm text-[var(--text-muted)] mt-4">
-              결제 시스템은 준비 중입니다. 현재는 무료 체험으로 1회 제공됩니다.
-            </p>
           </div>
           <button
             onClick={() => router.push('/dashboard')}
@@ -195,7 +192,7 @@ export default function FeedbackRequestClient() {
             <ol className="list-none p-0 m-0 flex flex-col gap-2.5">
               {[
                 '녹음을 올리고 고민/요청사항을 작성해주세요',
-                '결제가 완료되면 선생님에게 전달됩니다',
+                '신청이 완료되면 선생님에게 전달됩니다',
                 '7년 경력 전문 트레이너가 직접 듣고 소견을 작성합니다',
                 'AI 분석 + 선생님 소견을 비교한 맞춤 피드백을 받아보세요',
               ].map((text, i) => (

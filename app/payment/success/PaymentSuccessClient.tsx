@@ -79,9 +79,15 @@ export default function PaymentSuccessClient() {
         <strong>{PLAN_LABEL[plan] ?? plan}</strong> 플랜이 활성화되었습니다.
       </p>
       <div className="flex gap-3 flex-wrap justify-center">
-        <Button variant="default" onClick={() => router.push('/journey')}>
-          레슨 시작하기
-        </Button>
+        {plan === 'feedback' ? (
+          <Button variant="default" onClick={() => router.push('/feedback-request')}>
+            녹음 제출하기
+          </Button>
+        ) : (
+          <Button variant="default" onClick={() => router.push('/journey')}>
+            레슨 시작하기
+          </Button>
+        )}
         <Button variant="secondary" onClick={() => router.push('/dashboard')}>
           대시보드로
         </Button>

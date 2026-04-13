@@ -19,7 +19,15 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(body),
     });
 
-    const data = await resp.json();
+    const data = await resp.json() as Record<string, unknown>;
+
+    // snake_case → camelCase 변환 (references)
+    if (Array.isArray(data.references)) {
+      data.references = (data.references as Array<{ video_id: string; timestamp: number }>).map(
+        (ref) => ({ videoId: ref.video_id, timestamp: ref.timestamp }),
+      );
+    }
+
     return NextResponse.json(data, { status: resp.status });
   } catch {
     return NextResponse.json(
