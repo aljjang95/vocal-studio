@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAudioPlayer } from '@/lib/hooks/useAudioPlayer';
 
 interface DemoAudioPlayerProps {
@@ -20,8 +20,11 @@ export default function DemoAudioPlayer({ url, label, onError }: DemoAudioPlayer
   const [loopActive, setLoopActive] = useState(false);
   const [loopStart, setLoopStart] = useState(0);
 
+  useEffect(() => {
+    if (player.error) onError?.();
+  }, [player.error, onError]);
+
   if (player.error) {
-    onError?.();
     return (
       <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20">
         <span className="text-sm text-red-400">{player.error}</span>

@@ -25,6 +25,7 @@ export async function middleware(request: NextRequest) {
     `font-src 'self' https://fonts.gstatic.com`,
     `img-src 'self' data: blob: https://images.unsplash.com https://*.tosspayments.com`,
     connectSrc,
+    `media-src 'self' https://*.supabase.co blob:`,
     `frame-src https://js.tosspayments.com`,
     `frame-ancestors 'none'`, `base-uri 'self'`, `form-action 'self'`,
   ].join('; ');

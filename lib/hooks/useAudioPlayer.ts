@@ -69,16 +69,19 @@ export function useAudioPlayer(url: string | null): AudioPlayer {
 
     setIsLoading(true);
     setError(null);
+    let cancelled = false;
 
     const audio = new Audio(url);
     audioRef.current = audio;
 
     audio.addEventListener('loadedmetadata', () => {
+      if (cancelled) return;
       setDuration(audio.duration);
       setIsLoading(false);
     });
 
     audio.addEventListener('ended', () => {
+      if (cancelled) return;
       const loop = loopRef.current;
       if (loop) {
         audio.currentTime = loop.start;
@@ -90,12 +93,14 @@ export function useAudioPlayer(url: string | null): AudioPlayer {
     });
 
     audio.addEventListener('error', () => {
+      if (cancelled) return;
       setError('음성을 불러올 수 없습니다');
       setIsLoading(false);
       setIsPlaying(false);
     });
 
     return () => {
+      cancelled = true;
       cancelAnimationFrame(rafRef.current);
       audio.pause();
       audio.src = '';
