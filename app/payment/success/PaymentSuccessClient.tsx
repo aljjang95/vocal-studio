@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
 const PLAN_LABEL: Record<string, string> = {
-  subscription: '정액제',
+  hobby: '취미반',
   pro: '발성전문반',
   feedback: '유료 피드백',
 };

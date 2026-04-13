@@ -24,7 +24,7 @@ export interface AnalysisResult {
 }
 
 // ── 플랜 타입 ──
-export type Plan = 'free' | 'basic' | 'pro';
+export type Plan = 'free' | 'hobby' | 'pro';
 
 // ── 사용자 ──
 export interface User {

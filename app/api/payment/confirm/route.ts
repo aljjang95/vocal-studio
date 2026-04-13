@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-const PLAN_BY_AMOUNT: Record<number, 'subscription' | 'pro' | 'feedback'> = {
-  19900: 'subscription',
+const PLAN_BY_AMOUNT: Record<number, 'hobby' | 'pro' | 'feedback'> = {
+  100000: 'hobby',
   150000: 'pro',
   50000: 'feedback',
 };

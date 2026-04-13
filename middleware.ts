@@ -69,6 +69,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // 이메일 미인증 사용자 → 인증 안내 페이지로
+  if (user && !user.email_confirmed_at && !pathname.startsWith('/auth/')) {
+    return NextResponse.redirect(new URL('/auth/verify-email', request.url));
+  }
+
   // 로그인 상태에서 /auth/login 접근 → /dashboard로 리다이렉트
   if (user && (pathname === '/auth/login' || pathname === '/auth/signup')) {
     return NextResponse.redirect(new URL('/dashboard', request.url));

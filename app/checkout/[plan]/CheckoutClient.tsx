@@ -8,8 +8,8 @@ import { Button } from '@/components/ui/button';
 const CLIENT_KEY = process.env.NEXT_PUBLIC_TOSSPAYMENTS_CLIENT_KEY!;
 
 const PLAN_INFO: Record<string, { name: string; amount: number; desc: string }> = {
-  subscription: { name: '정액제', amount: 19900, desc: '광고 제거 + 모든 콘텐츠 자유이용' },
-  pro: { name: '발성전문반', amount: 150000, desc: '28단계 채점 해금 + 4축 분석 + 맞춤 커리큘럼' },
+  hobby: { name: '취미반', amount: 100000, desc: '자유 곡 실시간 평가 + AI 피드백' },
+  pro: { name: '발성전문반', amount: 150000, desc: '28단계 HLB 체계적 커리큘럼' },
   feedback: { name: '유료 피드백', amount: 50000, desc: '선생님 직접 듣고 진단 (1회)' },
 };
 

@@ -7,7 +7,7 @@ interface Props {
   params: Promise<{ plan: string }>;
 }
 
-const VALID_PLANS = ['subscription', 'pro', 'feedback'];
+const VALID_PLANS = ['hobby', 'pro', 'feedback'];
 
 export default async function CheckoutPage({ params }: Props) {
   const { plan } = await params;
