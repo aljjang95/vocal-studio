@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
 // 로그인 없이 접근 가능한 경로
-const PUBLIC_PATHS = ['/', '/auth/login', '/auth/signup', '/auth/callback', '/scale-practice', '/journey', '/pricing', '/payment'];
+const PUBLIC_PATHS = ['/', '/auth/login', '/auth/signup', '/auth/callback', '/onboarding', '/scale-practice', '/journey', '/pricing', '/payment'];
 // 선생님 전용 경로 (로그인 필요, 이메일 검사는 page.tsx/API에서 처리)
 const TEACHER_PATHS = ['/teacher'];
 
