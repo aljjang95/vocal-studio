@@ -17,15 +17,15 @@
 
 상세: `docs/superpowers/plans/2026-04-13-product-restructure.md`
 
-- [ ] Task 1: 이메일 인증 버그 수정
-- [ ] Task 2: 타입 정리 + 요금제 구조 변경
-- [ ] Task 3: Pricing 컴포넌트 리빌드
-- [ ] Task 4: 온보딩 파일 업로드 + 음질 경고
-- [ ] Task 5: 온보딩 요금제 선택 분기
-- [ ] Task 6: 취미반 메인 페이지
-- [ ] Task 7: AI 커버 티어별 제한
+- [x] Task 1: 이메일 인증 버그 수정
+- [x] Task 2: 타입 정리 + 요금제 구조 변경
+- [x] Task 3: Pricing 컴포넌트 리빌드
+- [x] Task 4: 온보딩 파일 업로드 + 음질 경고
+- [x] Task 5: 온보딩 요금제 선택 분기
+- [x] Task 6: 취미반 메인 페이지
+- [x] Task 7: AI 커버 티어별 제한
 - [ ] Task 8: 리서치 + awesome-design 온보딩 UX
-- [ ] Task 9: Nav/문서 동기화
+- [x] Task 9: Nav/문서 동기화
 - [ ] Task 10: 통합 검증
 
 ## 이전 기록

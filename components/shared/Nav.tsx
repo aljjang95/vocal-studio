@@ -60,7 +60,11 @@ export default function Nav() {
     // 유료 사용자 추가
     if (isPaid) {
       const insertIdx = links.findIndex(l => l.href === '/pricing');
-      links.splice(insertIdx, 0,
+      // 취미반: 자유 연습 메뉴
+      if (userTier === 'hobby') {
+        links.splice(1, 0, { href: '/hobby', label: '자유 연습' });
+      }
+      links.splice(insertIdx + (userTier === 'hobby' ? 1 : 0), 0,
         { href: '/ai-cover', label: 'AI 커버' },
         { href: '/vocal-report', label: '발성 분석' },
       );
