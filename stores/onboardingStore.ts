@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { createClient } from '@/lib/supabase/client';
-import type { OnboardingResult } from '@/types';
+import type { OnboardingResult, Plan } from '@/types';
 
 interface OnboardingState {
   step: number;
@@ -11,12 +11,14 @@ interface OnboardingState {
   isPlayingTts: boolean;
   error: string | null;
   result: OnboardingResult | null;
+  selectedPlan: Plan | null;
 
   setStep: (step: number) => void;
   setAnalyzing: (v: boolean) => void;
   setPlayingTts: (v: boolean) => void;
   setError: (err: string | null) => void;
   setResult: (result: OnboardingResult) => void;
+  setSelectedPlan: (plan: Plan) => void;
   saveToSupabase: () => Promise<void>;
   loadFromSupabase: () => Promise<void>;
   resetAll: () => void;
@@ -30,12 +32,14 @@ export const useOnboardingStore = create<OnboardingState>()(
       isPlayingTts: false,
       error: null,
       result: null,
+      selectedPlan: null,
 
       setStep: (step) => set({ step }),
       setAnalyzing: (v) => set({ isAnalyzing: v }),
       setPlayingTts: (v) => set({ isPlayingTts: v }),
       setError: (err) => set({ error: err }),
       setResult: (result) => set({ result }),
+      setSelectedPlan: (plan) => set({ selectedPlan: plan }),
 
       saveToSupabase: async () => {
         try {
@@ -78,11 +82,12 @@ export const useOnboardingStore = create<OnboardingState>()(
           isPlayingTts: false,
           error: null,
           result: null,
+          selectedPlan: null,
         }),
     }),
     {
       name: 'vocalmind-onboarding',
-      partialize: (state) => ({ result: state.result }),
+      partialize: (state) => ({ result: state.result, selectedPlan: state.selectedPlan }),
     }
   )
 );

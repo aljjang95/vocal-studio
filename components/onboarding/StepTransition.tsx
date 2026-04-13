@@ -8,30 +8,46 @@ import { Button } from '@/components/ui/button';
 
 export default function StepTransition() {
   const router = useRouter();
-  const { result, saveToSupabase } = useOnboardingStore();
+  const { result, selectedPlan, saveToSupabase } = useOnboardingStore();
   const [user, setUser] = useState<{ id: string } | null>(null);
   const [saved, setSaved] = useState(false);
 
   const suggestedStage = result?.consultation.suggested_stage_id ?? 1;
+  const plan = selectedPlan ?? 'free';
 
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user);
-      // 로그인 상태면 자동으로 Supabase에 저장
       if (data.user && result && !saved) {
         saveToSupabase().then(() => setSaved(true));
       }
     });
   }, [result, saved, saveToSupabase]);
 
-  const handleStartLesson = (stageId: number) => {
+  const getDestination = () => {
+    if (plan === 'hobby') return '/hobby';
+    if (plan === 'pro') return `/journey/${suggestedStage}`;
+    return '/dashboard';
+  };
+
+  const handleStart = () => {
+    const dest = getDestination();
     if (user) {
-      router.push(`/journey/${stageId}`);
+      if (plan !== 'free') {
+        router.push(`/checkout/${plan}`);
+      } else {
+        router.push(dest);
+      }
     } else {
-      // 비로그인: 가입 페이지로 보내고, 가입 후 추천 레슨으로
-      router.push(`/auth/signup?next=/journey/${stageId}`);
+      router.push(`/auth/signup?next=${encodeURIComponent(dest)}&plan=${plan}`);
     }
+  };
+
+  const planLabels: Record<string, string> = {
+    hobby: '취미반',
+    pro: '발성전문반',
+    free: '무료',
   };
 
   return (
@@ -40,12 +56,14 @@ export default function StepTransition() {
         레슨을 시작할 준비가 됐어요
       </h3>
       <p className="text-[0.9rem] text-[var(--text2)] leading-relaxed max-w-[420px]">
-        분석 결과를 바탕으로 최적의 시작점을 추천합니다.
+        {plan === 'hobby' && '자유 곡 연습과 AI 피드백으로 즐겁게 시작하세요.'}
+        {plan === 'pro' && `분석 결과를 바탕으로 Stage ${suggestedStage}부터 체계적으로 시작합니다.`}
+        {plan === 'free' && '무료 체험으로 가볍게 둘러보세요.'}
       </p>
 
       <div className="px-7 py-4 bg-[rgba(59,130,246,0.06)] border border-[rgba(59,130,246,0.2)] rounded-[var(--r-xs)] text-[0.88rem] text-[var(--accent-lt)]">
-        <div className="text-[0.78rem] text-[var(--text2)] mb-1">추천 시작 단계</div>
-        <div className="font-mono font-bold text-[1.1rem]">Stage {suggestedStage}</div>
+        <div className="text-[0.78rem] text-[var(--text2)] mb-1">선택한 플랜</div>
+        <div className="font-bold text-[1.1rem]">{planLabels[plan]}</div>
       </div>
 
       {!user && (
@@ -59,16 +77,19 @@ export default function StepTransition() {
           variant="default"
           size="lg"
           className="w-full"
-          onClick={() => handleStartLesson(suggestedStage)}
+          onClick={handleStart}
         >
-          {user ? '추천 단계로 시작하기' : '가입하고 시작하기'}
+          {user
+            ? plan !== 'free' ? `${planLabels[plan]} 결제하기` : '시작하기'
+            : '가입하고 시작하기'
+          }
         </Button>
         <button
           type="button"
           className="bg-transparent border-none text-[var(--text2)] text-[0.85rem] font-[var(--font-sans)] cursor-pointer py-2 transition-colors duration-200 hover:text-[var(--text)]"
-          onClick={() => handleStartLesson(1)}
+          onClick={() => router.push('/dashboard')}
         >
-          처음부터 시작하기
+          나중에 선택하기
         </button>
       </div>
     </div>

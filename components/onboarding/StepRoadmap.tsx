@@ -80,7 +80,7 @@ export default function StepRoadmap() {
 
       <div className="flex justify-end mt-8">
         <Button variant="default" size="lg" onClick={() => setStep(4)}>
-          첫 레슨 시작하기
+          플랜 선택하기
         </Button>
       </div>
     </div>

@@ -5,12 +5,13 @@ import StepRecording from './StepRecording';
 import StepAnalyzing from './StepAnalyzing';
 import StepResult from './StepResult';
 import StepRoadmap from './StepRoadmap';
+import StepPlanChoice from './StepPlanChoice';
 import StepTransition from './StepTransition';
 
-const STEP_LABELS = ['녹음', '분석', '결과', '로드맵', '시작'];
+const STEP_LABELS = ['녹음', '분석', '결과', '로드맵', '플랜', '시작'];
 
 export default function OnboardingWizard() {
-  const { step, error, result, setError, resetAll } = useOnboardingStore();
+  const { step, error, result, setError } = useOnboardingStore();
 
   // result가 있으면 step 2 이상으로 점프 가능
   const displayStep = result && step < 2 ? 2 : step;
@@ -75,7 +76,8 @@ export default function OnboardingWizard() {
       {displayStep === 1 && <StepAnalyzing />}
       {displayStep === 2 && <StepResult />}
       {displayStep === 3 && <StepRoadmap />}
-      {displayStep === 4 && <StepTransition />}
+      {displayStep === 4 && <StepPlanChoice />}
+      {displayStep === 5 && <StepTransition />}
     </div>
   );
 }
