@@ -5,6 +5,7 @@
 
 import type { HLBCurriculumStage } from '@/types';
 import { stageDemoAudioUrl } from './stageDemoAudio';
+import { stageDemoVideo } from './stageDemoVideo';
 
 /* Reusable scale patterns */
 const ROUNDING = [0, 2, 4, 5, 7, 5, 4, 2, 0];
@@ -711,10 +712,17 @@ export function getStageById(id: number): HLBCurriculumStage | undefined {
   return hlbCurriculum.find((s) => s.id === id);
 }
 
-// 시범 오디오 URL 자동 주입
+// 시범 오디오 URL + 시범 영상 자동 주입
 for (const stage of hlbCurriculum) {
   const url = stageDemoAudioUrl[stage.id];
   if (url) stage.demoAudioUrl = url;
+
+  const video = stageDemoVideo[stage.id];
+  if (video) {
+    stage.demoVideoId = video.videoId;
+    stage.demoStartSec = video.startSec;
+    stage.demoEndSec = video.endSec;
+  }
 }
 
 /** 블록 이름 목록 (순서 유지, 중복 제거) */

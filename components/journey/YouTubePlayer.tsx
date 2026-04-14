@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useYouTubePlayer } from '@/lib/hooks/useYouTubePlayer';
 
 interface Props {
@@ -12,8 +13,12 @@ interface Props {
 export default function YouTubePlayer({ videoId, startSec, endSec, onError }: Props) {
   const { containerRef, isReady, replay, error } = useYouTubePlayer(videoId, startSec, endSec);
 
+  // onError를 useEffect로 이동 (render 중 setState 방지)
+  useEffect(() => {
+    if (error) onError?.();
+  }, [error, onError]);
+
   if (error) {
-    onError?.();
     return (
       <div className="flex items-center justify-center gap-2 px-4 py-6 rounded-lg bg-red-500/10 border border-red-500/20">
         <span className="text-sm text-red-400">{error}</span>
