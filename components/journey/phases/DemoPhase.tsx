@@ -6,6 +6,7 @@ import { useTTS } from '@/lib/hooks/useTTS';
 import { Button } from '@/components/ui/button';
 import { GlowCard } from '@/components/ui/glow-card';
 import DemoAudioPlayer from '@/components/shared/DemoAudioPlayer';
+import YouTubePlayer from '@/components/journey/YouTubePlayer';
 
 interface Props {
   stage: HLBCurriculumStage;
@@ -15,10 +16,22 @@ interface Props {
 export default function DemoPhase({ stage, onNext }: Props) {
   const tts = useTTS(stage.demoScript);
   const [showTtsFallback, setShowTtsFallback] = useState(false);
+  const [videoError, setVideoError] = useState(false);
   const hasAudioUrl = !!stage.demoAudioUrl;
+  const hasVideoId = !!stage.demoVideoId && !videoError;
 
   return (
     <div className="flex flex-col gap-5 min-h-[calc(100vh-180px)] pt-2 pb-6 [&>:last-child]:mt-auto">
+      {/* 시범 영상 (YouTube 임베드) */}
+      {hasVideoId && (
+        <YouTubePlayer
+          videoId={stage.demoVideoId!}
+          startSec={stage.demoStartSec}
+          endSec={stage.demoEndSec}
+          onError={() => setVideoError(true)}
+        />
+      )}
+
       <GlowCard className="p-6 text-center">
         <p className="text-[15px] leading-[1.7] text-white/85 mb-5">{stage.demoScript}</p>
 

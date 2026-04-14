@@ -23,10 +23,10 @@ export async function middleware(request: NextRequest) {
     `default-src 'self'`, scriptSrc,
     `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
     `font-src 'self' https://fonts.gstatic.com`,
-    `img-src 'self' data: blob: https://images.unsplash.com https://*.tosspayments.com`,
+    `img-src 'self' data: blob: https://images.unsplash.com https://*.tosspayments.com https://i.ytimg.com`,
     connectSrc,
     `media-src 'self' https://*.supabase.co blob:`,
-    `frame-src https://js.tosspayments.com`,
+    `frame-src https://js.tosspayments.com https://www.youtube.com`,
     `frame-ancestors 'none'`, `base-uri 'self'`, `form-action 'self'`,
   ].join('; ');
 

@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { HLBCurriculumStage } from '@/types';
 import type { SessionReport, TensionData } from '@/lib/hooks/useRealtimeEval';
 import { useRealtimeEval } from '@/lib/hooks/useRealtimeEval';
+import { useDemoPitch } from '@/lib/hooks/useDemoPitch';
 import PitchVisualizer from '@/components/journey/PitchVisualizer';
+import PitchComparisonVisualizer from '@/components/journey/PitchComparisonVisualizer';
 import TensionIndicator from '@/components/journey/TensionIndicator';
 import LiveFeedbackToast from '@/components/journey/LiveFeedbackToast';
 import VoiceVisualizer from '@/components/journey/VoiceVisualizer';
@@ -29,11 +31,22 @@ function classifyFeedback(feedback: string): 'positive' | 'neutral' | 'correctio
 
 const PITCH_HISTORY_MAX = 50;
 
+interface StudentPitch {
+  time: number;
+  frequency: number;
+}
+
 export default function PracticePhase({ stage, stageId, onComplete }: Props) {
   const {
     isRecording, isConnected, latestResult, report,
     tensionHistory, startSession, stopSession, error,
   } = useRealtimeEval();
+
+  const hasDemo = !!stage.demoAudioUrl;
+  const demoPitch = useDemoPitch(hasDemo ? stage.demoAudioUrl : undefined);
+  const [compareMode, setCompareMode] = useState(true);
+  const [studentPitches, setStudentPitches] = useState<StudentPitch[]>([]);
+  const recordingStartRef = useRef<number>(0);
 
   const completedRef = useRef(false);
   const [pitchHistory, setPitchHistory] = useState<number[]>([]);
@@ -54,8 +67,14 @@ export default function PracticePhase({ stage, stageId, onComplete }: Props) {
         const next = [...prev, pitch];
         return next.length > PITCH_HISTORY_MAX ? next.slice(-PITCH_HISTORY_MAX) : next;
       });
+
+      // 비교 모드용 학생 피치 수집
+      if (compareMode && hasDemo && recordingStartRef.current > 0) {
+        const elapsed = (Date.now() - recordingStartRef.current) / 1000;
+        setStudentPitches((prev) => [...prev, { time: elapsed, frequency: pitch }]);
+      }
     }
-  }, [latestResult]);
+  }, [latestResult, compareMode, hasDemo]);
 
   const handleToggle = useCallback(() => {
     if (isRecording) {
@@ -63,6 +82,8 @@ export default function PracticePhase({ stage, stageId, onComplete }: Props) {
     } else {
       completedRef.current = false;
       setPitchHistory([]);
+      setStudentPitches([]);
+      recordingStartRef.current = Date.now();
       startSession(stageId);
     }
   }, [isRecording, stopSession, startSession, stageId]);
@@ -88,23 +109,81 @@ export default function PracticePhase({ stage, stageId, onComplete }: Props) {
         <p className="text-xs text-white/40 mt-1">{stage.evaluationCriteria.description}</p>
       </div>
 
-      <VoiceVisualizer
-        isRecording={isRecording}
-        currentPitch={latestResult?.avg_pitch_hz}
-        tensionData={latestResult?.tension ? {
-          laryngeal: latestResult.tension.laryngeal,
-          tongueRoot: latestResult.tension.tongue_root,
-          jaw: latestResult.tension.jaw,
-          registerBreak: latestResult.tension.register_break,
-        } : undefined}
-        pitchHistory={pitchHistory}
-      />
+      {/* 비교 모드 토글 (시범 오디오가 있는 단계만) */}
+      {hasDemo && (
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-[var(--text-muted)]">
+            {compareMode ? '따라하기 모드' : '자유 연습'}
+          </span>
+          <button
+            type="button"
+            onClick={() => setCompareMode(!compareMode)}
+            className={`relative w-10 h-5 rounded-full transition-colors ${
+              compareMode ? 'bg-[var(--accent)]' : 'bg-white/10'
+            }`}
+            aria-label="비교 모드 토글"
+          >
+            <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+              compareMode ? 'left-[22px]' : 'left-0.5'
+            }`} />
+          </button>
+        </div>
+      )}
 
-      <PitchVisualizer
-        targetPitches={targetPitches}
-        currentPitch={null}
-        isActive={isRecording}
-      />
+      {/* 비교 모드 ON + 시범 피치 로드 완료 */}
+      {hasDemo && compareMode && !demoPitch.error ? (
+        <>
+          {demoPitch.isLoading ? (
+            <div className="flex items-center justify-center min-h-[220px] bg-white/[0.02] border border-white/[0.08] rounded-lg">
+              <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+                <div className="w-4 h-4 border-2 border-white/20 border-t-[var(--accent)] rounded-full animate-spin" />
+                선생님 피치 분석 중...
+              </div>
+            </div>
+          ) : (
+            <PitchComparisonVisualizer
+              referencePitches={demoPitch.referencePitches}
+              studentPitches={studentPitches}
+              isRecording={isRecording}
+              duration={demoPitch.duration}
+            />
+          )}
+
+          {/* 긴장 지도는 비교 모드에서도 유지 */}
+          <VoiceVisualizer
+            isRecording={isRecording}
+            currentPitch={latestResult?.avg_pitch_hz}
+            tensionData={latestResult?.tension ? {
+              laryngeal: latestResult.tension.laryngeal,
+              tongueRoot: latestResult.tension.tongue_root,
+              jaw: latestResult.tension.jaw,
+              registerBreak: latestResult.tension.register_break,
+            } : undefined}
+            pitchHistory={pitchHistory}
+          />
+        </>
+      ) : (
+        /* 기존 모드 (비교 OFF 또는 시범 없음) */
+        <>
+          <VoiceVisualizer
+            isRecording={isRecording}
+            currentPitch={latestResult?.avg_pitch_hz}
+            tensionData={latestResult?.tension ? {
+              laryngeal: latestResult.tension.laryngeal,
+              tongueRoot: latestResult.tension.tongue_root,
+              jaw: latestResult.tension.jaw,
+              registerBreak: latestResult.tension.register_break,
+            } : undefined}
+            pitchHistory={pitchHistory}
+          />
+
+          <PitchVisualizer
+            targetPitches={targetPitches}
+            currentPitch={null}
+            isActive={isRecording}
+          />
+        </>
+      )}
 
       <div className="flex justify-center py-5">
         <button
