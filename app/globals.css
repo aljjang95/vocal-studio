@@ -58,6 +58,21 @@
   --fs-sm:      0.875rem;
   --fs-xs:      0.75rem;
 
+  /* ── Phase 13: DNA Card ── */
+  --dna-star:      #A8D4B8;
+  --dna-line:      rgba(168,212,184,0.4);
+  --dna-fill:      rgba(91,140,110,0.15);
+  --dna-bg:        #060A08;
+
+  /* ── Phase 13: Rank/Badge ── */
+  --rank-gold:     #D4A857;
+  --rank-silver:   #8A9A90;
+  --rank-bronze:   #A0785A;
+
+  /* ── Phase 13: Vote ── */
+  --vote-active:   var(--accent-bright);
+  --vote-inactive: var(--text-muted);
+
   /* ── Easing ── */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
@@ -150,6 +165,17 @@ html:not(.dark) {
   --border-subtle:  rgba(0,0,0,0.05);
   --border-default: rgba(0,0,0,0.08);
   --border-strong:  rgba(0,0,0,0.13);
+
+  /* Phase 13: DNA Card (light) */
+  --dna-star:      #4A7A5D;
+  --dna-line:      rgba(74,122,93,0.35);
+  --dna-fill:      rgba(74,122,93,0.10);
+  --dna-bg:        #F0F4F2;
+
+  /* Phase 13: Rank (light — slightly adjusted) */
+  --rank-gold:     #B8922E;
+  --rank-silver:   #6A7A70;
+  --rank-bronze:   #8A6040;
 
   /* Legacy aliases re-mapped for light */
   --surface:   rgba(0,0,0,0.02);

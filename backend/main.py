@@ -9,6 +9,7 @@ from routers.coach import router as coach_router
 from routers.ws_evaluate import router as ws_router
 from routers.ws_scale import router as ws_scale_router
 from routers.onboarding import router as onboarding_router
+from routers.vocal_dna import router as vocal_dna_router
 
 app = FastAPI(title="VocalMind AI Backend", version="0.1.0")
 
@@ -29,6 +30,7 @@ app.include_router(coach_router)
 app.include_router(ws_router)
 app.include_router(ws_scale_router)
 app.include_router(onboarding_router)
+app.include_router(vocal_dna_router)
 
 
 @app.get("/health")

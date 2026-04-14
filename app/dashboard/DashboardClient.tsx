@@ -8,6 +8,8 @@ import NextActionCard from '@/components/dashboard/NextActionCard';
 import ProgressCard from '@/components/dashboard/ProgressCard';
 import TodayPractice from '@/components/dashboard/TodayPractice';
 import GrowthChart from '@/components/dashboard/GrowthChart';
+import UserProfileCard from '@/components/shared/UserProfileCard';
+import AuditionWidget from '@/components/dashboard/AuditionWidget';
 
 export default function DashboardClient() {
   const [hydrated, setHydrated] = useState(false);
@@ -47,6 +49,8 @@ export default function DashboardClient() {
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-5">
+          <UserProfileCard />
+          <AuditionWidget />
           <NextActionCard />
           <ProgressCard />
           <TodayPractice />

@@ -524,3 +524,143 @@ export interface OnboardingResult {
 
 // ── 여정 레슨 Phase ──
 export type JourneyLessonPhase = 'why' | 'demo' | 'practice' | 'eval' | 'summary';
+
+// ── Phase 13: 음색 DNA ──
+
+export interface VocalDna {
+  id: string;
+  user_id: string;
+  laryngeal: number;
+  tongue_root: number;
+  jaw: number;
+  register_break: number;
+  tone_stability: number;
+  avg_pitch_hz: number | null;
+  voice_type: string | null;
+  source: string;
+  created_at: string;
+}
+
+export interface DnaAxis {
+  key: keyof Pick<VocalDna, 'laryngeal' | 'tongue_root' | 'jaw' | 'register_break' | 'tone_stability'>;
+  label: string;
+  value: number;
+}
+
+// ── Phase 13: 아바타 + 의상 ──
+
+export type ItemCategory = 'hat' | 'top' | 'bottom' | 'accessory' | 'effect' | 'crown';
+
+export interface AvatarData {
+  id: string;
+  user_id: string;
+  base_image_url: string;
+  style_prompt: string | null;
+  ref_image_url?: string | null;
+  growth_level?: string | null;
+  created_at: string;
+}
+
+export interface ShopItem {
+  id: string;
+  name: string;
+  category: ItemCategory;
+  image_url: string;
+  price: number;
+  is_season: boolean;
+  season_end_at: string | null;
+  is_reward_only: boolean;
+  created_at: string;
+}
+
+export interface UserInventoryItem {
+  id: string;
+  user_id: string;
+  item_id: string;
+  acquired_at: string;
+  source: string;
+  item?: ShopItem;
+}
+
+export interface UserEquipped {
+  user_id: string;
+  hat_id: string | null;
+  top_id: string | null;
+  bottom_id: string | null;
+  accessory_id: string | null;
+  effect_id: string | null;
+  updated_at: string;
+}
+
+// ── Phase 13: 커뮤니티 ──
+
+export type PostType = 'cover' | 'battle' | 'free';
+export type FeedTab = 'latest' | 'popular' | 'battle';
+
+export interface CommunityPost {
+  id: string;
+  user_id: string;
+  type: PostType;
+  title: string | null;
+  description: string | null;
+  audio_url: string | null;
+  song_title: string | null;
+  song_artist: string | null;
+  vote_count: number;
+  play_count: number;
+  is_deleted: boolean;
+  created_at: string;
+  // joined fields
+  author_name?: string;
+  author_avatar_url?: string;
+  has_voted?: boolean;
+}
+
+export interface CommunityVote {
+  id: string;
+  user_id: string;
+  post_id: string;
+  created_at: string;
+}
+
+// ── Phase 13: 주간 오디션 ──
+
+export type AuditionStatus = 'active' | 'voting' | 'ended';
+
+export interface AuditionEvent {
+  id: string;
+  song_title: string;
+  song_artist: string;
+  description: string | null;
+  week_start: string;
+  week_end: string;
+  status: AuditionStatus;
+  created_at: string;
+}
+
+export interface AuditionEntry {
+  id: string;
+  event_id: string;
+  user_id: string;
+  audio_url: string;
+  vote_count: number;
+  rank: number | null;
+  created_at: string;
+  // joined
+  author_name?: string;
+  author_avatar_url?: string;
+  has_voted?: boolean;
+}
+
+// ── Phase 13: 보상 ──
+
+export type RewardType = 'crown' | 'effect' | 'title' | 'item';
+
+export interface UserReward {
+  id: string;
+  user_id: string;
+  reward_type: RewardType;
+  reward_data: Record<string, unknown> | null;
+  source: string;
+  created_at: string;
+}

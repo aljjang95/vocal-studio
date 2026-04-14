@@ -46,6 +46,8 @@ export default function Nav() {
     // 항상 표시
     const links: { href: string; label: string }[] = [
       { href: '/journey', label: '소리의 길' },
+      { href: '/community', label: '커뮤니티' },
+      { href: '/audition', label: '오디션' },
       { href: '/pricing', label: '요금제' },
     ];
 
@@ -110,6 +112,8 @@ export default function Nav() {
               <li key={link.href}><Link href={link.href} className={navLinkClass}>{link.label}</Link></li>
             ))}
             {user && <li><Link href="/dashboard" className={navLinkClass}>대시보드</Link></li>}
+            {user && <li><Link href="/avatar" className={navLinkClass}>내 아바타</Link></li>}
+            {user && <li><Link href="/vocal-dna" className={navLinkClass}>음색 DNA</Link></li>}
             <li><ThemeToggle /></li>
             {user ? (
               <li><button onClick={handleLogout} className={`${ctaClass} border-none cursor-pointer`}>로그아웃</button></li>
@@ -143,6 +147,8 @@ export default function Nav() {
           <Link key={link.href} href={link.href} onClick={closeMenu} className={mobileLinkClass}>{link.label}</Link>
         ))}
         {user && <Link href="/dashboard" onClick={closeMenu} className={mobileLinkClass}>대시보드</Link>}
+        {user && <Link href="/avatar" onClick={closeMenu} className={mobileLinkClass}>내 아바타</Link>}
+        {user && <Link href="/vocal-dna" onClick={closeMenu} className={mobileLinkClass}>음색 DNA</Link>}
         {user ? (
           <button onClick={() => { closeMenu(); handleLogout(); }} className="bg-transparent border-none cursor-pointer text-[var(--text)] font-['Inter',sans-serif] text-[1.6rem] font-bold p-0 text-left transition-colors hover:text-[var(--accent)]">로그아웃</button>
         ) : (
