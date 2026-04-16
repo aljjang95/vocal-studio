@@ -314,6 +314,17 @@ audio,video{width:100%;border-radius:5px;}
 video{max-height:160px;object-fit:cover;}
 .ba-empty{text-align:center;padding:20px;color:var(--tm);font-size:12.5px;}
 .pay-card{background:var(--ag);border:1px solid var(--b);border-radius:12px;overflow:hidden;margin-bottom:14px;}
+/* ── 타임라인 ── */
+.tl-line{position:relative;padding-left:36px;margin-left:16px;}
+.tl-line::before{content:"";position:absolute;left:11px;top:0;bottom:0;width:2px;background:var(--b2);}
+.tl-dot{position:absolute;left:4px;top:16px;width:16px;height:16px;border-radius:50%;border:2.5px solid var(--a);background:var(--s1);z-index:1;}
+.tl-dot.absent{border-color:var(--r);background:rgba(200,80,80,.15);}
+.tl-dot.cancel{border-color:var(--tm);background:rgba(140,140,140,.15);}
+.tl-item{background:var(--s1);border:1px solid var(--b);border-radius:10px;padding:12px 16px;margin-bottom:12px;transition:all .15s;}
+.tl-item:hover{border-color:var(--b2);box-shadow:var(--sh-sm);}
+.tl-month-hd{font-family:"Cormorant Garamond",serif;font-size:18px;font-weight:700;color:var(--a);margin:20px 0 10px;padding-left:40px;}
+.tl-stats-bar{display:flex;gap:4px;height:8px;border-radius:4px;overflow:hidden;margin-top:6px;}
+.tl-stats-bar>div{height:100%;border-radius:2px;transition:width .3s;}
 .pay-card-hd{padding:14px 18px;border-bottom:1px solid var(--b);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
 .pay-week-row{display:flex;align-items:center;padding:12px 18px;border-bottom:1px solid var(--b);gap:14px;}
 .pay-week-row:last-child{border-bottom:none;}
@@ -2427,6 +2438,7 @@ div.mwv .lb { font-size: 7px !important; padding: 0 !important; min-height: 0 !i
     <div class="ni"    data-p="consult"  onclick="go('consult')"><span class="ni-ic">&#x1F4CB;</span>신규 상담</div>
     <div class="ni"    data-p="students" onclick="go('students')"><span class="ni-ic">&#x266C;</span>레슨생 관리</div>
     <div class="ni"    data-p="logs"     onclick="go('logs')"><span class="ni-ic">&#x270E;</span>레슨 기록</div>
+    <div class="ni"    data-p="timeline" onclick="go('timeline')"><span class="ni-ic">&#x1F4C8;</span>진도 타임라인</div>
     <div class="ni"    data-p="payment"  onclick="go('payment')"><span class="ni-ic">&#x1F4B0;</span>입금 관리</div>
     <div class="ni on" data-p="today"    onclick="go('today')"><span class="ni-ic">&#x23F0;</span>오늘 스케줄</div>
     <div class="ni-sep"></div>
@@ -3943,7 +3955,7 @@ function sbLessonClick(el){
 var page='today',wkOfs=0;
 var _ciDraftTimer=null;
 var _consultTab='consult';
-var PT={dashboard:'대시보드',consult:'신규 상담',students:'레슨생 관리',logs:'레슨 기록',payment:'입금 관리',today:'오늘 스케줄',schedule:'주간 스케줄'};
+var PT={dashboard:'대시보드',consult:'신규 상담',students:'레슨생 관리',logs:'레슨 기록',payment:'입금 관리',today:'오늘 스케줄',schedule:'주간 스케줄',timeline:'진도 타임라인'};
 function go(p){
   page=p;wkOfs=0;
   // 스케줄 설정 버튼 표시/숨김
@@ -4042,6 +4054,9 @@ function render(){
   } else if(page==='payment'){
     ge('ta').innerHTML='';
     ge('content').innerHTML=buildPayment();
+  } else if(page==='timeline'){
+    ge('ta').innerHTML='';
+    ge('content').innerHTML=buildTimeline();
   } else if(page==='today'){
     ge('ta').innerHTML='';
     ge('content').innerHTML=buildTodaySchedule();
@@ -4221,25 +4236,50 @@ function buildTodaySchedule(){
     o+='<button class="btn bsm" style="flex:1;justify-content:center;background:rgba(110,163,200,.08);color:var(--bl);border:1px solid rgba(110,163,200,.18);font-size:11px" data-sid="'+s.id+'" data-h="'+item.h+'" onclick="openNextWeekReschedule(this.dataset.sid,this.dataset.h)">✏️ 스케줄 수정</button>';
     o+='</div>';
 
-    /* 현재 수업이면 퀵 기록 카드 펼치기 */
-    if(isCurrent||isPast){
-      o+='<div style="border-top:1px solid rgba(255,255,255,.08);padding-top:12px;margin-top:'+(isCurrent?'0':'12')+'px">';
-      if(tl){
-        /* 기록 있으면 내용 표시 + 퀵 메모 수정 */
-        o+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">';
-        if(tl.ct)o+='<div><div style="font-size:10px;letter-spacing:.1em;color:var(--tm);text-transform:uppercase;margin-bottom:3px">📝 진도</div><div style="font-size:13.5px;color:var(--ts)">'+esc(tl.ct)+'</div></div>';
-        if(tl.fb)o+='<div><div style="font-size:10px;letter-spacing:.1em;color:var(--r);text-transform:uppercase;margin-bottom:3px">⚠️ 피드백</div><div style="font-size:13.5px;color:var(--ts)">'+esc(tl.fb)+'</div></div>';
-        if(tl.hw)o+='<div><div style="font-size:10px;letter-spacing:.1em;color:var(--g);text-transform:uppercase;margin-bottom:3px">📋 과제</div><div style="font-size:13.5px;color:var(--ts)">'+esc(tl.hw)+'</div></div>';
-        o+='</div>';
-      }
-      /* 퀵 메모 입력 영역 */
-      var qid='qm_'+s.id+'_'+item.h;
-      o+='<div style="display:flex;gap:6px;align-items:center">';
-      o+='<input id="'+qid+'" type="text" placeholder="⚡ 진도 한 줄 메모..." value="'+esc((tl&&tl.ct)||'')+'" style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--t);padding:7px 11px;border-radius:8px;font-size:13px;font-family:DM Sans,sans-serif;outline:none" onkeydown="if(event.key===\'Enter\'){event.preventDefault();saveQuickMemo(\''+s.id+'\',\''+item.h+'\',\''+todayStr+'\',document.getElementById(\''+qid+'\').value)}">';
-      o+='<button class="btn bp bsm" data-sid="'+s.id+'" data-h="'+item.h+'" data-date="'+todayStr+'" data-qid="'+qid+'" onclick="saveQuickMemo(this.dataset.sid,this.dataset.h,this.dataset.date,document.getElementById(this.dataset.qid).value)">저장</button>';
-      o+='</div>';
+    /* 퀵 기록 + 이전 레슨 기록 (모든 슬롯) */
+    o+='<div style="border-top:1px solid rgba(255,255,255,.08);padding-top:12px;margin-top:12px">';
+    if(tl){
+      /* 기록 있으면 내용 표시 */
+      o+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">';
+      if(tl.ct)o+='<div><div style="font-size:10px;letter-spacing:.1em;color:var(--tm);text-transform:uppercase;margin-bottom:3px">📝 진도</div><div style="font-size:13.5px;color:var(--ts)">'+esc(tl.ct)+'</div></div>';
+      if(tl.fb)o+='<div><div style="font-size:10px;letter-spacing:.1em;color:var(--r);text-transform:uppercase;margin-bottom:3px">⚠️ 피드백</div><div style="font-size:13.5px;color:var(--ts)">'+esc(tl.fb)+'</div></div>';
+      if(tl.hw)o+='<div><div style="font-size:10px;letter-spacing:.1em;color:var(--g);text-transform:uppercase;margin-bottom:3px">📋 과제</div><div style="font-size:13.5px;color:var(--ts)">'+esc(tl.hw)+'</div></div>';
       o+='</div>';
     }
+    /* 퀵 메모 입력 영역 */
+    var qid='qm_'+s.id+'_'+item.h;
+    o+='<div style="display:flex;gap:6px;align-items:center">';
+    o+='<input id="'+qid+'" type="text" placeholder="⚡ 진도 한 줄 메모..." value="'+esc((tl&&tl.ct)||'')+'" style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--t);padding:7px 11px;border-radius:8px;font-size:13px;font-family:DM Sans,sans-serif;outline:none" onkeydown="if(event.key===\'Enter\'){event.preventDefault();saveQuickMemo(\''+s.id+'\',\''+item.h+'\',\''+todayStr+'\',document.getElementById(\''+qid+'\').value)}">';
+    o+='<button class="btn bp bsm" data-sid="'+s.id+'" data-h="'+item.h+'" data-date="'+todayStr+'" data-qid="'+qid+'" onclick="saveQuickMemo(this.dataset.sid,this.dataset.h,this.dataset.date,document.getElementById(this.dataset.qid).value)">저장</button>';
+    o+='</div>';
+
+    /* 이전 레슨 기록 (최근 5개) */
+    var _prevLogs=logs.filter(function(l){return l.sid===s.id&&l.date!==todayStr;}).sort(function(a,b){return (b.date||'').localeCompare(a.date||'');}).slice(0,5);
+    if(_prevLogs.length){
+      var _histId='hist_'+s.id;
+      o+='<div style="margin-top:10px">';
+      o+='<button onclick="(function(){var el=document.getElementById(\''+_histId+'\');el.style.display=el.style.display===\'none\'?\'block\':\'none\';this.querySelector(\'.hst-arrow\').textContent=el.style.display===\'none\'?\'▼\':\'▲\';}).call(this)" style="background:none;border:none;color:var(--a);font-size:12px;font-weight:600;cursor:pointer;padding:0;font-family:inherit;display:flex;align-items:center;gap:5px">';
+      o+='<span class="hst-arrow">▼</span> 이전 기록 (최근 '+_prevLogs.length+'건)';
+      o+='</button>';
+      o+='<div id="'+_histId+'" style="display:none;margin-top:8px;max-height:240px;overflow-y:auto;border:1px solid var(--b);border-radius:10px;background:rgba(255,255,255,.02)">';
+      _prevLogs.forEach(function(pl,pi){
+        var _border=pi>0?'border-top:1px solid var(--b);':'';
+        o+='<div style="padding:10px 14px;'+_border+'cursor:pointer" onclick="editLogByIdEl(\''+pl.id+'\')">';
+        o+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">';
+        o+='<span style="font-size:12px;font-weight:700;color:var(--a);font-family:DM Mono,monospace">'+esc(pl.date)+'</span>';
+        o+='<span style="font-size:10.5px;color:var(--tm)">제'+pl.wn+'회</span>';
+        var _attCol=pl.att==='출석'?'var(--g)':pl.att==='결석'?'var(--r)':'var(--tm)';
+        o+='<span style="font-size:10px;background:'+_attCol+'22;color:'+_attCol+';border-radius:3px;padding:1px 5px;font-weight:600">'+esc(pl.att||'출석')+'</span>';
+        o+='</div>';
+        if(pl.ct)o+='<div style="font-size:12.5px;color:var(--ts);margin-bottom:2px">📝 '+esc(pl.ct)+'</div>';
+        if(pl.fb)o+='<div style="font-size:12px;color:var(--r);margin-bottom:2px">⚠️ '+esc(pl.fb)+'</div>';
+        if(pl.hw)o+='<div style="font-size:12px;color:var(--g)">📋 '+esc(pl.hw)+'</div>';
+        if(!pl.ct&&!pl.fb&&!pl.hw)o+='<div style="font-size:12px;color:var(--tm);font-style:italic">기록 없음</div>';
+        o+='</div>';
+      });
+      o+='</div></div>';
+    }
+    o+='</div>';
     o+='</div>';
   });
   o+='</div>';
@@ -6550,6 +6590,135 @@ function getCycleInfo(s){
   return{cycleSize:cycleSize,cycleNum:cycleNum,cycleStart:cycleStart,cycleEnd:cycleEnd,lessonsInCycle:lessonsInCycle,remainInCycle:remainInCycle,totalLessons:totalLessons,offset:offset,actualLessons:actualLessons};
 }
 
+/* ── 진도 타임라인 ── */
+var _tlSid=null;
+function buildTimeline(){
+  var active=students.filter(function(s){return s.status==='수강중';});
+  var all=students.slice();
+  if(!all.length)return '<div class="empty"><div class="ei">📈</div><div class="et">등록된 레슨생이 없습니다</div></div>';
+
+  /* 선택된 레슨생 (기본: 첫 번째 수강중) */
+  var sel=_tlSid?students.find(function(x){return x.id===_tlSid;}):null;
+  if(!sel)sel=active[0]||all[0];
+  _tlSid=sel.id;
+
+  var o='<div style="max-width:700px;margin:0 auto">';
+
+  /* 레슨생 선택 바 */
+  o+='<div style="display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch">';
+  active.forEach(function(s){
+    var isOn=s.id===_tlSid;
+    o+='<button onclick="_tlSid=\''+s.id+'\';render()" style="flex-shrink:0;padding:8px 16px;border-radius:8px;border:1.5px solid '+(isOn?'var(--a)':'var(--b)')+';background:'+(isOn?'var(--a)':'var(--ag)')+';color:'+(isOn?'#08080d':'var(--ts)')+';font-size:12.5px;font-weight:'+(isOn?'700':'500')+';cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap">';
+    o+='<span class="cp" style="background:'+gc(s)+';width:8px;height:8px;display:inline-block;border-radius:50%;margin-right:5px;vertical-align:middle"></span>';
+    o+=esc(s.name);
+    o+='</button>';
+  });
+  /* 휴원/중단 레슨생도 접근 가능 */
+  var inactive=all.filter(function(s){return s.status!=='수강중';});
+  if(inactive.length){
+    o+='<span style="border-left:1px solid var(--b);margin:0 4px"></span>';
+    inactive.forEach(function(s){
+      var isOn=s.id===_tlSid;
+      o+='<button onclick="_tlSid=\''+s.id+'\';render()" style="flex-shrink:0;padding:8px 14px;border-radius:8px;border:1px solid var(--b);background:'+(isOn?'rgba(140,140,140,.2)':'rgba(140,140,140,.05)')+';color:var(--tm);font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;opacity:.7;white-space:nowrap">';
+      o+=esc(s.name)+' <span style="font-size:10px">('+esc(s.status||'')+')</span>';
+      o+='</button>';
+    });
+  }
+  o+='</div>';
+
+  /* 선택된 레슨생 프로필 카드 */
+  var c=gc(sel),c2=COLORS[(students.indexOf(sel)+2)%COLORS.length];
+  var ci=getCycleInfo(sel);
+  var sLogs=logs.filter(function(l){return l.sid===sel.id;}).sort(function(a,b){return (b.date||'').localeCompare(a.date||'');});
+  var attCount=sLogs.filter(function(l){return l.att==='출석';}).length;
+  var absentCount=sLogs.filter(function(l){return l.att==='결석';}).length;
+  var cancelCount=sLogs.filter(function(l){return l.att==='취소';}).length;
+  var totalL=sLogs.length;
+  var attRate=totalL>0?Math.round((attCount/totalL)*100):0;
+
+  o+='<div style="background:linear-gradient(135deg,rgba(200,169,110,.1) 0%,rgba(16,16,26,0) 60%);border:1px solid var(--b2);border-radius:16px;padding:20px 22px;margin-bottom:20px">';
+  o+='<div style="display:flex;align-items:center;gap:16px;margin-bottom:14px">';
+  /* 아바타 */
+  var avStyle='width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,'+c+','+c2+');display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#08080d;flex-shrink:0;overflow:hidden';
+  o+='<div style="'+avStyle+'">'+(getStudentPhoto(sel)?'<img src="'+getStudentPhoto(sel)+'" style="width:100%;height:100%;object-fit:cover">':esc(sel.name.slice(0,1)))+'</div>';
+  o+='<div style="flex:1">';
+  o+='<div style="font-size:19px;font-weight:700;margin-bottom:3px">'+esc(sel.name)+'</div>';
+  o+='<div style="font-size:12.5px;color:var(--tm)">'+clsL(sel.cls)+' · '+(sel.freq===2?'주 2회':'주 1회')+' · 총 '+ci.totalLessons+'회차</div>';
+  o+='</div>';
+  o+='<div style="text-align:right">';
+  o+='<div style="font-family:Cormorant Garamond,serif;font-size:36px;font-weight:900;color:'+(attRate>=80?'var(--g)':attRate>=60?'var(--a)':'var(--r)')+';line-height:1">'+attRate+'<span style="font-size:16px">%</span></div>';
+  o+='<div style="font-size:10px;color:var(--tm);letter-spacing:.1em;text-transform:uppercase;margin-top:2px">출석률</div>';
+  o+='</div></div>';
+
+  /* 통계 바 */
+  o+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">';
+  o+='<div style="text-align:center;padding:8px;background:rgba(42,138,96,.08);border-radius:8px;border:1px solid rgba(42,138,96,.15)"><div style="font-size:20px;font-weight:900;color:var(--g);font-family:Cormorant Garamond,serif">'+attCount+'</div><div style="font-size:10px;color:var(--tm);letter-spacing:.08em">출석</div></div>';
+  o+='<div style="text-align:center;padding:8px;background:rgba(200,80,80,.08);border-radius:8px;border:1px solid rgba(200,80,80,.15)"><div style="font-size:20px;font-weight:900;color:var(--r);font-family:Cormorant Garamond,serif">'+absentCount+'</div><div style="font-size:10px;color:var(--tm);letter-spacing:.08em">결석</div></div>';
+  o+='<div style="text-align:center;padding:8px;background:rgba(140,140,140,.08);border-radius:8px;border:1px solid rgba(140,140,140,.15)"><div style="font-size:20px;font-weight:900;color:var(--tm);font-family:Cormorant Garamond,serif">'+cancelCount+'</div><div style="font-size:10px;color:var(--tm);letter-spacing:.08em">취소</div></div>';
+  o+='</div>';
+
+  /* 출석 비율 바 */
+  if(totalL>0){
+    var wA=Math.round((attCount/totalL)*100);
+    var wB=Math.round((absentCount/totalL)*100);
+    var wC=100-wA-wB;
+    o+='<div class="tl-stats-bar" style="margin-top:10px">';
+    if(wA>0)o+='<div style="width:'+wA+'%;background:var(--g)"></div>';
+    if(wB>0)o+='<div style="width:'+wB+'%;background:var(--r)"></div>';
+    if(wC>0)o+='<div style="width:'+wC+'%;background:var(--tm)"></div>';
+    o+='</div>';
+  }
+  o+='</div>';
+
+  /* 타임라인 본체 */
+  if(!sLogs.length){
+    o+='<div class="empty"><div class="ei">📝</div><div class="et">아직 레슨 기록이 없습니다</div></div>';
+    o+='</div>';return o;
+  }
+
+  /* 월별 그루핑 */
+  var months={};
+  sLogs.forEach(function(l){
+    var ym=(l.date||'').slice(0,7);
+    if(!months[ym])months[ym]=[];
+    months[ym].push(l);
+  });
+  var monthKeys=Object.keys(months).sort(function(a,b){return b.localeCompare(a);});
+
+  monthKeys.forEach(function(ym){
+    var parts=ym.split('-');
+    var mLabel=(parseInt(parts[1])||1)+'월';
+    var yLabel=parts[0]||'';
+    o+='<div class="tl-month-hd">'+yLabel+' '+mLabel+'</div>';
+    o+='<div class="tl-line">';
+    months[ym].forEach(function(l){
+      var dotCls=l.att==='결석'?'absent':l.att==='취소'?'cancel':'';
+      o+='<div style="position:relative">';
+      o+='<div class="tl-dot '+dotCls+'"></div>';
+      o+='<div class="tl-item" onclick="editLogByIdEl(\''+l.id+'\')" style="cursor:pointer">';
+      /* 헤더: 날짜 + 회차 + 출결 */
+      o+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">';
+      o+='<span style="font-size:13px;font-weight:700;color:var(--a);font-family:DM Mono,monospace">'+esc(l.date||'').slice(5)+'</span>';
+      o+='<span style="font-size:11px;color:var(--tm);background:var(--ag);border-radius:4px;padding:1px 7px;font-weight:600">제'+l.wn+'회</span>';
+      var attCol=l.att==='출석'?'var(--g)':l.att==='결석'?'var(--r)':'var(--tm)';
+      o+='<span style="font-size:10.5px;background:'+attCol+'22;color:'+attCol+';border-radius:4px;padding:1px 7px;font-weight:600">'+esc(l.att||'출석')+'</span>';
+      if(l.rt){var stars='';for(var ri=0;ri<5;ri++)stars+='<span style="color:'+(ri<parseInt(l.rt)?'var(--a)':'var(--b)')+'">★</span>';o+='<span style="font-size:10px;margin-left:auto">'+stars+'</span>';}
+      o+='</div>';
+      /* 본문 */
+      if(l.ct)o+='<div style="font-size:13px;color:var(--ts);margin-bottom:3px"><span style="color:var(--tm);font-size:11px;margin-right:4px">📝</span>'+esc(l.ct)+'</div>';
+      if(l.fb)o+='<div style="font-size:12.5px;color:var(--r);margin-bottom:3px"><span style="font-size:11px;margin-right:4px">⚠️</span>'+esc(l.fb)+'</div>';
+      if(l.hw)o+='<div style="font-size:12.5px;color:var(--g);margin-bottom:3px"><span style="font-size:11px;margin-right:4px">📋</span>'+esc(l.hw)+'</div>';
+      if(l.note)o+='<div style="font-size:12px;color:var(--tm);font-style:italic">'+esc(l.note)+'</div>';
+      if(!l.ct&&!l.fb&&!l.hw&&!l.note)o+='<div style="font-size:12px;color:var(--tm);font-style:italic">기록 내용 없음</div>';
+      o+='</div></div>';
+    });
+    o+='</div>';
+  });
+
+  o+='</div>';
+  return o;
+}
+
 function buildPayment(){
   var active=students.filter(function(s){return s.status==='수강중';});
   var unpaidAlert=active.filter(function(s){
@@ -6595,7 +6764,21 @@ function buildPayment(){
     return uA-uB;
   });
 
-  sorted.forEach(function(s){
+  /* 레슨생 네비게이션 바 (한 명씩 보기) */
+  o+='<div style="display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch">';
+  sorted.forEach(function(s,idx){
+    var _ci=getCycleInfo(s);
+    var _pd=payments.filter(function(p){return p.sid===s.id&&p.cycleNum===_ci.cycleNum&&p.paid;}).reduce(function(a,b){return a+(b.amount||0);},0);
+    var _isUnpaid=s.fee>0&&_pd<s.fee;
+    o+='<button class="pay-nav-btn'+(idx===0?' on':'')+'" data-idx="'+idx+'" onclick="switchPayCard('+idx+')" style="flex-shrink:0;padding:8px 14px;border-radius:8px;border:1.5px solid '+(_isUnpaid?'var(--r)':'var(--b)')+';background:'+(_isUnpaid?'rgba(200,80,80,.08)':'var(--ag)')+';cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:600;color:'+(_isUnpaid?'var(--r)':'var(--ts)')+';transition:all .15s;white-space:nowrap">';
+    o+='<span class="cp" style="background:'+gc(s)+';width:8px;height:8px;display:inline-block;border-radius:50%;margin-right:5px;vertical-align:middle"></span>';
+    o+=esc(s.name);
+    if(_isUnpaid)o+=' ⚠️';
+    o+='</button>';
+  });
+  o+='</div>';
+
+  sorted.forEach(function(s,idx){
     var ci=getCycleInfo(s);
     var fee=s.fee||0;
     var sp=payments.filter(function(p){return p.sid===s.id&&p.cycleNum===ci.cycleNum;});
@@ -6611,7 +6794,7 @@ function buildPayment(){
     var pct=ci.cycleSize>0?Math.round((ci.lessonsInCycle/ci.cycleSize)*100):0;
     var bar='<div style="margin-top:7px;height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:var(--a);border-radius:3px;transition:width .3s"></div></div>';
 
-    o+='<div class="pay-card"><div class="pay-card-hd">';
+    o+='<div class="pay-card pay-card-slide" data-pay-idx="'+idx+'" style="'+(idx>0?'display:none':'')+'"><div class="pay-card-hd">';
     o+='<div style="display:flex;align-items:center;gap:11px;flex-wrap:wrap">';
     o+='<div style="font-size:15px;font-weight:600"><span class="cp" style="background:'+gc(s)+'"></span>'+esc(s.name)+'</div>';
     o+='<span class="bdg '+(s.cls==='pro'?'bg-a':'bg-g')+'">'+clsL(s.cls)+'</span>';
@@ -6691,19 +6874,7 @@ function buildPayment(){
         o+='<div class="btn bd bic bsm" data-pid="'+p.id+'" onclick="deletePayment(this.dataset.pid)">🗑</div>';
         o+='</div></div>';
       });
-    }    /* 입금 내역 */
-    sp.forEach(function(p){
-      o+='<div class="pay-week-row">';
-      o+='<div class="pay-wk-badge"><div class="pay-wk-n">'+(p.wn||'—')+'</div><div class="pay-wk-l">회차</div></div>';
-      o+='<div style="flex:1"><div style="font-size:13.5px;font-weight:500">'+esc(p.date||'')+(p.note?' · '+esc(p.note):'')+'</div>';
-      o+='<div style="font-size:11px;color:var(--tm);margin-top:1px">'+ci.cycleStart+'~'+ci.cycleEnd+'회 구간</div>';
-      o+='</div>';
-      o+='<div style="font-size:14px;font-weight:600;color:var(--a)">'+won(p.amount)+'</div>';
-      o+='<div style="display:flex;gap:6px">';
-      o+='<span class="bdg '+(p.paid?'pay-ok':'pay-no')+'" style="cursor:pointer" data-pid="'+p.id+'" onclick="togglePaid(this.dataset.pid)">'+(p.paid?'✓ 확인':'미확인')+'</span>';
-      o+='<div class="btn bd bic bsm" data-pid="'+p.id+'" onclick="deletePayment(this.dataset.pid)">&#x2715;</div>';
-      o+='</div></div>';
-    });
+    }    /* 입금 내역 — 중복 forEach 제거됨 */
 
     if(fee&&unpaid){
       o+='<div style="padding:10px 18px;background:rgba(200,114,114,.06);border-top:1px solid rgba(200,114,114,.15)">';
@@ -6713,9 +6884,31 @@ function buildPayment(){
     } else {
       o+='<div style="padding:10px 18px;border-top:'+(sp.length?'1px solid var(--b)':'none')+'"><button class="btn bg2 bsm" data-sid="'+s.id+'" onclick="addPayForStudent(this.dataset.sid)">+ 입금 내역 추가</button></div>';
     }
+    /* 이전/다음 네비게이션 */
+    o+='<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-top:1px solid var(--b)">';
+    o+='<button onclick="switchPayCard('+(idx-1)+')" style="background:none;border:1px solid var(--b);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;color:var(--a);cursor:pointer;font-family:inherit;'+(idx===0?'visibility:hidden':'')+'">← 이전</button>';
+    o+='<span style="font-size:12px;color:var(--tm);font-family:DM Mono,monospace">'+(idx+1)+' / '+sorted.length+'</span>';
+    o+='<button onclick="switchPayCard('+(idx+1)+')" style="background:none;border:1px solid var(--b);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;color:var(--a);cursor:pointer;font-family:inherit;'+(idx===sorted.length-1?'visibility:hidden':'')+'">다음 →</button>';
+    o+='</div>';
     o+='</div>';
   });
   return o;
+}
+/* 입금 관리 카드 전환 */
+function switchPayCard(idx){
+  var cards=document.querySelectorAll('.pay-card-slide');
+  if(idx<0||idx>=cards.length)return;
+  cards.forEach(function(c){c.style.display='none';});
+  cards[idx].style.display='';
+  /* 네비 버튼 활성화 */
+  var btns=document.querySelectorAll('.pay-nav-btn');
+  btns.forEach(function(b,i){
+    b.classList.toggle('on',i===idx);
+    if(i===idx){b.style.outline='2px solid var(--a)';b.style.outlineOffset='1px';}
+    else{b.style.outline='none';}
+  });
+  /* 선택한 버튼 스크롤 */
+  if(btns[idx])btns[idx].scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
 }
 function addPayForStudent(sid){
   var s=students.find(function(x){return x.id===sid;});if(!s)return;
@@ -8941,6 +9134,7 @@ function go_page_logs(){go('logs');}
 function go_page_students(){go('students');}
 function go_page_consult(){go('consult');}
 function go_page_dashboard(){go('dashboard');}
+function go_page_timeline(){go('timeline');}
 function goConsult(){
   try{localStorage.removeItem('vsC_evalCid');}catch(e){}
   window._skipEvalRestore=true;
