@@ -1,0 +1,628 @@
+/* ═══════════════════════════════════════════════════════════
+   theme.css — CSS 변수(:root), 계절 테마, 라이트모드 공통 보정
+   계절별 중복 제거: 각 계절 ONE 블록에 모든 변수 통합
+   ═══════════════════════════════════════════════════════════ */
+
+/* ═══ 기본 CSS 변수 (가을 크림베이지 — 기본값) ═══ */
+:root{
+  /* 라이트 크림 베이스 (기본=가을) */
+  --bg:#f7f4ef;
+  --s1:#fdfaf6;
+  --s2:#f0ebe3;
+  --s3:#e6dfd4;
+  --b:var(--season-border,rgba(180,140,80,.14));
+  --b2:var(--season-border2,rgba(180,140,80,.25));
+  --a:var(--season-accent,#b07830);--a2:var(--season-gold,#c8902a);
+  --ag:rgba(80,60,20,.08);--ag2:rgba(80,60,20,.16);
+  --t:#2a1f0e;--ts:#6b5030;--tm:#a89070;
+  --g:#2a8a60;--r:#c03040;--bl:#2060a0;--pu:#7040a0;
+  --rad:14px;--rad-sm:9px;
+  --sh:0 4px 24px rgba(140,100,40,.1), 0 1px 4px rgba(140,100,40,.06);
+  --sh-sm:0 2px 12px rgba(140,100,40,.08);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+  --safe-top:env(safe-area-inset-top,0px);
+
+  /* 기본 계절 변수 (가을) */
+  --season-bg-img:  url("https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=1600&q=80");
+  --season-sb-img:  url("https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800&q=80");
+  --season-overlay: linear-gradient(180deg,rgba(250,244,232,.88) 0%,rgba(248,240,225,.78) 40%,rgba(250,244,232,.88) 100%);
+  --season-topbar:  rgba(255,252,245,.94);
+  --season-accent:  #906018;
+  --season-gold:    #b07828;
+  --season-glow:    rgba(160,110,30,.18);
+  --season-border:  rgba(160,120,50,.16);
+  --season-border2: rgba(160,120,50,.3);
+  --season-hover:   rgba(160,110,40,.07);
+  --season-hover2:  rgba(160,110,40,.13);
+  --season-bg-pos:  40%;
+  --season-card-bg: rgba(255,253,248,1);
+  --season-modal-bg: rgba(255,254,250,1);
+  --season-text:    #2a1a04;
+  --season-text-sub:#705030;
+  --season-text-muted: #b89070;
+  --sb-fade-mid: rgba(247,244,239,.85);
+  --font-body: "Noto Serif KR", serif;
+  --font-display: "Cormorant Garamond", serif;
+  --font-ui: "Noto Sans KR", sans-serif;
+  --font-size-base: 15px;
+  --letter-sp: .005em;
+  --line-h: 1.58;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   봄: 크림화이트 × 포레스트그린 — 자연스러운 성장, 새로운 시작
+   ═══════════════════════════════════════════════════════════ */
+body.season-spring {
+  /* 기본 팔레트 */
+  --bg: #eef3ea; --s1: #f5f9f2; --s2: #e8f0e4; --s3: #dce7d6;
+  --t: #1e2a1a; --ts: #4a5f40; --tm: #8a9e80;
+  --ag: rgba(45,85,35,.08); --ag2: rgba(45,85,35,.15);
+  --sh: 0 4px 24px rgba(30,50,20,.07), 0 1px 4px rgba(30,50,18,.04);
+  /* 계절 변수 */
+  --season-bg-img:  url("https://images.unsplash.com/photo-1588880331179-bc9b93a8cb5e?w=1600&q=80");
+  --season-sb-img:  url("https://images.unsplash.com/photo-1519892300165-cb5542fb47c7?w=800&q=80");
+  --season-overlay: linear-gradient(180deg,rgba(246,248,244,.9) 0%,rgba(242,245,238,.82) 40%,rgba(246,248,244,.92) 100%);
+  --season-topbar:  rgba(250,252,248,.96);
+  --season-accent:  #2d5a27;
+  --season-gold:    #4a7a3a;
+  --season-glow:    rgba(45,90,39,.18);
+  --season-border:  rgba(45,90,39,.14);
+  --season-border2: rgba(45,90,39,.26);
+  --season-hover:   rgba(45,90,39,.07);
+  --season-hover2:  rgba(45,90,39,.13);
+  --season-bg-pos:  40%;
+  --season-card-bg: rgba(250,252,248,1);
+  --season-modal-bg: rgba(252,254,250,1);
+  --season-text:    #1a2016;
+  --season-text-sub:#455240;
+  --season-text-muted: #8a9982;
+  --sb-fade-mid: rgba(246,248,244,.85);
+  /* 폰트 */
+  --font-body: "Noto Serif KR", serif;
+  --font-display: "Cormorant Garamond", serif;
+  --font-ui: "Noto Sans KR", sans-serif;
+  --font-size-base: 14.5px;
+  --letter-sp: .01em;
+  --line-h: 1.65;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   여름: 쿨화이트 × 딥네이비 × 골드 — 권위, 전문성, 절제된 고급감
+   ═══════════════════════════════════════════════════════════ */
+body.season-summer {
+  /* 기본 팔레트 */
+  --bg: #f4f6fa; --s1: #f8fafd; --s2: #edf1f8; --s3: #dfe5f0;
+  --t: #0d1520; --ts: #2a3850; --tm: #7080a0;
+  --ag: rgba(20,40,80,.07); --ag2: rgba(20,40,80,.14);
+  --sh: 0 4px 24px rgba(10,25,60,.08), 0 1px 4px rgba(10,25,60,.05);
+  /* 계절 변수 */
+  --season-bg-img:  url("https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1600&q=80");
+  --season-sb-img:  url("https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800&q=80");
+  --season-overlay: linear-gradient(180deg,rgba(244,246,250,.9) 0%,rgba(238,242,250,.82) 40%,rgba(244,246,250,.92) 100%);
+  --season-topbar:  rgba(248,250,253,.96);
+  --season-accent:  #1a3060;
+  --season-gold:    #c8a020;
+  --season-glow:    rgba(26,48,96,.18);
+  --season-border:  rgba(26,48,96,.13);
+  --season-border2: rgba(26,48,96,.24);
+  --season-hover:   rgba(26,48,96,.06);
+  --season-hover2:  rgba(26,48,96,.12);
+  --season-bg-pos:  50%;
+  --season-card-bg: rgba(248,250,253,1);
+  --season-modal-bg: rgba(250,252,255,1);
+  --season-text:    #0d1520;
+  --season-text-sub:#2a3850;
+  --season-text-muted: #7080a0;
+  --sb-fade-mid: rgba(244,246,250,.85);
+  /* 폰트 */
+  --font-body: "Noto Sans KR", sans-serif;
+  --font-display: "Noto Sans KR", sans-serif;
+  --font-ui: "Noto Sans KR", sans-serif;
+  --font-size-base: 14px;
+  --letter-sp: .03em;
+  --line-h: 1.6;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   가을: 웜크림 × 차콜 × 번트앰버 — 원숙한 깊이, 경험의 축적
+   ═══════════════════════════════════════════════════════════ */
+body.season-autumn {
+  /* 기본 팔레트 */
+  --bg: #f7f4ef; --s1: #fdfaf6; --s2: #f0ebe3; --s3: #e6dfd4;
+  --t: #201810; --ts: #504030; --tm: #9a8870;
+  --ag: rgba(80,60,20,.08); --ag2: rgba(80,60,20,.16);
+  --sh: 0 4px 24px rgba(50,35,10,.08), 0 1px 4px rgba(50,35,10,.05);
+  /* 계절 변수 */
+  --season-bg-img:  url("https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=1600&q=80");
+  --season-sb-img:  url("https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800&q=80");
+  --season-overlay: linear-gradient(180deg,rgba(247,244,239,.9) 0%,rgba(242,238,230,.82) 40%,rgba(247,244,239,.92) 100%);
+  --season-topbar:  rgba(253,250,246,.96);
+  --season-accent:  #7a3e0a;
+  --season-gold:    #c07820;
+  --season-glow:    rgba(122,62,10,.18);
+  --season-border:  rgba(122,62,10,.14);
+  --season-border2: rgba(122,62,10,.26);
+  --season-hover:   rgba(122,62,10,.07);
+  --season-hover2:  rgba(122,62,10,.13);
+  --season-bg-pos:  40%;
+  --season-card-bg: rgba(253,250,246,1);
+  --season-modal-bg: rgba(255,252,248,1);
+  --season-text:    #201810;
+  --season-text-sub:#504030;
+  --season-text-muted: #9a8870;
+  --sb-fade-mid: rgba(247,244,239,.85);
+  /* 폰트 */
+  --font-body: "Noto Serif KR", serif;
+  --font-display: "Cormorant Garamond", serif;
+  --font-ui: "Noto Sans KR", sans-serif;
+  --font-size-base: 15px;
+  --letter-sp: .005em;
+  --line-h: 1.58;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   겨울: 쿨그레이 × 다크슬레이트 × 실버 — 정밀함, 냉철함, 최고의 완성도
+   ═══════════════════════════════════════════════════════════ */
+body.season-winter {
+  /* 기본 팔레트 */
+  --bg: #f2f4f7; --s1: #f8f9fc; --s2: #eceff4; --s3: #e0e5ee;
+  --t: #101520; --ts: #303848; --tm: #7888a8;
+  --ag: rgba(30,40,70,.07); --ag2: rgba(30,40,70,.14);
+  --sh: 0 4px 24px rgba(15,20,45,.08), 0 1px 4px rgba(15,20,45,.05);
+  /* 계절 변수 */
+  --season-bg-img:  url("https://images.unsplash.com/photo-1418985991508-e47386d96a71?w=1600&q=80");
+  --season-sb-img:  url("https://images.unsplash.com/photo-1491002052546-bf38f186af56?w=800&q=80");
+  --season-overlay: linear-gradient(180deg,rgba(242,244,247,.9) 0%,rgba(236,240,246,.82) 40%,rgba(242,244,247,.92) 100%);
+  --season-topbar:  rgba(248,249,252,.97);
+  --season-accent:  #243060;
+  --season-gold:    #6880b0;
+  --season-glow:    rgba(36,48,96,.18);
+  --season-border:  rgba(36,48,96,.13);
+  --season-border2: rgba(36,48,96,.24);
+  --season-hover:   rgba(36,48,96,.06);
+  --season-hover2:  rgba(36,48,96,.12);
+  --season-bg-pos:  50%;
+  --season-card-bg: rgba(248,249,252,1);
+  --season-modal-bg: rgba(250,252,255,1);
+  --season-text:    #101520;
+  --season-text-sub:#303848;
+  --season-text-muted: #7888a8;
+  --sb-fade-mid: rgba(242,244,247,.85);
+  /* 폰트 */
+  --font-body: "Noto Sans KR", sans-serif;
+  --font-display: "Noto Sans KR", sans-serif;
+  --font-ui: "Noto Sans KR", sans-serif;
+  --font-size-base: 14.5px;
+  --letter-sp: .02em;
+  --line-h: 1.62;
+}
+
+/* ═══ 라이트 모드 공통 보정 — 계절 변수 기반 ═══ */
+.card { background: var(--s1) !important; border-color: var(--b) !important; }
+.modal { background: var(--s1) !important; border-color: var(--b) !important; }
+.mh { background: var(--ag) !important; border-bottom-color: var(--b) !important; }
+.mf { background: var(--ag) !important; border-top-color: var(--b) !important; }
+.sb { background: var(--s1) !important; border-right-color: var(--b) !important; }
+.topbar { background: var(--season-topbar, var(--s1)) !important; border-bottom-color: var(--b) !important; }
+.lc, .ci { background: var(--s1) !important; border-color: var(--b) !important; }
+.lw, .wk-badge, .ci-av { background: var(--ag) !important; border-color: var(--b2) !important; }
+input[type=text],input[type=tel],input[type=date],input[type=number],select,textarea {
+  background: var(--s1) !important;
+  border-color: var(--b) !important;
+  color: var(--t) !important;
+}
+.mc { background: var(--ag) !important; border-color: var(--b) !important; color: var(--tm) !important; }
+.mc:hover { background: var(--ag2) !important; color: var(--ts) !important; }
+.bg2 { background: var(--ag) !important; border-color: var(--b) !important; color: var(--ts) !important; }
+.bg2:hover { background: var(--ag2) !important; color: var(--t) !important; }
+.tab-bar { background: var(--s2) !important; border-bottom-color: var(--b) !important; }
+.wk-card, .pay-card { background: var(--s1) !important; border-color: var(--b) !important; }
+.cs { background: var(--ag) !important; border-color: var(--b) !important; }
+.fi-value { background: var(--s2) !important; border-color: var(--b) !important; color: var(--t) !important; }
+.toast { background: var(--s1) !important; border-color: var(--b2) !important; color: var(--t) !important; }
+.ov { background: rgba(0,0,0,.25); }
+.ov.open { backdrop-filter: blur(6px) !important; }
+tbody tr:hover { background: var(--ag) !important; }
+thead th { background: var(--s2) !important; color: var(--tm) !important; }
+td { color: var(--ts) !important; }
+td.b { color: var(--t) !important; }
+.sg-hd { background: var(--s2) !important; }
+.sg-cell:hover { background: var(--ag) !important; }
+.sg-tm { color: var(--tm) !important; border-color: var(--b) !important; background: var(--s2) !important; }
+::-webkit-scrollbar-track { background: var(--s2) !important; }
+::-webkit-scrollbar-thumb { background: var(--b2) !important; }
+.profile-wrap { background: var(--s1) !important; border-color: var(--b) !important; }
+.profile-left { border-color: var(--b) !important; }
+
+/* ═══ 계절 공통 UI 색상 적용 ═══ */
+.mh .mt { color: var(--season-text, var(--t)) !important; font-family: var(--font-display) !important; }
+.ch .ct { color: var(--season-text, var(--t)) !important; }
+.bdg.bg-a {
+  background: var(--season-hover, rgba(220,185,120,.12)) !important;
+  color: var(--season-accent, #c9a050) !important;
+}
+.bdg.bg-g { background: rgba(109,200,162,.13) !important; color: var(--g) !important; }
+.lc:hover { border-color: var(--season-border2) !important; }
+.ci:hover { border-color: var(--season-border2) !important; background: var(--season-hover) !important; }
+.tab.on { color: var(--season-accent, var(--a)) !important; border-bottom-color: var(--season-accent, var(--a)) !important; }
+input:focus, select:focus, textarea:focus {
+  border-color: var(--season-accent, rgba(220,185,120,.5)) !important;
+  box-shadow: 0 0 0 3px var(--season-hover, rgba(220,185,120,.1)), inset 0 1px 3px rgba(0,0,0,.04) !important;
+}
+.sg-hd.td { background: linear-gradient(180deg, var(--season-hover2, rgba(220,185,120,.12)), var(--season-hover, rgba(220,185,120,.05))) !important; }
+.sg-hd.td .dn, .sg-hd.td .dd { color: var(--season-accent, var(--a)) !important; }
+.sg-cell.td-col { background: var(--season-hover, rgba(220,185,120,.03)) !important; }
+.ni.on { color: var(--season-accent) !important; border-left-color: var(--season-accent) !important; }
+.ni.on .ni-ic { color: var(--season-accent) !important; }
+.logo-t { color: var(--season-accent) !important; text-shadow: 0 2px 20px var(--season-glow) !important; }
+.pt { color: var(--season-text, var(--t)) !important; }
+.mtab-item.on { border-top-color: var(--season-accent) !important; }
+.mtab-item.on .mtab-lb { color: var(--season-accent) !important; }
+.mtab-item.on .mtab-ic { filter: drop-shadow(0 0 4px var(--season-accent)); }
+.toast { border-color: var(--season-border, rgba(220,185,120,.2)) !important; }
+.cs-title { color: var(--season-accent, var(--a)) !important; }
+.lw { background: var(--ag) !important; border-color: var(--b2) !important; }
+.ci-av { background: var(--ag) !important; border-color: var(--b2) !important; }
+.sg-tm { color: var(--tm) !important; border-color: var(--b) !important; }
+.sg-hd .dn { color: var(--ts) !important; }
+.sg-hd .dd { color: var(--tm) !important; }
+.sg-hd.td .dn, .sg-hd.td .dd { color: var(--season-accent, var(--a)) !important; }
+
+/* ── 텍스트/UI 공통 색상 ── */
+.profile-name-big { color: var(--t) !important; }
+.ch .ct, .sh .st2 { color: var(--t) !important; }
+.fs-title { color: var(--tm) !important; border-bottom-color: var(--b) !important; }
+.fi-value { color: var(--t) !important; background: var(--ag) !important; border-color: var(--b) !important; }
+.fi-label, label { color: var(--tm) !important; }
+.et { color: var(--ts) !important; }
+.ed { color: var(--tm) !important; }
+.pil-label { color: var(--tm) !important; }
+.pil-value { color: var(--t) !important; }
+.wk-val { color: var(--ts) !important; }
+.wk-lbl { color: var(--tm) !important; }
+.wk-badge-n, .lw-n, .pay-wk-n { color: var(--season-accent, var(--a)) !important; }
+.wk-badge-l, .lw-l, .pay-wk-l { color: var(--tm) !important; }
+.tab { color: var(--tm) !important; }
+.tab:hover { color: var(--ts) !important; }
+.wn-lbl { color: var(--tm) !important; }
+.wn-btn { color: var(--ts) !important; background: var(--ag) !important; border-color: var(--b) !important; }
+.sb-lesson-name { color: var(--t) !important; }
+.sb-lesson-time { color: var(--tm) !important; }
+.sb-today-date { color: var(--tm) !important; }
+.sb-no-lesson { color: var(--tm) !important; }
+.bdg { border: none; }
+.wk-card { background: var(--s2) !important; border-color: var(--b) !important; }
+.wk-card-hd { border-bottom-color: var(--b) !important; }
+
+/* ═══ 봄 세부 UI 조정 ═══ */
+body.season-spring .sg-hd.td { background: linear-gradient(180deg, rgba(45,85,35,.1), rgba(45,85,35,.04)) !important; }
+body.season-spring .sg-cell.td-col { background: rgba(45,85,35,.03) !important; }
+body.season-spring .mon-pill { background: rgba(45,85,35,.1) !important; border-color: rgba(45,85,35,.2) !important; color: #2d5a27 !important; }
+body.season-spring .ni-sep { background: rgba(45,90,39,.1) !important; }
+body.season-spring .sb-today-hd { color: #2d5a27 !important; }
+body.season-spring .profile-left { border-color: rgba(45,90,39,.15) !important; }
+body.season-spring .tab-bar { border-bottom-color: rgba(45,90,39,.12) !important; }
+body.season-spring .sb-util-btn { background: rgba(45,85,35,.05) !important; border-color: rgba(45,90,39,.12) !important; }
+body.season-spring .sb-util-btn:hover { background: rgba(45,85,35,.12) !important; }
+body.season-spring .pay-ok { background: rgba(109,200,162,.13) !important; color: #7ec9a8 !important; }
+body.season-spring .pay-no { background: rgba(255,100,120,.11) !important; color: #ff6b88 !important; }
+body.season-spring .pay-partial { background: rgba(45,85,35,.1) !important; color: #2d5a27 !important; }
+body.season-spring .wk-card-hd { border-bottom-color: rgba(45,90,39,.1) !important; }
+body.season-spring .fi-value { background: rgba(246,250,244,.8) !important; border-color: rgba(45,85,35,.14) !important; }
+body.season-spring .lr-strip { background: rgba(45,85,35,.04) !important; border-color: rgba(45,90,39,.12) !important; }
+body.season-spring .qs-row:hover, body.season-spring .qs-row.sel { border-color: rgba(45,85,35,.28) !important; background: rgba(45,85,35,.08) !important; }
+body.season-spring { color: var(--season-text, #1a2016) !important; }
+body.season-spring .card { background: rgba(246,250,244,1) !important; border-color: rgba(45,85,35,.12) !important; box-shadow: 0 2px 16px rgba(25,50,18,.07), 0 1px 3px rgba(25,50,18,.03) !important; }
+body.season-spring .card:hover { box-shadow: 0 6px 28px rgba(25,50,18,.12) !important; border-color: rgba(45,85,35,.22) !important; }
+body.season-spring .modal { background: rgba(248,252,246,1) !important; border-color: rgba(45,85,35,.13) !important; box-shadow: 0 24px 60px rgba(20,45,15,.13) !important; }
+body.season-spring .sb { background: rgba(246,250,244,.97) !important; border-right-color: rgba(45,85,35,.11) !important; }
+body.season-spring .topbar { background: rgba(244,248,242,.96) !important; border-bottom-color: rgba(45,85,35,.1) !important; box-shadow: 0 1px 0 rgba(45,85,35,.1), 0 2px 16px rgba(25,50,18,.06), inset 0 -1px 0 rgba(255,255,255,.8) !important; }
+body.season-spring .ch { background: rgba(232,242,228,.5) !important; border-bottom-color: rgba(45,85,35,.1) !important; }
+body.season-spring .mh { background: rgba(232,242,228,.7) !important; border-bottom-color: rgba(45,85,35,.11) !important; }
+body.season-spring .mf { background: rgba(238,246,234,.8) !important; border-top-color: rgba(45,85,35,.1) !important; }
+body.season-spring .mobile-tab-bar { background: rgba(246,250,244,.97) !important; border-top-color: rgba(45,85,35,.12) !important; }
+body.season-spring .lc, body.season-spring .ci { background: rgba(246,250,244,1) !important; border-color: rgba(45,85,35,.11) !important; }
+body.season-spring .lc:hover, body.season-spring .ci:hover { background: rgba(232,242,228,.8) !important; border-color: rgba(45,85,35,.2) !important; }
+body.season-spring .lw, body.season-spring .wk-badge, body.season-spring .ci-av { background: rgba(45,85,35,.12) !important; border-color: rgba(45,85,35,.2) !important; }
+body.season-spring .lw-n, body.season-spring .wk-badge-n { color: #2d5a27 !important; }
+body.season-spring input[type=text], body.season-spring input[type=tel],
+body.season-spring input[type=date], body.season-spring input[type=number],
+body.season-spring select, body.season-spring textarea { background: rgba(246,250,244,1) !important; border-color: rgba(45,85,35,.16) !important; color: #1e2a1a !important; }
+body.season-spring input:focus, body.season-spring select:focus, body.season-spring textarea:focus { border-color: rgba(45,85,35,.42) !important; box-shadow: 0 0 0 3px rgba(45,85,35,.09) !important; }
+body.season-spring .bp { background: linear-gradient(135deg,#2d5a27,#4a7a3a) !important; color: #fff !important; box-shadow: 0 2px 12px rgba(45,85,35,.28) !important; }
+body.season-spring .bm { background: rgba(45,85,35,.1) !important; color: #2d5a27 !important; border-color: rgba(45,85,35,.2) !important; }
+body.season-spring .bg2 { background: rgba(45,85,35,.06) !important; border-color: rgba(45,85,35,.14) !important; color: #4a5f40 !important; }
+body.season-spring .bg-a { background: rgba(45,85,35,.1) !important; color: #2d5a27 !important; border-color: rgba(45,85,35,.2) !important; }
+body.season-spring .dpb.on { background: #2d5a27 !important; color: #fff !important; border-color: #2d5a27 !important; }
+body.season-spring .ro.on { background: #2d5a27 !important; border-color: #2d5a27 !important; color: #fff !important; }
+body.season-spring .ni:hover { background: rgba(45,85,35,.07) !important; color: #4a5f40 !important; }
+body.season-spring .ni.on { color: #2d5a27 !important; background: linear-gradient(90deg,rgba(45,85,35,.12) 0%,rgba(45,85,35,.02) 100%) !important; border-left-color: #2d5a27 !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.5) !important; }
+body.season-spring .logo-add-btn { background: linear-gradient(135deg,#2d5a27,#4a7a3a) !important; }
+body.season-spring .ov { background: rgba(8,20,6,.28) !important; }
+body.season-spring .toast { background: rgba(246,250,244,.97) !important; border-color: rgba(45,85,35,.2) !important; color: #1e2a1a !important; }
+body.season-spring ::-webkit-scrollbar-thumb { background: rgba(45,85,35,.2) !important; }
+body.season-spring .logo-t { color: #2d5a27 !important; -webkit-text-fill-color: initial !important; text-shadow: none !important; }
+body.season-spring .wk-card, body.season-spring .pay-card { background: rgba(246,250,244,1) !important; border-color: rgba(45,85,35,.11) !important; }
+body.season-spring .mc { background: rgba(45,85,35,.07) !important; border-color: rgba(45,85,35,.14) !important; color: #4a5f40 !important; }
+body.season-spring .tab-bar { background: rgba(238,246,234,.85) !important; }
+body.season-spring tbody tr:hover { background: rgba(45,85,35,.05) !important; }
+body.season-spring thead th { background: rgba(232,242,228,.6) !important; color: #6a8a60 !important; }
+body.season-spring select option { background: #eef3ea !important; }
+body.season-spring .cs { background: rgba(45,85,35,.05) !important; border-color: rgba(45,85,35,.13) !important; }
+body.season-spring .lb { box-shadow: 0 1px 4px rgba(0,0,0,.2), 0 0 8px rgba(45,85,35,.15) !important; }
+/* 봄 sidebarペイド */
+body.season-spring { --sb-fade-mid: rgba(246,248,244,.85); }
+/* 봄 이탤릭 헤딩 */
+body.season-spring .pt, body.season-spring .mt, body.season-spring .logo-t { font-style: italic !important; }
+
+/* ═══ 여름 세부 UI 조정 ═══ */
+body.season-summer .sg-hd.td { background: linear-gradient(180deg, rgba(26,48,96,.1), rgba(26,48,96,.04)) !important; }
+body.season-summer .sg-cell.td-col { background: rgba(26,48,96,.03) !important; }
+body.season-summer .mon-pill { background: rgba(26,48,96,.1) !important; border-color: rgba(26,48,96,.22) !important; color: #1a3060 !important; }
+body.season-summer .ni-sep { background: rgba(26,48,96,.1) !important; }
+body.season-summer .sb-today-hd { color: #1a3060 !important; }
+body.season-summer .profile-left { border-color: rgba(26,48,96,.15) !important; }
+body.season-summer .tab-bar { border-bottom-color: rgba(26,48,96,.12) !important; }
+body.season-summer .sb-util-btn { background: rgba(26,48,96,.05) !important; border-color: rgba(26,48,96,.12) !important; }
+body.season-summer .sb-util-btn:hover { background: rgba(26,48,96,.12) !important; }
+body.season-summer .pay-ok { background: rgba(0,200,150,.13) !important; color: #00e0b0 !important; }
+body.season-summer .pay-no { background: rgba(255,100,120,.11) !important; color: #ff6b88 !important; }
+body.season-summer .pay-partial { background: rgba(26,48,96,.1) !important; color: #1a3060 !important; }
+body.season-summer .fi-value { background: rgba(248,250,253,.8) !important; border-color: rgba(26,48,96,.12) !important; }
+body.season-summer .lr-strip { background: rgba(26,48,96,.04) !important; border-color: rgba(26,48,96,.12) !important; }
+body.season-summer .card { background: rgba(248,250,253,1) !important; border-color: rgba(26,48,96,.12) !important; box-shadow: 0 2px 16px rgba(10,25,60,.06), 0 1px 3px rgba(10,25,60,.03) !important; }
+body.season-summer .card:hover { box-shadow: 0 6px 28px rgba(10,25,60,.1) !important; border-color: rgba(26,48,96,.22) !important; }
+body.season-summer .modal { background: rgba(250,252,255,1) !important; border-color: rgba(26,48,96,.13) !important; box-shadow: 0 24px 64px rgba(10,20,50,.12) !important; }
+body.season-summer .sb { background: rgba(248,250,253,.97) !important; border-right-color: rgba(26,48,96,.11) !important; box-shadow: 2px 0 20px rgba(10,25,60,.07) !important; }
+body.season-summer .topbar { background: rgba(248,250,253,.96) !important; border-bottom-color: rgba(26,48,96,.1) !important; }
+body.season-summer .ch { background: rgba(237,241,248,.5) !important; border-bottom-color: rgba(26,48,96,.1) !important; }
+body.season-summer .mh { background: rgba(237,241,248,.7) !important; border-bottom-color: rgba(26,48,96,.11) !important; }
+body.season-summer .mf { background: rgba(242,246,252,.8) !important; border-top-color: rgba(26,48,96,.1) !important; }
+body.season-summer .mobile-tab-bar { background: rgba(248,250,253,.97) !important; border-top-color: rgba(26,48,96,.12) !important; }
+body.season-summer .lc, body.season-summer .ci { background: rgba(248,250,253,1) !important; border-color: rgba(26,48,96,.11) !important; }
+body.season-summer .lc:hover, body.season-summer .ci:hover { background: rgba(237,241,248,.8) !important; border-color: rgba(26,48,96,.2) !important; }
+body.season-summer .lw, body.season-summer .wk-badge, body.season-summer .ci-av { background: rgba(26,48,96,.1) !important; border-color: rgba(26,48,96,.2) !important; }
+body.season-summer .lw-n, body.season-summer .wk-badge-n { color: #1a3060 !important; }
+body.season-summer input[type=text], body.season-summer input[type=tel],
+body.season-summer input[type=date], body.season-summer input[type=number],
+body.season-summer select, body.season-summer textarea { background: rgba(248,250,253,1) !important; border-color: rgba(26,48,96,.18) !important; color: #0d1520 !important; }
+body.season-summer .bp { background: linear-gradient(135deg,#1a3060,#2a4880) !important; color: #fff !important; box-shadow: 0 2px 12px rgba(26,48,96,.3) !important; }
+body.season-summer .bm { background: rgba(26,48,96,.1) !important; color: #1a3060 !important; border-color: rgba(26,48,96,.2) !important; }
+body.season-summer .bg2 { background: rgba(26,48,96,.06) !important; border-color: rgba(26,48,96,.14) !important; color: #2a3850 !important; }
+body.season-summer .bg-a { background: rgba(26,48,96,.1) !important; color: #1a3060 !important; border-color: rgba(26,48,96,.2) !important; }
+body.season-summer .dpb.on { background: #1a3060 !important; color: #fff !important; border-color: #1a3060 !important; }
+body.season-summer .ro.on { background: #1a3060 !important; border-color: #1a3060 !important; color: #fff !important; }
+body.season-summer .ni:hover { background: rgba(26,48,96,.06) !important; color: #2a3850 !important; }
+body.season-summer .ni.on { color: #1a3060 !important; background: linear-gradient(90deg,rgba(26,48,96,.12) 0%,rgba(26,48,96,.02) 100%) !important; border-left-color: #1a3060 !important; }
+body.season-summer .logo-add-btn { background: linear-gradient(135deg,#c8a020,#e0b830) !important; box-shadow: 0 2px 10px rgba(200,160,20,.3) !important; color: #1a2000 !important; }
+body.season-summer .ov { background: rgba(5,10,25,.28) !important; }
+body.season-summer .toast { background: rgba(248,250,253,.97) !important; border-color: rgba(26,48,96,.2) !important; color: #0d1520 !important; }
+body.season-summer ::-webkit-scrollbar-thumb { background: rgba(26,48,96,.2) !important; }
+body.season-summer .logo-t { color: #1a3060 !important; -webkit-text-fill-color: initial !important; text-shadow: none !important; }
+body.season-summer .pt { letter-spacing: .08em !important; font-weight: 700 !important; text-transform: uppercase !important; font-style: normal !important; }
+body.season-summer select option { background: #f4f6fa !important; }
+body.season-summer .mc { background: rgba(26,48,96,.07) !important; border-color: rgba(26,48,96,.14) !important; color: #2a3850 !important; }
+body.season-summer .wk-card, body.season-summer .pay-card { background: rgba(248,250,253,1) !important; border-color: rgba(26,48,96,.12) !important; }
+body.season-summer .lb { box-shadow: 0 1px 4px rgba(0,0,0,.2), 0 0 8px rgba(0,200,240,.15) !important; }
+/* 여름/겨울 헤딩 직립 */
+body.season-summer .pt, body.season-summer .mt, body.season-summer .logo-t { font-style: normal !important; font-weight: 700 !important; letter-spacing: .06em !important; text-transform: uppercase !important; }
+
+/* ═══ 가을 세부 UI 조정 ═══ */
+body.season-autumn .sg-hd.td { background: linear-gradient(180deg, rgba(122,62,10,.12), rgba(122,62,10,.04)) !important; }
+body.season-autumn .sg-cell.td-col { background: rgba(122,62,10,.03) !important; }
+body.season-autumn .mon-pill { background: rgba(122,62,10,.1) !important; border-color: rgba(122,62,10,.22) !important; color: #7a3e0a !important; }
+body.season-autumn .ni-sep { background: rgba(122,62,10,.1) !important; }
+body.season-autumn .sb-today-hd { color: #7a3e0a !important; }
+body.season-autumn .profile-left { border-color: rgba(122,62,10,.15) !important; }
+body.season-autumn .tab-bar { border-bottom-color: rgba(122,62,10,.12) !important; }
+body.season-autumn .sb-util-btn { background: rgba(122,62,10,.05) !important; border-color: rgba(122,62,10,.12) !important; }
+body.season-autumn .sb-util-btn:hover { background: rgba(122,62,10,.12) !important; }
+body.season-autumn .pay-ok { background: rgba(109,200,162,.13) !important; color: #7ec9a8 !important; }
+body.season-autumn .pay-no { background: rgba(200,114,114,.11) !important; color: #c87878 !important; }
+body.season-autumn .fi-value { background: rgba(253,250,246,.8) !important; border-color: rgba(122,62,10,.12) !important; }
+body.season-autumn .lr-strip { background: rgba(122,62,10,.04) !important; border-color: rgba(122,62,10,.12) !important; }
+body.season-autumn .card { background: rgba(253,250,246,1) !important; border-color: rgba(122,62,10,.12) !important; box-shadow: 0 2px 16px rgba(50,35,10,.07), 0 1px 3px rgba(50,35,10,.04) !important; }
+body.season-autumn .card:hover { box-shadow: 0 6px 28px rgba(50,35,10,.11) !important; border-color: rgba(122,62,10,.22) !important; }
+body.season-autumn .modal { background: rgba(255,252,248,1) !important; border-color: rgba(122,62,10,.13) !important; box-shadow: 0 24px 64px rgba(40,25,5,.12) !important; }
+body.season-autumn .sb { background: rgba(253,250,246,.97) !important; border-right-color: rgba(122,62,10,.11) !important; }
+body.season-autumn .topbar { background: rgba(253,250,246,.96) !important; border-bottom-color: rgba(122,62,10,.1) !important; }
+body.season-autumn .ch { background: rgba(240,235,226,.5) !important; border-bottom-color: rgba(122,62,10,.1) !important; }
+body.season-autumn .mh { background: rgba(240,235,226,.7) !important; border-bottom-color: rgba(122,62,10,.12) !important; }
+body.season-autumn .mf { background: rgba(245,240,232,.8) !important; border-top-color: rgba(122,62,10,.1) !important; }
+body.season-autumn .mobile-tab-bar { background: rgba(253,250,246,.97) !important; border-top-color: rgba(122,62,10,.12) !important; }
+body.season-autumn .lc, body.season-autumn .ci { background: rgba(253,250,246,1) !important; border-color: rgba(122,62,10,.11) !important; }
+body.season-autumn .lc:hover, body.season-autumn .ci:hover { background: rgba(240,235,226,.8) !important; border-color: rgba(122,62,10,.2) !important; }
+body.season-autumn .lw, body.season-autumn .wk-badge, body.season-autumn .ci-av { background: rgba(122,62,10,.1) !important; border-color: rgba(122,62,10,.2) !important; }
+body.season-autumn .lw-n, body.season-autumn .wk-badge-n { color: #7a3e0a !important; }
+body.season-autumn input[type=text], body.season-autumn input[type=tel],
+body.season-autumn input[type=date], body.season-autumn input[type=number],
+body.season-autumn select, body.season-autumn textarea { background: rgba(253,250,246,1) !important; border-color: rgba(122,62,10,.18) !important; color: #201810 !important; }
+body.season-autumn .bp { background: linear-gradient(135deg,#7a3e0a,#9a5010) !important; color: #fff !important; box-shadow: 0 2px 12px rgba(122,62,10,.28) !important; }
+body.season-autumn .bm { background: rgba(122,62,10,.1) !important; color: #7a3e0a !important; border-color: rgba(122,62,10,.2) !important; }
+body.season-autumn .bg2 { background: rgba(122,62,10,.06) !important; border-color: rgba(122,62,10,.14) !important; color: #504030 !important; }
+body.season-autumn .bg-a { background: rgba(122,62,10,.1) !important; color: #7a3e0a !important; border-color: rgba(122,62,10,.2) !important; }
+body.season-autumn .dpb.on { background: #7a3e0a !important; color: #fff !important; border-color: #7a3e0a !important; }
+body.season-autumn .ro.on { background: #7a3e0a !important; border-color: #7a3e0a !important; color: #fff !important; }
+body.season-autumn .ni:hover { background: rgba(122,62,10,.07) !important; color: #504030 !important; }
+body.season-autumn .ni.on { color: #7a3e0a !important; background: linear-gradient(90deg,rgba(122,62,10,.12) 0%,rgba(122,62,10,.02) 100%) !important; border-left-color: #7a3e0a !important; }
+body.season-autumn .logo-add-btn { background: linear-gradient(135deg,#7a3e0a,#9a5010) !important; box-shadow: 0 2px 10px rgba(122,62,10,.28) !important; }
+body.season-autumn .ov { background: rgba(20,12,4,.28) !important; }
+body.season-autumn .toast { background: rgba(253,250,246,.97) !important; border-color: rgba(122,62,10,.2) !important; color: #201810 !important; }
+body.season-autumn ::-webkit-scrollbar-thumb { background: rgba(122,62,10,.2) !important; }
+body.season-autumn .logo-t { color: #7a3e0a !important; -webkit-text-fill-color: initial !important; }
+body.season-autumn select option { background: #f7f4ef !important; }
+body.season-autumn .mc { background: rgba(122,62,10,.07) !important; border-color: rgba(122,62,10,.14) !important; color: #504030 !important; }
+body.season-autumn .wk-card, body.season-autumn .pay-card { background: rgba(253,250,246,1) !important; border-color: rgba(122,62,10,.12) !important; }
+body.season-autumn .lb { box-shadow: 0 1px 4px rgba(0,0,0,.2), 0 0 8px rgba(230,170,40,.15) !important; }
+body.season-autumn thead th { background: rgba(245,238,220,.6) !important; color: #907040 !important; }
+body.season-autumn tbody tr:hover { background: rgba(122,62,10,.04) !important; }
+
+/* ═══ 겨울 세부 UI 조정 ═══ */
+body.season-winter .sg-hd.td { background: linear-gradient(180deg, rgba(36,48,96,.12), rgba(36,48,96,.04)) !important; }
+body.season-winter .sg-cell.td-col { background: rgba(36,48,96,.03) !important; }
+body.season-winter .mon-pill { background: rgba(36,48,96,.1) !important; border-color: rgba(36,48,96,.22) !important; color: #243060 !important; }
+body.season-winter .ni-sep { background: rgba(36,48,96,.1) !important; }
+body.season-winter .sb-today-hd { color: #243060 !important; }
+body.season-winter .profile-left { border-color: rgba(36,48,96,.15) !important; }
+body.season-winter .tab-bar { border-bottom-color: rgba(36,48,96,.12) !important; }
+body.season-winter .sb-util-btn { background: rgba(36,48,96,.05) !important; border-color: rgba(36,48,96,.12) !important; }
+body.season-winter .sb-util-btn:hover { background: rgba(36,48,96,.12) !important; }
+body.season-winter .pay-ok { background: rgba(100,200,240,.13) !important; color: #60d4f0 !important; }
+body.season-winter .pay-no { background: rgba(180,140,200,.11) !important; color: #c8a0e8 !important; }
+body.season-winter .fi-value { background: rgba(248,249,252,.8) !important; border-color: rgba(36,48,96,.12) !important; }
+body.season-winter .lr-strip { background: rgba(36,48,96,.04) !important; border-color: rgba(36,48,96,.12) !important; }
+body.season-winter .card { background: rgba(248,249,252,1) !important; border-color: rgba(36,48,96,.12) !important; box-shadow: 0 2px 16px rgba(15,20,45,.07), 0 1px 3px rgba(15,20,45,.04) !important; }
+body.season-winter .card:hover { box-shadow: 0 6px 28px rgba(15,20,45,.11) !important; border-color: rgba(36,48,96,.22) !important; }
+body.season-winter .modal { background: rgba(250,252,255,1) !important; border-color: rgba(36,48,96,.13) !important; box-shadow: 0 24px 64px rgba(10,15,40,.12) !important; }
+body.season-winter .sb { background: rgba(248,249,252,.97) !important; border-right-color: rgba(36,48,96,.11) !important; }
+body.season-winter .topbar { background: rgba(248,249,252,.97) !important; border-bottom-color: rgba(36,48,96,.1) !important; }
+body.season-winter .ch { background: rgba(236,239,246,.5) !important; border-bottom-color: rgba(36,48,96,.1) !important; }
+body.season-winter .mh { background: rgba(236,239,246,.7) !important; border-bottom-color: rgba(36,48,96,.11) !important; }
+body.season-winter .mf { background: rgba(240,243,250,.8) !important; border-top-color: rgba(36,48,96,.1) !important; }
+body.season-winter .mobile-tab-bar { background: rgba(248,249,252,.97) !important; border-top-color: rgba(36,48,96,.12) !important; }
+body.season-winter .lc, body.season-winter .ci { background: rgba(248,249,252,1) !important; border-color: rgba(36,48,96,.11) !important; }
+body.season-winter .lc:hover, body.season-winter .ci:hover { background: rgba(236,239,246,.8) !important; border-color: rgba(36,48,96,.2) !important; }
+body.season-winter .lw, body.season-winter .wk-badge, body.season-winter .ci-av { background: rgba(36,48,96,.1) !important; border-color: rgba(36,48,96,.2) !important; }
+body.season-winter .lw-n, body.season-winter .wk-badge-n { color: #243060 !important; }
+body.season-winter input[type=text], body.season-winter input[type=tel],
+body.season-winter input[type=date], body.season-winter input[type=number],
+body.season-winter select, body.season-winter textarea { background: rgba(248,249,252,1) !important; border-color: rgba(36,48,96,.18) !important; color: #101520 !important; }
+body.season-winter .bp { background: linear-gradient(135deg,#243060,#344880) !important; color: #fff !important; box-shadow: 0 2px 12px rgba(36,48,96,.28) !important; }
+body.season-winter .bm { background: rgba(36,48,96,.1) !important; color: #243060 !important; border-color: rgba(36,48,96,.2) !important; }
+body.season-winter .bg2 { background: rgba(36,48,96,.06) !important; border-color: rgba(36,48,96,.14) !important; color: #303848 !important; }
+body.season-winter .bg-a { background: rgba(36,48,96,.1) !important; color: #243060 !important; border-color: rgba(36,48,96,.2) !important; }
+body.season-winter .dpb.on { background: #243060 !important; color: #fff !important; border-color: #243060 !important; }
+body.season-winter .ro.on { background: #243060 !important; border-color: #243060 !important; color: #fff !important; }
+body.season-winter .ni:hover { background: rgba(36,48,96,.06) !important; color: #303848 !important; }
+body.season-winter .ni.on { color: #243060 !important; background: linear-gradient(90deg,rgba(36,48,96,.12) 0%,rgba(36,48,96,.02) 100%) !important; border-left-color: #243060 !important; }
+body.season-winter .logo-add-btn { background: linear-gradient(135deg,#243060,#344880) !important; box-shadow: 0 2px 10px rgba(36,48,96,.28) !important; }
+body.season-winter .ov { background: rgba(5,8,20,.28) !important; }
+body.season-winter .toast { background: rgba(248,249,252,.97) !important; border-color: rgba(36,48,96,.2) !important; color: #101520 !important; }
+body.season-winter ::-webkit-scrollbar-thumb { background: rgba(36,48,96,.2) !important; }
+body.season-winter .logo-t { color: #243060 !important; -webkit-text-fill-color: initial !important; }
+body.season-winter select option { background: #f2f4f7 !important; }
+body.season-winter .mc { background: rgba(36,48,96,.07) !important; border-color: rgba(36,48,96,.14) !important; color: #303848 !important; }
+body.season-winter .wk-card, body.season-winter .pay-card { background: rgba(248,249,252,1) !important; border-color: rgba(36,48,96,.12) !important; }
+body.season-winter .lb { box-shadow: 0 1px 4px rgba(0,0,0,.2), 0 0 8px rgba(160,210,255,.15) !important; }
+body.season-winter .qs-row:hover, body.season-winter .qs-row.sel { border-color: rgba(36,48,96,.28) !important; background: rgba(36,48,96,.08) !important; }
+/* 겨울/여름 헤딩 직립 */
+body.season-winter .pt, body.season-winter .mt, body.season-winter .logo-t { font-style: normal !important; font-weight: 700 !important; letter-spacing: .06em !important; text-transform: uppercase !important; }
+
+/* ═══ 폰트 적용 (계절 변수 기반) ═══ */
+body {
+  font-family: "Noto Serif KR", "Noto Sans KR", serif !important;
+  line-height: 1.65 !important;
+  letter-spacing: .01em !important;
+}
+/* 봄/가을 — 세리프 베이스 */
+body.season-spring, body.season-autumn {
+  font-family: "Noto Serif KR", serif !important;
+}
+/* 여름/겨울 — 산세리프 라이트 */
+body.season-summer, body.season-winter {
+  font-family: "Noto Sans KR", sans-serif !important;
+  font-weight: 300 !important;
+}
+/* 제목류 — Cormorant */
+.pt, .mt, .logo-t, .ct, .st2, .fs-title, h1, h2, h3 {
+  font-family: "Cormorant Garamond", "Noto Serif KR", serif !important;
+  font-style: italic !important;
+  letter-spacing: .03em !important;
+}
+/* 메뉴/버튼/배지 — 산세리프 */
+.ni, .btn, .tab, .bdg, .mtab-lb, .dpb {
+  font-family: "Noto Sans KR", sans-serif !important;
+  font-weight: 400 !important;
+  letter-spacing: .01em !important;
+}
+/* 입력 폼 */
+input, select, textarea, label {
+  font-family: "Noto Serif KR", "Noto Sans KR", serif !important;
+  font-weight: 400 !important;
+}
+/* 이름/강조 텍스트 */
+.lc-name, .profile-name-big, .sb-lesson-name {
+  font-family: "Cormorant Garamond", "Noto Serif KR", serif !important;
+  font-style: italic !important;
+  letter-spacing: .02em !important;
+}
+/* 숫자/코드 */
+.wk-badge-n, .lw-n, time, .lr-date {
+  font-family: "DM Mono", monospace !important;
+}
+/* 표/데이터 */
+td, th {
+  font-family: "Noto Sans KR", sans-serif !important;
+  font-weight: 400 !important;
+  letter-spacing: .005em !important;
+}
+/* 모노 유지 */
+.wn-lbl, .sb-today-date, .sb-lesson-time, .lc .lw-l, code, .dm-mono {
+  font-family: "DM Mono", monospace !important;
+}
+/* 헤딩/디스플레이 폰트 */
+.lc-name, .profile-name-big, .ct, .st2, .ch .ct, .sh .st2,
+.lc, .ci, .wk-card {
+  font-family: var(--font-ui, "Noto Sans KR", sans-serif) !important;
+}
+.pt, .mt, .logo-t, .ct, .st2, .ch .ct, .sh .st2,
+.lw-n, .wk-badge-n, .pay-wk-n,
+.sb-today-hd, h1, h2, h3 {
+  font-family: var(--font-display, "Cormorant Garamond", serif) !important;
+}
+/* UI 요소 */
+.btn, input, select, textarea, .ni, .mtab-lb, .bdg, label, .sb-util-btn, .tab {
+  font-family: var(--font-ui, "Noto Sans KR", sans-serif) !important;
+}
+
+/* 봄/가을 헤딩 이탤릭 */
+body.season-spring .pt, body.season-spring .mt, body.season-spring .logo-t,
+body.season-autumn .pt, body.season-autumn .mt, body.season-autumn .logo-t {
+  font-style: italic !important;
+}
+/* 여름 특별 */
+body.season-summer .ni { letter-spacing: .03em !important; font-size: 12px !important; }
+/* 겨울 특별 */
+body.season-winter .ni { letter-spacing: .02em !important; }
+/* 봄 특별 */
+body.season-spring .ct, body.season-spring .ni { font-weight: 400 !important; }
+
+/* ═══ 전문성 타이포그래피 ═══ */
+.logo-t { font-size: 21px !important; font-weight: 700 !important; letter-spacing: .02em !important; line-height: 1.2 !important; }
+.logo-s { font-size: 8px !important; letter-spacing: .35em !important; text-transform: uppercase !important; opacity: .6 !important; font-family: "Noto Sans KR", sans-serif !important; }
+.pt { font-size: 21px !important; font-weight: 600 !important; letter-spacing: .01em !important; }
+.ct { font-size: 15px !important; font-weight: 700 !important; letter-spacing: .04em !important; }
+.mt { font-size: 18px !important; font-weight: 700 !important; letter-spacing: .02em !important; }
+.ni { font-size: 14px !important; font-weight: 500 !important; letter-spacing: .02em !important; }
+.bdg { font-size: 12px !important; font-weight: 600 !important; letter-spacing: .04em !important; border-radius: 4px !important; }
+.btn { letter-spacing: .02em !important; font-weight: 600 !important; font-size: 14px !important; }
+thead th { font-size: 10px !important; letter-spacing: .14em !important; font-weight: 600 !important; text-transform: uppercase !important; }
+.mtab-lb { font-size: 9px !important; letter-spacing: .06em !important; text-transform: uppercase !important; font-weight: 600 !important; }
+.tab { font-size: 14px !important; }
+.ni { font-size: 14px !important; }
+label { font-size: 13px !important; }
+input, select, textarea { font-size: 14px !important; }
+td { font-size: 14px !important; }
+th { font-size: 11.5px !important; }
+.lc { font-size: 14px !important; }
+.fi-label { font-size: 12px !important; }
+.fi-value { font-size: 14px !important; }
+.sb-lesson-name { font-size: 13.5px !important; }
+.sb-lesson-time { font-size: 11.5px !important; }
+.sb-today-hd { font-size: 13px !important; }
+.lb { font-size: 13px !important; }
+.ln { font-size: 14px !important; }
+.mtab-lb { font-size: 10px !important; }
+body { font-size: var(--font-size-base, 15px) !important; }
+
+/* ═══ 오늘 스케줄 타임라인 슬롯 색상 ═══ */
+.today-slot-current {
+  border-left: 3px solid var(--season-accent, var(--a)) !important;
+  background: var(--ag) !important;
+}
+.today-slot-past { opacity: .65; background: var(--s2) !important; border-color: var(--b) !important; }
+.today-slot-upcoming { background: var(--s1) !important; border-color: var(--b2) !important; }
+
+/* ═══ 별점/요일 선택 강화 ═══ */
+#lr-stars-wrap .ro.on { font-size: 18px !important; transform: scale(1.05); }
+.dpb.on { font-weight: 700 !important; }

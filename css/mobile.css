@@ -1,0 +1,294 @@
+/* ═══════════════════════════════════════════════════════════
+   mobile.css — 모바일 반응형 (@media 768px 이하),
+   .mobile-tab-bar, body.is-mobile 오버라이드,
+   모바일 스케줄 뷰, 뷰전환 버튼
+   ═══════════════════════════════════════════════════════════ */
+
+/* ══ 모바일 탭바 — 기본 숨김 ══ */
+.mobile-tab-bar{
+  position:fixed;bottom:0;left:0;right:0;
+  height:calc(62px + env(safe-area-inset-bottom,0px));
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  background:var(--season-topbar,var(--s1));
+  border-top:1px solid var(--season-border,rgba(220,185,120,.14));
+  backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);
+  display:none;
+  z-index:99999;
+  box-shadow:0 -1px 0 var(--season-border,rgba(220,185,120,.08)),0 -14px 40px rgba(0,0,0,.65);
+}
+.mtab-item{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:3px;padding:7px 2px 5px;
+  cursor:pointer;
+  border-top:2px solid transparent;
+  transition:all .15s;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;position:relative;
+}
+.mtab-item.on{border-top-color:var(--season-accent,#c9a050);background:var(--season-hover,rgba(220,185,120,.07));}
+.mtab-item.on::after{
+  content:'';position:absolute;
+  top:0;left:10%;right:10%;height:2px;
+  background:linear-gradient(90deg,transparent,var(--a),transparent);
+  opacity:.6;
+}
+.mtab-ic{
+  font-size:20px;line-height:1;pointer-events:none;
+  transition:transform .15s;
+}
+.mtab-item.on .mtab-ic{transform:translateY(-1px);}
+.mtab-lb{
+  font-size:10px;font-weight:600;
+  color:var(--tm);pointer-events:none;
+  letter-spacing:.04em;transition:color .15s;text-transform:uppercase;
+}
+.mtab-item.on .mtab-lb{color:var(--season-accent,#c9a050);}
+
+/* ══ 메인 영역 — 탭바 공간 확보 ══ */
+@media(max-width:768px){
+  .mobile-tab-bar{display:flex!important;}
+  .main{padding-bottom:calc(62px + env(safe-area-inset-bottom,20px))!important;}
+}
+
+/* ═══════════════════════════════════════════
+   모바일 반응형 (768px 이하)
+   ═══════════════════════════════════════════ */
+@media(max-width:768px){
+
+  /* ── 사이드바 → 하단 탭바 ── */
+  .sb{display:none!important;}
+  /* iOS Safari 강제 */
+  @supports (-webkit-touch-callout: none){
+    .sb{
+      top:auto!important;
+      bottom:0!important;
+      bottom:env(safe-area-inset-bottom, 0)!important;
+    }
+  }
+  /* 로고, 오늘 스케줄 사이드바 숨김 */
+  .logo,.sb-today,.nav .ni-sep,#syncStatus{display:none!important;}
+
+  /* nav를 탭바로 */
+  .nav{
+    display:flex!important;flex-direction:row!important;
+    padding:0!important;width:100%!important;height:60px!important;
+    overflow-x:auto!important;overflow-y:hidden!important;
+    scrollbar-width:none!important;
+    flex:1!important;
+    pointer-events:auto!important;
+  }
+  .nav::-webkit-scrollbar{display:none!important;}
+  .ni{
+    flex:1!important;flex-direction:column!important;
+    gap:2px!important;padding:6px 4px!important;
+    font-size:10px!important;font-weight:600!important;
+    justify-content:center!important;align-items:center!important;
+    border-left:none!important;border-top:2px solid transparent!important;
+    min-width:50px!important;height:60px!important;
+    cursor:pointer!important;
+    pointer-events:auto!important;
+    -webkit-tap-highlight-color:rgba(200,169,110,.2)!important;
+    user-select:none!important;
+  }
+  .ni.on{
+    border-left-color:transparent!important;
+    border-top-color:var(--season-accent,var(--a))!important;
+    background:var(--ag)!important;
+  }
+  .ni-ic{font-size:19px!important;width:auto!important;}
+
+  /* ── 메인 영역 ── */
+  .main{
+    margin-left:0!important;
+    pointer-events:auto!important;
+  }
+  .content{ pointer-events:auto!important; }
+
+  /* ── 상단 바 (1차 적용) ── */
+  .topbar{
+    padding:0 16px!important;
+    background:var(--season-topbar,var(--s1))!important;
+  }
+  .pt{font-size:17px!important;}
+  .ta{gap:6px!important;flex-wrap:wrap!important;}
+  .ta .btn{padding:7px 12px!important;font-size:12px!important;}
+
+  /* ── 콘텐츠 패딩 ── */
+  .content{padding:14px 14px!important;}
+
+  /* ── 카드 ── */
+  .card{border-radius:10px!important;background:var(--season-card-bg,var(--s1))!important;}
+  .ch{padding:12px 14px!important;}
+
+  /* ── 학생 카드 1열 ── */
+  #studentsGrid{grid-template-columns:1fr!important;}
+
+  /* ── 주간 스케줄 ── */
+  .sg-scroll{overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;}
+  .sg{min-width:700px!important;}
+  .sg-hd .dn{font-size:12px!important;}
+  .sg-hd .dd{font-size:10px!important;}
+  .lb{padding:6px 8px!important;min-height:48px!important;gap:5px!important;}
+  .lb .ln{font-size:12px!important;}
+  .lb .ls{font-size:10px!important;}
+  .lb img{width:32px!important;height:32px!important;}
+  /* 모바일 주간뷰 lb 예외 — 초소형 */
+  div.mwv .lb{
+    padding:0!important;min-height:0!important;gap:0!important;
+    border-radius:0!important;box-shadow:none!important;
+    font-size:7px!important;line-height:1.1!important;
+    margin:0!important;border:none!important;background:none!important;
+    display:flex!important;flex-direction:column!important;align-items:center!important;
+  }
+
+  /* ── 모달 — 하단 시트 ── */
+  .ov{padding:0!important;padding-bottom:calc(60px + env(safe-area-inset-bottom,20px))!important;align-items:flex-end!important;}
+  .modal{
+    width:100%!important;max-width:100%!important;
+    border-radius:18px 18px 0 0!important;
+    max-height:calc(88vh - 60px - env(safe-area-inset-bottom,20px))!important;
+    overflow-y:auto!important;
+    animation:mInMobile .25s ease!important;
+    background:var(--season-modal-bg,var(--s1))!important;
+  }
+  .mf{
+    position:sticky!important;
+    bottom:0!important;
+    background:var(--s1)!important;
+    z-index:1!important;
+  }
+  @keyframes mInMobile{
+    from{transform:translateY(100%);}
+    to{transform:translateY(0);}
+  }
+  .modal.wide,.modal.xxl{width:100%!important;}
+  .mh{padding:16px 18px 12px!important;}
+  .mb{padding:16px 18px!important;}
+  .mf{padding:12px 18px 16px!important;}
+  .fg{grid-template-columns:1fr!important;}
+  .fg3{grid-template-columns:1fr 1fr!important;}
+
+  /* ── 프로필 ── */
+  .profile-wrap{grid-template-columns:1fr!important;}
+  .profile-left{border-right:none!important;border-bottom:1px solid var(--b)!important;}
+  .profile-photo{aspect-ratio:4/3!important;}
+
+  /* ── 레슨 기록 ── */
+  .lc{grid-template-columns:40px 1fr auto!important;padding:12px 14px!important;gap:10px!important;}
+
+  /* ── Before/After ── */
+  .ba-wrap{grid-template-columns:1fr!important;}
+
+  /* ── 입금 관리 ── */
+  .pay-week-row{flex-wrap:wrap!important;gap:8px!important;}
+
+  /* ── 대시보드 카드 ── */
+  .dash-grid{grid-template-columns:1fr 1fr!important;}
+
+  /* ── 토스트 위치 ── */
+  .toast{
+    bottom:74px!important;
+    right:14px!important;left:14px!important;
+    font-size:13px!important;max-width:none!important;
+  }
+
+  /* ── 주간 네비 ── */
+  .wn-bar{gap:5px!important;}
+  .wn-lbl{min-width:100px!important;font-size:11px!important;}
+  .wn-btn{width:26px!important;height:26px!important;}
+
+  /* ── 버튼 터치 친화적 ── */
+  .btn{min-height:40px!important;}
+  .bsm{min-height:34px!important;padding:5px 11px!important;}
+
+  /* ── 테이블 가로 스크롤 ── */
+  .table-wrap{overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;}
+  table{min-width:500px!important;}
+
+  /* ── 상담 목록 ── */
+  .ci{padding:11px 13px!important;gap:10px!important;}
+  .ci-av{width:42px!important;height:42px!important;font-size:16px!important;}
+
+  /* ── 탑바 (2차 — 높이 auto) ── */
+  .topbar{
+    position:relative!important;
+    height:auto!important;min-height:50px!important;
+    padding:8px 14px!important;
+    flex-wrap:wrap!important;gap:6px!important;
+    padding-top:calc(env(safe-area-inset-top,0px) + 8px)!important;
+  }
+  .pt{font-size:15px!important;white-space:nowrap!important;}
+  .ta{flex-wrap:wrap!important;gap:5px!important;flex:1!important;justify-content:flex-end!important;}
+  .ta .btn{padding:7px 11px!important;font-size:12px!important;}
+  .ni span:not(.ni-ic){font-size:9.5px!important;}
+  .lb{border-radius:12px!important;}
+}
+
+/* 레슨생 카드 모바일 최적화 */
+#studentsGrid > div{min-width:unset!important;}
+.profile-actions{gap:5px!important;}
+.profile-actions .btn{font-size:11px!important;padding:7px 10px!important;}
+
+/* ── 아주 작은 화면 (375px 이하) ── */
+@media(max-width:375px){
+  .ni{font-size:9px!important;min-width:44px!important;}
+  .content{padding:10px!important;}
+  .fg3{grid-template-columns:1fr!important;}
+}
+
+/* ══ is-mobile 클래스 기반 오버라이드 ══ */
+body.is-mobile .sb{display:none!important;}
+body.is-mobile .sb-bottom{display:none!important;}
+body.is-mobile .profile-wrap{grid-template-columns:1fr;min-height:auto;}
+body.is-mobile #studentsGrid{grid-template-columns:1fr!important;gap:6px!important;padding:10px!important;}
+body.is-mobile .profile-left{max-width:100%;border-right:none;border-bottom:1px solid var(--b);}
+body.is-mobile .profile-photo{height:120px;max-height:120px;}
+body.is-mobile .modal.xxl{width:96vw;max-height:94vh;}
+body.is-mobile .profile-name-big{font-size:18px;}
+body.is-mobile .main{margin-left:0!important;}
+body.is-mobile .topbar{position:relative!important;height:auto!important;min-height:52px!important;padding:8px 14px!important;flex-wrap:wrap!important;gap:6px!important;}
+body.is-mobile .content{padding:14px 14px!important;}
+body.is-mobile .mobile-tab-bar{display:flex!important;}
+/* 모바일에서 logo-add-btn 숨김 (탭바에서 접근 가능) */
+body.is-mobile .logo-add-btn{display:none!important;}
+
+/* ══ 뷰전환 버튼 — 모바일 좌상단 ══ */
+@media(max-width:768px){
+  #viewToggleBtn {
+    display: flex !important;
+    position: fixed;
+    top: calc(env(safe-area-inset-top,0px) + 8px);
+    left: 8px;
+    z-index: 999999;
+    background: var(--s1);
+    border: 1px solid var(--season-border, rgba(220,185,120,.25));
+    color: var(--season-accent, var(--a));
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-size: 10.5px; font-weight: 500;
+    cursor: pointer;
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    font-family: "DM Sans", sans-serif;
+    align-items: center; gap: 4px;
+    white-space: nowrap;
+    transition: all .15s;
+  }
+}
+body.is-mobile #viewToggleBtn {
+  display: flex !important;
+  position: fixed;
+  top: calc(env(safe-area-inset-top,0px) + 8px);
+  left: 8px;
+  z-index: 999999;
+  background: var(--s1);
+  border: 1px solid var(--season-border, rgba(220,185,120,.25));
+  color: var(--season-accent, var(--a));
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 10.5px; font-weight: 500;
+  cursor: pointer;
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  font-family: "DM Sans", sans-serif;
+  align-items: center; gap: 4px;
+}

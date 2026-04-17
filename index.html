@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="보컬스튜디오">
+  <meta name="theme-color" content="#1a1a2e">
+  <link rel="manifest" href="manifest.json">
+  <!-- FullCalendar -->
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<title>Vocal Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600;1,700&family=Noto+Sans+KR:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Noto+Serif+KR:wght@300;400;500;600;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <!-- CSS (분리됨) -->
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/mobile.css">
+</head>
+<body>
+
+
+
+
+<nav class="sb">
+    <div id="syncStatus" style="font-size:10.5px;color:#6ab04c;text-align:center;padding:3px 8px;min-height:14px;transition:all .3s;letter-spacing:.3px"></div>
+  <div class="logo">
+    <div class="logo-t">Vocal Studio</div>
+    <div class="logo-s">레슨 관리 시스템</div>
+    <button class="logo-add-btn" onclick="openSModal()" title="레슨생 추가">＋</button>
+  </div>
+  <div class="nav">
+    <div class="ni"    data-p="consult"  onclick="go('consult')"><span class="ni-ic">&#x1F4CB;</span>신규 상담</div>
+    <div class="ni"    data-p="students" onclick="go('students')"><span class="ni-ic">&#x266C;</span>레슨생 관리</div>
+    <div class="ni"    data-p="logs"     onclick="go('logs')"><span class="ni-ic">&#x270E;</span>레슨 기록</div>
+    <div class="ni"    data-p="timeline" onclick="go('timeline')"><span class="ni-ic">&#x1F4C8;</span>진도 타임라인</div>
+    <div class="ni"    data-p="payment"  onclick="go('payment')"><span class="ni-ic">&#x1F4B0;</span>입금 관리</div>
+    <div class="ni on" data-p="today"    onclick="go('today')"><span class="ni-ic">&#x23F0;</span>오늘 스케줄</div>
+    <div class="ni-sep"></div>
+    <div class="ni"    data-p="schedule" onclick="go('schedule')"><span class="ni-ic">&#x25A6;</span>주간 스케줄</div>
+    <div class="ni"    data-p="dashboard" onclick="go('dashboard')"><span class="ni-ic">&#x1F4CA;</span>대시보드 🔒</div>
+  </div>
+  <div class="sb-bottom">
+    <button class="sb-util-btn" onclick="toggleMonOff()">📅 월요일 휴무 ON/OFF</button>
+    <button class="sb-util-btn danger" onclick="resetAllData()">🗑 데이터 초기화</button>
+  </div>
+  <div class="sb-today">
+    <div class="sb-today-hd">오늘 레슨</div>
+    <div class="sb-today-date" id="sbTodayDate"></div>
+    <div id="sbTodayList"></div>
+    <div class="mon-pill" id="monPill">&#x1F4CB; 오늘은 스케줄 수정일</div>
+  </div>
+</nav>
+
+<div class="main">
+  <div class="topbar">
+    <div class="pt" id="pt">신규 상담</div>
+    <div class="ta" id="ta"></div>
+    
+  </div>
+  <div class="content" id="content"></div>
+</div>
+
+<!-- STUDENT MODAL -->
+<div class="ov" id="mS">
+  <div class="modal wide">
+    <div class="mh" style="background:linear-gradient(135deg,var(--season-hover,rgba(200,169,110,.08)),transparent)">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div id="mS-av" style="width:40px;height:40px;border-radius:10px;background:var(--ag);border:1px solid var(--b2);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--a);flex-shrink:0;overflow:hidden">♬</div>
+        <div><div class="mt" id="mST">레슨생 추가</div><div style="font-size:11.5px;color:var(--tm);margin-top:1px" id="mS-sub">기본 정보를 입력해주세요</div></div>
+      </div>
+      <div class="mc" onclick="cm('mS')">&#x2715;</div>
+    </div>
+    <div class="mb">
+      <!-- 사진 + 기본 정보 -->
+      <div style="display:flex;gap:18px;align-items:flex-start;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--b)">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:7px;flex-shrink:0">
+          <div class="photo-preview" id="s-photo-preview" style="width:88px;height:88px;border-radius:12px;cursor:pointer" onclick="document.getElementById('s-file-input').click()"><div class="no-ph">&#x1F4F7;</div></div>
+          <input type="hidden" id="s-photo-data">
+          <div style="display:flex;gap:5px">
+            <button class="btn bg2 bsm" style="font-size:11px;padding:4px 8px" onclick="openCam('s')">📷</button>
+            <button class="btn bg2 bsm" style="font-size:11px;padding:4px 8px" onclick="document.getElementById('s-file-input').click()">📁</button>
+          </div>
+          <input type="file" id="s-file-input" accept="image/*" style="display:none" onchange="prevPhoto(this,'s-photo-preview','s-photo-data')">
+        </div>
+        <div style="flex:1">
+          <div class="fg" style="margin-bottom:10px">
+            <div class="f1"><label>이름 *</label><input type="text" id="s-nm" placeholder="홍길동"></div>
+            <div class="f1"><label>출생연도</label><input type="number" id="s-age" placeholder="1995" min="1940" max="2020" oninput="updateAge(this)"><div id="s-age-display" style="font-size:11.5px;color:var(--a);margin-top:3px"></div></div>
+            <div class="f1"><label>성별</label><select id="s-gd"><option value="여성">여성</option><option value="남성">남성</option></select></div>
+            <div class="f1"><label>연락처</label><input type="tel" id="s-ph" placeholder="010-0000-0000" oninput="fmtPhone(this)"></div>
+            <div class="f1"><label>레슨 시작일</label><input type="date" id="s-st"></div>
+          </div>
+        </div>
+      </div>
+      <!-- 레슨 설정 -->
+      <div class="fg" style="margin-bottom:12px">
+        <div class="f1">
+          <label>반 종류</label>
+          <select id="s-cls" onchange="autoFee()" style="font-size:14px">
+            <option value="pro">🎤 발성전문반 (1시간)</option>
+            <option value="hob">🎵 취미반 (50분)</option>
+            <option value="chuk">🎶 축가반 (50분)</option>
+            <option value="voice">🎙 음성교정반 (50분)</option>
+          </select>
+        </div>
+        <div class="f1">
+          <label>주 레슨 횟수</label>
+          <div class="radio-g">
+            <div class="ro on" id="s-freq-1" onclick="setFreq(1);autoFee()">주 1회</div>
+            <div class="ro" id="s-freq-2" onclick="setFreq(2);autoFee()">주 2회</div>
+          </div>
+        </div>
+      </div>
+      <input type="hidden" id="s-freq" value="1">
+      <div class="f1" style="margin-bottom:12px">
+        <label>스케줄 유형</label>
+        <div class="radio-g">
+          <div class="ro on" id="s-stype-fixed" onclick="setSType('fixed')">📌 고정 스케줄</div>
+          <div class="ro" id="s-stype-flex" onclick="setSType('flex')">🔄 변동 스케줄</div>
+        </div>
+      </div>
+      <div id="s-consult-hint" style="display:none;background:rgba(110,163,200,.08);border:1px solid rgba(110,163,200,.2);border-radius:9px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--bl)"></div>
+      <div id="s-fixed-wrap">
+        <div class="f1" style="margin-bottom:12px">
+          <label>고정 레슨 요일</label>
+          <div class="dpick" id="s-dpick">
+            <div class="dpb" onclick="tDay(this)">월</div><div class="dpb" onclick="tDay(this)">화</div>
+            <div class="dpb" onclick="tDay(this)">수</div><div class="dpb" onclick="tDay(this)">목</div>
+            <div class="dpb" onclick="tDay(this)">금</div><div class="dpb" onclick="tDay(this)">토</div>
+            <div class="dpb" onclick="tDay(this)">일</div>
+          </div>
+        </div>
+        <div class="f1" style="margin-bottom:12px"><label>요일별 고정 시간</label><div id="tsSlots"><span style="font-size:13px;color:var(--tm)">위에서 요일을 선택하면 나타납니다</span></div></div>
+      </div>
+      <div class="fg" style="margin-bottom:12px">
+        <div class="f1"><label>월 레슨비 (원)</label><input type="number" id="s-fee" placeholder="자동 입력"></div>
+        <div class="f1"><label>상태</label><select id="s-stat"><option value="수강중">수강중</option><option value="휴강">휴강</option><option value="수료">수료</option></select></div>
+      </div>
+      <!-- 현재 회차 설정 -->
+      <div style="background:var(--ag);border:1px solid var(--b2);border-radius:10px;padding:12px 14px;margin-bottom:12px">
+        <div style="font-size:12px;font-weight:700;color:var(--a);margin-bottom:6px">📊 현재 회차 설정</div>
+        <div style="font-size:12px;color:var(--tm);margin-bottom:10px;line-height:1.6">앱 사용 전 이미 진행한 회차를 입력하면 입금 시점이 정확하게 계산됩니다.<br><span style="color:var(--a)">예) 지금 7회째 레슨 중이면 → 7 입력</span></div>
+        <div class="fg">
+          <div class="f1">
+            <label>이전 누적 회차 (앱 기록 제외)</label>
+            <input type="number" id="s-lesson-offset" placeholder="예: 7" min="0" oninput="updateCyclePreview()" style="font-size:15px;font-weight:700;color:var(--a);text-align:center">
+            <div style="font-size:11px;color:var(--tm);margin-top:3px">0 또는 비워두면 앱 기록만으로 계산</div>
+          </div>
+          <div class="f1">
+            <label>결제 주기</label>
+            <div id="s-freq-display" style="padding:9px 13px;background:rgba(255,255,255,.03);border:1px solid var(--b);border-radius:8px;font-size:13px;color:var(--ts)">주 1회 → 4회마다 입금</div>
+          </div>
+        </div>
+        <div id="s-cycle-preview" style="margin-top:10px;display:none;background:rgba(255,255,255,.04);border-radius:8px;padding:10px 13px;border-left:3px solid var(--a)">
+          <div id="s-cycle-preview-content" style="font-size:13px;color:var(--t);line-height:1.9"></div>
+        </div>
+      </div>
+      <div class="f1"><label>메모 / 목표</label><textarea id="s-memo" rows="3"></textarea></div>
+    </div>
+    <div class="mf">
+      <button class="btn bd" id="sBtnDel" style="margin-right:auto;display:none" onclick="delStudent()">🗑 삭제</button>
+      <button class="btn bg2" onclick="cm('mS')">취소</button>
+      <button class="btn bp" onclick="saveStudent()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- CAM MODAL -->
+<div class="ov" id="mCam" style="padding:12px">
+  <div class="modal" style="width:min(96vw,820px);max-height:96vh">
+    <div class="mh" style="padding:14px 22px 12px"><div class="mt">&#x1F4F7; 사진 촬영</div><div class="mc" onclick="stopCam();cm('mCam')">&#x2715;</div></div>
+    <div class="mb" style="padding:18px 22px">
+      <div class="cam-wrap" id="camWrap" style="margin-bottom:14px;border-radius:14px;overflow:hidden;background:#000;max-height:65vh;display:flex;align-items:center;justify-content:center">
+        <video id="camVideo" autoplay playsinline style="width:100%;max-height:65vh;display:block;object-fit:cover;transform:scaleX(-1)"></video>
+      </div>
+      <div id="camPreviewWrap" style="display:none;margin-bottom:14px;border-radius:14px;overflow:hidden;max-height:65vh;display:none;align-items:center;justify-content:center;background:#000">
+        <img id="camPreviewImg" style="width:100%;max-height:65vh;object-fit:contain;display:block;border-radius:14px">
+      </div>
+      <div style="display:flex;gap:9px;justify-content:center;flex-wrap:wrap">
+        <button class="btn bp" id="camSnapBtn" onclick="snapPhoto()" style="padding:12px 28px;font-size:15px">&#x1F4F8; 촬영</button>
+        <button class="btn bg2" id="camRetakeBtn" style="display:none;padding:12px 22px" onclick="retakeCam()">다시 찍기</button>
+        <button class="btn bp" id="camUseBtn" style="display:none;padding:12px 28px;font-size:15px" onclick="useCamPhoto()">&#x2713; 사용</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div class="ov" id="mLightbox" style="padding:0;background:rgba(0,0,0,.95)" onclick="cm('mLightbox')">
+  <img id="lightboxImg" style="max-width:96vw;max-height:96vh;object-fit:contain;border-radius:8px">
+</div>
+
+<!-- LESSON RECORD MODAL -->
+<div class="ov" id="mLR">
+  <div class="modal wide">
+    <div class="mh" style="background:linear-gradient(135deg,var(--season-hover,rgba(200,169,110,.06)),transparent)">
+      <div>
+        <div class="mt" id="lrTitle">레슨 기록</div>
+        <div style="font-size:12px;color:var(--tm);margin-top:2px" id="lrMeta"></div>
+      </div>
+      <div class="mc" onclick="cm('mLR')">&#x2715;</div>
+    </div>
+    <div class="mb">
+      <!-- 수강생 정보 스트립 -->
+      <div style="display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.03);border:1px solid var(--b);border-radius:11px;padding:12px 16px;margin-bottom:16px">
+        <div id="lrAv" class="lr-av" style="width:44px;height:44px;border-radius:50%;flex-shrink:0"></div>
+        <div style="flex:1">
+          <div id="lrName" style="font-size:15px;font-weight:700;color:var(--t)"></div>
+          <div id="lrInfo" style="font-size:12px;color:var(--tm);margin-top:1px"></div>
+        </div>
+        <div style="background:var(--ag);border:1px solid var(--b);border-radius:9px;padding:6px 14px;text-align:center;flex-shrink:0">
+          <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--a);line-height:1" id="lrWN">0</div>
+          <div style="font-size:9px;color:var(--tm);letter-spacing:.1em;text-transform:uppercase;margin-top:2px">주차</div>
+        </div>
+      </div>
+      <!-- 날짜 + 출석 -->
+      <div class="fg" style="margin-bottom:12px">
+        <div class="f1"><label>날짜</label><input type="date" id="lr-date"></div>
+        <div class="f1">
+          <label>출석 여부</label>
+          <div style="display:flex;gap:6px">
+            <div class="ro on" id="lr-att-출석" onclick="setLrAtt(this,'출석')" style="flex:1;justify-content:center">✅ 출석</div>
+            <div class="ro" id="lr-att-결석" onclick="setLrAtt(this,'결석')" style="flex:1;justify-content:center">❌ 결석</div>
+            <div class="ro" id="lr-att-보강" onclick="setLrAtt(this,'보강')" style="flex:1;justify-content:center">🔄 보강</div>
+          </div>
+          <input type="hidden" id="lr-att" value="출석">
+        </div>
+      </div>
+      <!-- 진도/피드백/과제 -->
+      <div class="f1" style="margin-bottom:11px">
+        <label>오늘 진도 · 연습 내용</label>
+        <input type="text" id="lr-ct" placeholder="복식호흡, 음정 교정, 감정 표현 등">
+      </div>
+      <div class="fg" style="margin-bottom:11px">
+        <div class="f1"><label>문제점 · 피드백</label><textarea id="lr-fb" rows="3" placeholder="개선이 필요한 부분"></textarea></div>
+        <div class="f1"><label>다음 레슨 과제</label><textarea id="lr-hw" rows="3" placeholder="연습 과제, 준비할 것"></textarea></div>
+      </div>
+      <!-- 평가 + 특이사항 -->
+      <div class="fg">
+        <div class="f1">
+          <label>이번 레슨 평가</label>
+          <div style="display:flex;gap:5px" id="lr-stars-wrap">
+            <div class="ro" onclick="setLrRt('1')" id="lr-rt-1" style="flex:1;justify-content:center;font-size:16px">★</div>
+            <div class="ro" onclick="setLrRt('2')" id="lr-rt-2" style="flex:1;justify-content:center;font-size:16px">★★</div>
+            <div class="ro on" onclick="setLrRt('3')" id="lr-rt-3" style="flex:1;justify-content:center;font-size:16px">★★★</div>
+            <div class="ro" onclick="setLrRt('4')" id="lr-rt-4" style="flex:1;justify-content:center;font-size:16px">★★★★</div>
+            <div class="ro" onclick="setLrRt('5')" id="lr-rt-5" style="flex:1;justify-content:center;font-size:16px">★★★★★</div>
+          </div>
+          <input type="hidden" id="lr-rt" value="3">
+        </div>
+        <div class="f1"><label>컨디션 · 특이사항</label><input type="text" id="lr-note" placeholder="목 상태, 피로도 등"></div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn bd" id="lrBtnDel" style="margin-right:auto;display:none" onclick="deleteLog()">삭제</button>
+      <button class="btn bg2" onclick="cm('mLR')">취소</button>
+      <button class="btn bp" onclick="saveLR()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- QUICK SLOT -->
+<div class="ov" id="mQS">
+  <div class="modal">
+    <div class="mh">
+      <div>
+        <div class="mt" id="qsTitle">슬롯 배정</div>
+        <div style="font-size:12px;color:var(--tm);margin-top:2px" id="qsMeta"></div>
+      </div>
+      <div class="mc" onclick="cm('mQS')">&#x2715;</div>
+    </div>
+    <div class="mb">
+      <div style="font-size:13px;color:var(--ts);margin-bottom:12px;background:var(--ag);border-radius:8px;padding:9px 12px;color:var(--a)">배정할 레슨생을 선택하세요. 여러 명 동시 배정 가능합니다.</div>
+      <div id="qsBody"></div>
+    </div>
+    <div class="mf">
+      <button class="btn bg2" onclick="cm('mQS')">취소</button>
+      <button class="btn bp" onclick="saveQS()">✓ 적용</button>
+    </div>
+  </div>
+</div>
+
+<!-- FLEX WEEK -->
+<div class="ov" id="mFlexWeek">
+  <div class="modal wide">
+    <div class="mh"><div><div class="mt">&#x1F504; 변동 레슨생 이번 주 배정</div><div style="font-size:12px;color:var(--tm);margin-top:3px" id="flexWeekLabel"></div></div><div class="mc" onclick="cm('mFlexWeek')">&#x2715;</div></div>
+    <div class="mb" id="flexWeekBody"></div>
+    <div class="mf"><button class="btn bg2" onclick="cm('mFlexWeek')">닫기</button><button class="btn bp" onclick="saveFlexWeek()">&#x2713; 저장</button></div>
+  </div>
+</div>
+
+<!-- FULL WEEK EDIT -->
+<div class="ov" id="mWE">
+  <div class="modal wide">
+    <div class="mh"><div><div class="mt">&#x1F4C5; 전체 주간 수정</div><div style="font-size:12px;color:var(--tm);margin-top:3px" id="weLabel"></div></div><div class="mc" onclick="cm('mWE')">&#x2715;</div></div>
+    <div class="mb" id="weBody"></div>
+    <div class="mf"><button class="btn bg2" onclick="cm('mWE')">닫기</button><button class="btn bp" onclick="saveWE()">&#x2713; 저장</button></div>
+  </div>
+</div>
+
+<!-- PROFILE -->
+<div class="ov" id="mProfile">
+  <div class="modal xxl">
+    <div class="mh" style="background:linear-gradient(135deg,var(--season-hover,rgba(200,169,110,.06)),transparent)">
+      <div id="profileTitleWrap">
+        <div class="mt" id="profileTitle">프로필</div>
+        <div style="font-size:11.5px;color:var(--tm);margin-top:2px" id="profileSubtitle"></div>
+      </div>
+      <div class="mc" onclick="cm('mProfile')">&#x2715;</div>
+    </div>
+    <div style="padding:0 20px 20px" id="profileBody"></div>
+    <div class="mf" id="profileFooter"></div>
+  </div>
+</div>
+
+<!-- 통화 매뉴얼 팝업 -->
+<div class="ov" id="mManual">
+  <div class="modal">
+    <div class="mh">
+      <div>
+        <div class="mt">📞 통화 상담 매뉴얼</div>
+        <div style="font-size:11.5px;color:var(--tm);margin-top:2px">전화 문의 응대 가이드</div>
+      </div>
+      <div class="mc" onclick="cm('mManual')">&#x2715;</div>
+    </div>
+    <div class="mb" style="padding:20px">
+
+      <!-- 인사 -->
+      <div class="manual-section">
+        <div class="manual-section-title">🎙 인사</div>
+        <div class="manual-script">"네, 보컬 스튜디오입니다."</div>
+      </div>
+
+      <!-- 니즈 파악 -->
+      <div class="manual-section">
+        <div class="manual-section-title">① 먼저 듣기</div>
+        <div class="manual-qa">
+          <div class="manual-a">
+            • "어떤 부분 때문에 연락 주셨어요?"<br>
+            • "노래할 때 어디가 제일 불편하세요?"<br>
+            • "혹시 레슨 받아보신 적 있으세요?"
+          </div>
+        </div>
+      </div>
+
+      <!-- 반 소개 -->
+      <div class="manual-section">
+        <div class="manual-section-title">② 반 소개</div>
+        <div class="manual-script">"저희는 목적에 따라 반이 나뉘어져 있어요. 어떤 걸 원하시느냐에 따라 달라지거든요."</div>
+
+        <div class="manual-class-card" style="border-left:3px solid var(--season-accent,var(--a))">
+          <div class="manual-class-name">🎤 발성전문반</div>
+          <div class="manual-class-tag">제대로 바꾸고 싶은 분</div>
+          <div class="manual-class-desc">개인의 습관화로 고착된 잘못된 발성 문제를 단계별 커리큘럼으로 교정하여, 건강한 목소리와 안정된 발성으로 가창 실력 향상을 목표로 하는 클래스입니다. (기본기 → 응용)<br><br>기본 50분 레슨, 당일 수강생 컨디션·진도에 따라 최대 10분 추가 피드백 제공.</div>
+        </div>
+
+        <div class="manual-class-card">
+          <div class="manual-class-name">🎵 취미반</div>
+          <div class="manual-class-tag">노래 자체를 즐기고 싶은 분</div>
+          <div class="manual-class-desc">디테일한 설명보다 실기 위주의 레슨으로 진행합니다. 부담 없이 노래를 즐기고 싶은 분을 위한 클래스.</div>
+        </div>
+
+        <div class="manual-class-card">
+          <div class="manual-class-name">🎶 축가반</div>
+          <div class="manual-class-tag">행사 준비하시는 분</div>
+          <div class="manual-class-desc">결혼식이나 행사 일정에 맞춰 한 곡을 완성하는 반이에요. 기간 안에 확실하게 만들어드려요.</div>
+        </div>
+
+        <div class="manual-class-card">
+          <div class="manual-class-name">🎙 음성교정반</div>
+          <div class="manual-class-tag">목소리를 직업적으로 관리하는 분</div>
+          <div class="manual-class-desc">발음, 공명, 호흡 패턴을 직업적 관점에서 교정하는 반이에요. 목소리가 곧 일인 분들한테 잘 맞아요.</div>
+        </div>
+      </div>
+
+      <!-- Q&A -->
+      <div class="manual-section">
+        <div class="manual-section-title">③ 자주 묻는 질문</div>
+
+        <div class="manual-qa">
+          <div class="manual-q">발성전문반이랑 취미반이 어떻게 달라요?</div>
+          <div class="manual-a">취미반은 노래 자체를 즐기는 데 집중하고, 발성전문반은 소리 내는 구조 자체를 바꾸는 거예요. 같은 기간을 투자해도 나오는 결과물이 달라요. 뭘 원하느냐에 따라 선택하시면 돼요.</div>
+        </div>
+
+        <div class="manual-qa">
+          <div class="manual-q">왜 발성전문반만 시간이 달라요?</div>
+          <div class="manual-a">수업은 똑같이 50분이에요. 뒤에 붙는 최대 10분은 그날 컨디션이랑 진도에 따라 제가 재량으로 쓰는 시간이에요. 덜 잡힌 부분 마무리하거나 다음 수업 방향 잡는 데 써요. 받는 입장에서는 그냥 더 받는 거예요.</div>
+        </div>
+
+        <div class="manual-qa">
+          <div class="manual-q">몇 회 만에 달라져요?</div>
+          <div class="manual-a">사람마다 다른데, 보통 4~8회차 사이에 본인이 먼저 느껴요. 주변에서 먼저 말하는 경우도 꽤 있고요. 생각보다 빨리 오는 편이에요.</div>
+        </div>
+
+        <div class="manual-qa">
+          <div class="manual-q">처음인데 발성전문반부터 해도 돼요?</div>
+          <div class="manual-a">오히려 처음이 더 유리해요. 잘못 굳어진 습관 없이 처음부터 제대로 쌓으면 나중에 고칠 게 없거든요.</div>
+        </div>
+
+        <div class="manual-qa">
+          <div class="manual-q">주 1회도 효과 있어요?</div>
+          <div class="manual-a">충분히 효과 있어요. 주 2회랑 비교하면 속도 차이는 있는데, 처음엔 1회로 시작하다가 느낌 오면 늘리시는 분들 많아요.</div>
+        </div>
+
+        <div class="manual-qa">
+          <div class="manual-q">레슨비가 어떻게 돼요?</div>
+          <div class="manual-a">반마다 달라요. 직접 한번 오셔서 목소리 들어보고 말씀드리는 게 제일 정확해요.</div>
+        </div>
+      </div>
+
+      <!-- 레슨비 안내 -->
+      <div class="manual-section">
+        <div class="manual-section-title">④ 레슨비 안내</div>
+
+        <div class="manual-class-card" style="border-left:3px solid var(--season-accent,var(--a))">
+          <div class="manual-class-name">🎤 발성전문반</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+            <div style="background:var(--s1);border:1px solid var(--b);border-radius:8px;padding:10px 12px;text-align:center">
+              <div style="font-size:10px;color:var(--tm);margin-bottom:4px">주 1회 · 월</div>
+              <div style="font-size:16px;font-weight:700;color:var(--t)">35만원</div>
+            </div>
+            <div style="background:var(--s1);border:1px solid var(--b);border-radius:8px;padding:10px 12px;text-align:center">
+              <div style="font-size:10px;color:var(--tm);margin-bottom:4px">주 2회 · 월</div>
+              <div style="font-size:16px;font-weight:700;color:var(--t)">60만원</div>
+            </div>
+          </div>
+          <div style="margin-top:8px;padding:8px 10px;background:var(--ag2);border-radius:7px;font-size:12px;color:var(--ts);line-height:1.7">
+            📌 3개월 일괄등록 → <b>5% 할인</b><br>
+            📌 6개월 일괄등록 → <b>10% 할인</b> <span style="color:var(--tm)">(최대 절감)</span>
+          </div>
+        </div>
+
+        <div class="manual-class-card">
+          <div class="manual-class-name">🎵 취미반</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+            <div style="background:var(--s1);border:1px solid var(--b);border-radius:8px;padding:10px 12px;text-align:center">
+              <div style="font-size:10px;color:var(--tm);margin-bottom:4px">주 1회 · 월</div>
+              <div style="font-size:16px;font-weight:700;color:var(--t)">25만원</div>
+            </div>
+            <div style="background:var(--s1);border:1px solid var(--b);border-radius:8px;padding:10px 12px;text-align:center">
+              <div style="font-size:10px;color:var(--tm);margin-bottom:4px">주 2회 · 월</div>
+              <div style="font-size:16px;font-weight:700;color:var(--t)">45만원</div>
+            </div>
+          </div>
+          <div style="margin-top:8px;padding:8px 10px;background:var(--ag2);border-radius:7px;font-size:12px;color:var(--ts)">
+            📌 3개월 일괄등록 → <b>5% 할인</b>
+          </div>
+        </div>
+
+        <div class="manual-class-card">
+          <div class="manual-class-name">🎶 축가반 · 🎙 음성교정반</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+            <div style="background:var(--s1);border:1px solid var(--b);border-radius:8px;padding:10px 12px;text-align:center">
+              <div style="font-size:10px;color:var(--tm);margin-bottom:4px">주 1회 · 월</div>
+              <div style="font-size:16px;font-weight:700;color:var(--t)">35만원</div>
+            </div>
+            <div style="background:var(--s1);border:1px solid var(--b);border-radius:8px;padding:10px 12px;text-align:center">
+              <div style="font-size:10px;color:var(--tm);margin-bottom:4px">주 2회 · 월</div>
+              <div style="font-size:16px;font-weight:700;color:var(--t)">60만원</div>
+            </div>
+          </div>
+          <div style="margin-top:8px;padding:8px 10px;background:var(--ag2);border-radius:7px;font-size:12px;color:var(--ts)">
+            📌 3개월 일괄등록 → <b>5% 할인</b>
+          </div>
+        </div>
+      </div>
+
+      <!-- 마무리 -->
+      <div class="manual-section">
+        <div class="manual-section-title">⑤ 마무리</div>
+        <div class="manual-script">"말씀 들어보니 확실히 변화를 원하시는 것 같아요. 일단 한번 오세요. 직접 목소리 들어봐야 제대로 방향 잡아드릴 수 있어요."</div>
+      </div>
+
+    </div>
+    <div class="mf">
+      <button class="btn bp" onclick="cm('mManual')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- RECORDING -->
+<div class="ov" id="mRec">
+  <div class="modal">
+    <div class="mh"><div class="mt">&#x1F3A4; 음성 녹음</div><div class="mc" onclick="cancelRec()">&#x2715;</div></div>
+    <div class="mb">
+      <div style="text-align:center;padding:10px 0 20px">
+        <div id="recStatus" style="font-size:14px;color:var(--ts);margin-bottom:16px">녹음 버튼을 눌러 시작하세요</div>
+        <div id="recTimerDisp" style="font-family:'DM Mono',monospace;font-size:32px;color:var(--a);margin-bottom:20px">00:00</div>
+        <button class="rec-btn" id="recStartBtn" onclick="startRec()" style="margin:0 auto">
+          <div class="rec-dot"></div> 녹음 시작
+        </button>
+        <button class="btn bd" id="recStopBtn" style="display:none;margin:0 auto" onclick="stopRec()">&#x25A0; 중지</button>
+      </div>
+      <div id="recPreview" style="display:none;margin-top:12px">
+        <audio id="recAudio" controls style="width:100%"></audio>
+        <input type="text" id="recLabel" placeholder="파일 설명 (예: 1주차 before)" style="margin-top:10px">
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn bg2" onclick="cancelRec()">취소</button>
+      <button class="btn bp" id="recSaveBtn" style="display:none" onclick="saveRec()">저장</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="media-upload-input" accept="audio/*,video/*" style="display:none" onchange="handleMediaUpload(this)">
+<div class="toast" id="toast"><span id="t-ic">&#x2713;</span><span id="t-msg"></span></div>
+
+
+<!-- 스케줄 설정 버튼 (스케줄 탭 활성 시만 표시) -->
+<div id="vs-sched-cfg">
+  <button id="vs-sched-cfg-btn" onclick="(function(){var p=document.getElementById('vs-sched-cfg');p.classList.toggle('open');})()" title="스케줄 설정">⚙️</button>
+  <div id="vs-sched-cfg-panel">
+    <div style="font-size:10px;letter-spacing:.15em;color:var(--tm);text-transform:uppercase;margin-bottom:10px;font-family:'DM Sans',sans-serif;">스케줄 표시</div>
+    <div class="vs-cfg-row">
+      <span class="vs-cfg-label">월요일</span>
+      <label class="vs-toggle">
+        <input type="checkbox" id="vs-tog-mon" onchange="toggleMonHidden()">
+        <span class="vs-toggle-slider"></span>
+      </label>
+    </div>
+    <div class="vs-cfg-row">
+      <span class="vs-cfg-label">일요일</span>
+      <label class="vs-toggle">
+        <input type="checkbox" id="vs-tog-sun" onchange="toggleSunHidden()">
+        <span class="vs-toggle-slider"></span>
+      </label>
+    </div>
+    <div class="vs-cfg-row" style="margin-top:4px;">
+      <span class="vs-cfg-label" style="font-size:11px;color:var(--tm);">ON = 숨김</span>
+    </div>
+  </div>
+</div>
+
+<div id="mobileTabBar" class="mobile-tab-bar"></div>
+
+<div id="mobileTabBar" class="mobile-tab-bar"></div>
+
+<!-- JS: 로드 순서 중요 (의존성 순서) -->
+<!-- 1. 타입/상수 -->
+<script src="js/types.js"></script>
+<!-- 2. 코어 유틸 (순수 함수) -->
+<script src="js/core/utils.js"></script>
+<script src="js/core/search.js"></script>
+<script src="js/core/cycle.js"></script>
+<script src="js/core/schedule.js"></script>
+<script src="js/core/stats.js"></script>
+<!-- 3. 스토어 (상태 + 저장) -->
+<script src="js/store/state.js"></script>
+<script src="js/store/persist.js"></script>
+<script src="js/store/undo.js"></script>
+<!-- 4. 인프라 (외부 연결) -->
+<script src="js/infra/media-db.js"></script>
+<script src="js/infra/holidays.js"></script>
+<script src="js/infra/firebase.js"></script>
+<script src="js/infra/camera.js"></script>
+<!-- 5. 공용 UI 컴포넌트 -->
+<script src="js/ui/shared/modal.js"></script>
+<script src="js/ui/shared/avatar.js"></script>
+<!-- 6. UI 페이지 빌더 -->
+<script src="js/ui/sidebar.js"></script>
+<script src="js/ui/router.js"></script>
+<script src="js/ui/dashboard.js"></script>
+<script src="js/ui/today.js"></script>
+<script src="js/ui/schedule.js"></script>
+<script src="js/ui/students.js"></script>
+<script src="js/ui/logs.js"></script>
+<script src="js/ui/timeline.js"></script>
+<script src="js/ui/payment.js"></script>
+<script src="js/ui/consult.js"></script>
+<script src="js/ui/profile.js"></script>
+<script src="js/ui/sms.js"></script>
+<script src="js/ui/alert.js"></script>
+<script src="js/ui/reset.js"></script>
+<!-- 7. 이펙트 (파티클 + 리플 + 모바일 탭바) -->
+<script src="js/effects.js"></script>
+<!-- 8. 엔트리포인트 -->
+<script src="js/app.js"></script>
+
+<button id="viewToggleBtn" onclick="toggleViewMode()" title="PC/모바일 화면 전환">🖥 PC</button>
+</body></html>
