@@ -5,6 +5,13 @@
  */
 
 /**
+ * DOM 엘리먼트 조회 (document.getElementById 축약)
+ * @param {string} id
+ * @returns {HTMLElement|null}
+ */
+function ge(id){return document.getElementById(id);}
+
+/**
  * 고유 ID 생성 (타임스탬프 + 랜덤)
  * @returns {string}
  */
