@@ -2449,6 +2449,7 @@ div.mwv .lb { font-size: 7px !important; padding: 0 !important; min-height: 0 !i
   </div>
   <div class="sb-bottom">
     <button class="sb-util-btn" onclick="toggleMonOff()">📅 월요일 휴무 ON/OFF</button>
+    <button class="sb-util-btn" onclick="openHolidayMgr()">🎌 휴무일 관리</button>
     <button class="sb-util-btn danger" onclick="resetAllData()">🗑 데이터 초기화</button>
   </div>
   <div class="sb-today">
@@ -2704,6 +2705,22 @@ div.mwv .lb { font-size: 7px !important; padding: 0 !important; min-height: 0 !i
     <div class="mh"><div><div class="mt">&#x1F4C5; 전체 주간 수정</div><div style="font-size:12px;color:var(--tm);margin-top:3px" id="weLabel"></div></div><div class="mc" onclick="cm('mWE')">&#x2715;</div></div>
     <div class="mb" id="weBody"></div>
     <div class="mf"><button class="btn bg2" onclick="cm('mWE')">닫기</button><button class="btn bp" onclick="saveWE()">&#x2713; 저장</button></div>
+  </div>
+</div>
+
+<!-- 휴무일 관리 -->
+<div class="ov" id="mHoliday">
+  <div class="modal">
+    <div class="mh"><div><div class="mt">&#x1F38C; 휴무일 관리</div><div style="font-size:11.5px;color:var(--tm);margin-top:2px">공휴일 외 학원 자체 휴무일을 추가·삭제합니다</div></div><div class="mc" onclick="cm('mHoliday')">&#x2715;</div></div>
+    <div class="mb">
+      <div style="display:flex;gap:8px;margin-bottom:6px">
+        <input type="date" id="holiday-date-input" style="flex:1;padding:9px 11px;background:rgba(255,255,255,.04);border:1px solid var(--b);border-radius:8px;color:var(--t);font-size:13px;font-family:inherit">
+        <button class="btn bp" style="white-space:nowrap" onclick="addCustomHoliday()">&#x002B; 추가</button>
+      </div>
+      <div style="font-size:11px;color:var(--tm);margin-bottom:14px;line-height:1.5">추가한 날은 스케줄에서 휴무로 표시되고 자동 출석에서 제외됩니다.</div>
+      <div id="holidayList"></div>
+    </div>
+    <div class="mf"><button class="btn bg2" onclick="cm('mHoliday')">닫기</button></div>
   </div>
 </div>
 
@@ -3250,9 +3267,11 @@ function loadHolidaysForView(cb){
 /* 설정 로드 */
 var _cfg={monOff:true,customHolidays:[],sunCollapsed:false,monCollapsed:false,sunHidden:false,monHidden:false};
 try{var _craw=localStorage.getItem('vsC_cfg');if(_craw)_cfg=JSON.parse(_craw);}catch(e){}
-/* customHolidays 진단 — UI가 없으므로 옛 잔재 가능성. 콘솔에서 확인하고 한 줄로 정리 가능 */
-if(Array.isArray(_cfg.customHolidays)&&_cfg.customHolidays.length){
-  console.warn('[customHolidays] 사용자 추가 휴무일:',_cfg.customHolidays,'— 잘못된 항목이면 콘솔에서: _cfg.customHolidays=[];saveCfg();render();');
+/* customHolidays 정합성 — 손상/잘못된 항목(YYYY-MM-DD 형식 외) 자동 제거. 관리 UI: 사이드바 🎌 휴무일 관리 */
+if(!Array.isArray(_cfg.customHolidays))_cfg.customHolidays=[];
+else{
+  var _clean=_cfg.customHolidays.filter(_isValidDateStr);
+  if(_clean.length!==_cfg.customHolidays.length)_cfg.customHolidays=_clean;
 }
 function saveCfg(){localStorage.setItem('vsC_cfg',JSON.stringify(_cfg));}
 
@@ -3330,6 +3349,53 @@ function toggleMonOff(){
   saveCfg();
   toast(_cfg.monOff?'월요일 휴무 ON 🔒':'월요일 휴무 OFF ✓');
   if(page==='schedule') render();
+}
+/* ── 사용자 지정 휴무일 관리 ── */
+function _isValidDateStr(ds){
+  if(typeof ds!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(ds))return false;
+  var p=ds.split('-'),y=+p[0],m=+p[1],dd=+p[2];
+  var d=new Date(y,m-1,dd);
+  return d.getFullYear()===y&&d.getMonth()===m-1&&d.getDate()===dd;
+}
+function _holidayDow(ds){var d=new Date(ds+'T00:00:00');return isNaN(d)?'':JSDOW[d.getDay()]+'요일';}
+function openHolidayMgr(){
+  if(!Array.isArray(_cfg.customHolidays))_cfg.customHolidays=[];
+  var inp=ge('holiday-date-input');if(inp)inp.value='';
+  renderHolidayList();
+  om('mHoliday');
+}
+function renderHolidayList(){
+  var list=ge('holidayList');if(!list)return;
+  var arr=(_cfg.customHolidays||[]).slice().filter(_isValidDateStr).sort();
+  if(!arr.length){list.innerHTML='<div style="text-align:center;color:var(--tm);padding:24px 0;font-size:13px">등록된 휴무일이 없습니다</div>';return;}
+  var o='';
+  arr.forEach(function(ds){
+    o+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--b);border-radius:8px;margin-bottom:6px">';
+    o+='<div><span style="font-weight:600;color:var(--t)">'+ds+'</span> <span style="font-size:11px;color:var(--tm);margin-left:4px">'+_holidayDow(ds)+'</span></div>';
+    o+='<button class="btn bg2 bsm" style="color:var(--r)" onclick="removeCustomHoliday(\''+ds+'\')">삭제</button>';
+    o+='</div>';
+  });
+  list.innerHTML=o;
+}
+function addCustomHoliday(){
+  var inp=ge('holiday-date-input');var ds=inp&&inp.value;
+  if(!_isValidDateStr(ds)){toast('올바른 날짜를 선택하세요','❌');return;}
+  if(!Array.isArray(_cfg.customHolidays))_cfg.customHolidays=[];
+  if(KR_HOLIDAYS[ds]){toast('이미 공휴일입니다 ('+KR_HOLIDAYS[ds]+')','❌');return;}
+  if(_cfg.customHolidays.indexOf(ds)>=0){toast('이미 등록된 휴무일입니다','❌');return;}
+  _cfg.customHolidays.push(ds);
+  _cfg.customHolidays.sort();
+  saveCfg();renderHolidayList();render();
+  if(inp)inp.value='';
+  toast('휴무일 추가: '+ds+' 🎌');
+}
+function removeCustomHoliday(ds){
+  if(!Array.isArray(_cfg.customHolidays))return;
+  var i=_cfg.customHolidays.indexOf(ds);
+  if(i<0)return;
+  _cfg.customHolidays.splice(i,1);
+  saveCfg();renderHolidayList();render();
+  toast('휴무일 삭제: '+ds+' ✓');
 }
 function initFirebase(){
   if(typeof firebase==='undefined'){
