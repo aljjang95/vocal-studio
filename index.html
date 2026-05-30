@@ -4292,7 +4292,6 @@ function autoFillPastAttendance(){
     try{localStorage.setItem(lastFillKey,todayStr);}catch(e){}
     if(added>0){
       try{saveAll();}catch(e){}
-      console.log('[autoFillPastAttendance] '+added+'건 자동 출석 처리');
     }
     return added;
   }catch(e){console.error('[autoFillPastAttendance]',e);return -1;}
@@ -5384,7 +5383,7 @@ function _injectInitialInquiries(){
       var db2=firebase.firestore();
       var ref2=db2.collection('studio').doc('data');
       ref2.set({inquiries:inquiries},{merge:true});
-    }catch(e){console.log('Firebase inquiry sync error:',e);}
+    }catch(e){console.error('Firebase inquiry sync error:',e);}
   }
 }
 
@@ -7646,7 +7645,6 @@ function saveStudent(){
     beforeMemo:(old&&old.beforeMemo)||'',
     createdAt:(old&&old.createdAt)||Date.now()
   };
-  console.log('[saveStudent] 저장 시도', {editSid:editSid, pendingConvertId:pendingConvertId, name:data.name, id:data.id});
   if(editSid){
     var i=students.findIndex(function(s){return s.id===editSid;});
     if(i>=0) students[i]=data;
@@ -7707,8 +7705,7 @@ function saveStudent(){
   saveAll();
   /* 저장 후 검증 — 학생이 실제 students에 있는지 */
   var _verify=students.findIndex(function(s){return s.id===data.id;});
-  console.log('[saveStudent] 저장 결과 — students 위치:', _verify, '총', students.length, '명');
-  if(_verify<0){toast('⚠️ 저장 실패: 학생이 목록에서 사라졌습니다','❌');return;}
+  if(_verify<0){console.error('[saveStudent] 저장 실패 — 학생 누락', data.id);toast('⚠️ 저장 실패: 학생이 목록에서 사라졌습니다','❌');return;}
   cm('mS');renderSidebarToday();if(page==='eval')page='students';render();
   if(editSid&&_scrollY>0)setTimeout(function(){window.scrollTo(0,_scrollY);},50);
   }catch(e){
