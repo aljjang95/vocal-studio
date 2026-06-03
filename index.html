@@ -3003,7 +3003,7 @@ function saveConsultPending(){
     job:gv('ci-job'),ref:gv('ci-ref'),why:gv('ci-why'),genres:genres,
     goalS:gv('ci-goal-s'),goalL:gv('ci-goal-l'),cls:gv('ci-cls'),
     schedFixed:gv('ci-sched-fixed'),schedFlex:gv('ci-sched-flex'),
-    voice:gv('ci-voice'),exp:gv('ci-exp'),memo:gv('ci-memo'),savedAt:Date.now()
+    voice:gv('ci-voice'),exp:gv('ci-exp'),memo:gv('ci-memo'),prob:gv('ci-prob'),impr:gv('ci-impr'),savedAt:Date.now()
   };
   try{localStorage.setItem('vsC_pending',JSON.stringify(pending));}
   catch(e){pending.photo='';localStorage.setItem('vsC_pending',JSON.stringify(pending));toast('⚠️ 사진 제외 후 저장됨');}
@@ -3018,6 +3018,7 @@ function loadPendingConsult(){
     sv2('ci-nm',p.name);sv2('ci-age',p.age);sv2('ci-ph',p.phone);sv2('ci-job',p.job);
     sv2('ci-ref',p.ref);sv2('ci-why',p.why);sv2('ci-goal-s',p.goalS);sv2('ci-goal-l',p.goalL);
     sv2('ci-voice',p.voice);sv2('ci-exp',p.exp);sv2('ci-memo',p.memo);
+    sv2('ci-prob',p.prob);sv2('ci-impr',p.impr);
     sv2('ci-sched-fixed',p.schedFixed);sv2('ci-sched-flex',p.schedFlex);
     if(p.photo){sv2('ci-photo-data',p.photo);var pp=ge('ci-photo-preview');if(pp)pp.innerHTML='<img src="'+p.photo+'" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0">';}
     if(p.gd)document.querySelectorAll('[data-hid="ci-gd"]').forEach(function(el){el.classList.toggle('on',el.dataset.val===p.gd);});
@@ -3459,15 +3460,41 @@ function _startFirestoreListener(){
   });
 }
 
+/* Firestore 문서 1MB 제한 대응 — 사진·오디오·동의녹음 base64는 제외하고 push.
+   (사진은 _photoKey/IndexedDB로 기기 로컬 관리, localStorage 저장도 동일하게 strip한다)
+   미디어를 통째로 올리면 데이터가 쌓일수록 1MB를 넘겨 set이 통째로 실패 →
+   신규 레슨생/상담이 서버에 반영되지 않고 onSnapshot이 옛값으로 로컬을 덮어써 데이터가 소실된다. */
+function _stripMediaForSync(list){
+  var stripA=function(arr){return (arr||[]).map(function(a){
+    return (a&&a.data&&a.data.length>50000)?Object.assign({},a,{data:'[saved]'}):a;
+  });};
+  return (list||[]).map(function(x){return Object.assign({},x,{
+    photo:(x.photo&&x.photo.length>5000)?'':x.photo,
+    audios:stripA(x.audios),
+    videos:stripA(x.videos),
+    consentRec:(x.consentRec&&x.consentRec.data&&x.consentRec.data.length>50000)
+      ?Object.assign({},x.consentRec,{data:'[saved]'}):x.consentRec
+  });});
+}
+/* strip으로 Firestore에서 사진을 빼기 전에, photo 필드에만 있고 로컬 백업키(_photoKey)가 없는
+   사진을 localStorage에 백업하고 키를 부여한다. 그래야 경량 push 후에도 사진이 보존된다. */
+function _backupOrphanPhotos(list){
+  (list||[]).forEach(function(x){
+    if(x&&x.photo&&x.photo.length>5000&&!x._photoKey){
+      try{var k='vsC_ph_'+(x.id||uid());localStorage.setItem(k,x.photo);x._photoKey=k;}catch(e){}
+    }
+  });
+}
 function _pushToFirestore(docRef){
   if(!docRef) return;
   var db=firebase.firestore();
   docRef=docRef||db.collection('studio').doc('data');
+  _backupOrphanPhotos(students);_backupOrphanPhotos(consults);
   return docRef.set({
-    students:students,
+    students:_stripMediaForSync(students),
     logs:logs,
     weekOvr:weekOvr,
-    consults:consults,
+    consults:_stripMediaForSync(consults),
     payments:payments,
     inquiries:inquiries,
     updatedAt:firebase.firestore.FieldValue.serverTimestamp()
@@ -8638,7 +8665,7 @@ function saveConsultEdit(cid){
     voice:gv('ci-voice'),vdetail:gv('ci-vdetail'),
     exp:gv('ci-exp'),prevType:gv('ci-prev-type'),prev:gv('ci-prev'),
     smoke:(gv('ci-smoke')+(gv('ci-smoke-amount')?' ('+gv('ci-smoke-amount')+')':'')),drink:(gv('ci-drink')+(gv('ci-drink-amount')?' ('+gv('ci-drink-amount')+')':'')),health:gv('ci-health'),
-    memo:gv('ci-memo'),
+    memo:gv('ci-memo'),prob:gv('ci-prob'),impr:gv('ci-impr'),
     confirmedDates:ciGetConfirmedDates()
   });
   saveAll();
@@ -9093,7 +9120,7 @@ function saveAndGoEval(){
     voice:gv('ci-voice'),vdetail:gv('ci-vdetail'),
     exp:gv('ci-exp'),prevType:gv('ci-prev-type'),prev:gv('ci-prev'),
     smoke:(gv('ci-smoke')+(gv('ci-smoke-amount')?' ('+gv('ci-smoke-amount')+')':'')),drink:(gv('ci-drink')+(gv('ci-drink-amount')?' ('+gv('ci-drink-amount')+')':'')),health:gv('ci-health'),
-    memo:gv('ci-memo'),prob:'',impr:'',
+    memo:gv('ci-memo'),prob:gv('ci-prob'),impr:gv('ci-impr'),
     confirmedDates:ciGetConfirmedDates(),
     audios:audioData&&audioType==='audio'?[{id:uid(),type:'before',mediaType:'audio',label:'상담 전 음성',date:toDS(new Date()),data:audioData}]:[],
     videos:audioData&&audioType==='video'?[{id:uid(),type:'before',mediaType:'video',label:'상담 전 영상',date:toDS(new Date()),data:audioData}]:[],
@@ -9290,6 +9317,14 @@ function saveEvalMemo(cid){
 
 var evalConsentCid='';
 function startConsentRecForEval(cid){
+  /* 🛟 녹음 후 showEvalPage 재렌더 시 입력값이 사라지지 않도록 현재 평가 내용을 먼저 저장 */
+  var _ec=consults.find(function(x){return x.id===cid;});
+  if(_ec){
+    if(ge('eval-song'))_ec.song=ge('eval-song').value||'';
+    if(ge('eval-prob'))_ec.prob=ge('eval-prob').value||'';
+    if(ge('eval-impr'))_ec.impr=ge('eval-impr').value||'';
+    saveAll();
+  }
   evalConsentCid=cid;
   consentTarget={did:cid,mode:'consult'};
   recDid=cid;recMode='consent';recType='consent';recBlob=null;recChunks=[];
@@ -9522,8 +9557,8 @@ function showConsultForm(cid){
   var goalContent='';
   goalContent+='<div class="fg" style="margin-bottom:0">';
   goalContent+='<div class="f1 full"><label>배우러 오게 된 계기</label><textarea id="ci-why" rows="3" placeholder="취미 즐기기 / 자신감 향상 / 음정·발성 교정 / SNS 콘텐츠 / 무대 준비 / 직업적 필요"></textarea></div>';
-  goalContent+='<div class="f1"><label>단기 목표 (3개월)</label><input type="text" id="ci-goal-s" placeholder="고음 안정 / 복식호흡 / 곡 1곡 완성 / 음정 안정화"></div>';
-  goalContent+='<div class="f1"><label>장기 목표</label><input type="text" id="ci-goal-l" placeholder="버스킹 / 오디션 / 유튜브 커버 / 진학 준비 / 평생 취미"></div>';
+  /* 단기·장기 목표 제거 — 데이터 호환용 hidden만 유지 */
+  goalContent+='<input type="hidden" id="ci-goal-s"><input type="hidden" id="ci-goal-l">';
   goalContent+='<div class="f1 full"><label>목표 장르 (복수 선택)</label><div class="radio-g">'+GENRES.map(function(g){return '<div class="ro genre-ro" onclick="this.classList.toggle(\'on\')">'+esc(g)+'</div>';}).join('')+'</div></div>';
   goalContent+='</div>';
   o+=cs('🎵','레슨 목표 & 동기',goalContent);
@@ -9570,7 +9605,7 @@ function showConsultForm(cid){
   feeContent+='<div style="font-size:12px;color:var(--ts);line-height:1.9">';
   feeContent+='· 수강 시작 전 전액 환불<br>· 1회차 이하: 결제금액 — 실수강료 환불<br>· 2회차 이상: 잔여 수업 정가 기준 차감 후 환불';
   feeContent+='</div></div>';
-  o+=cs('💰','레슨비 안내',feeContent);
+  /* 레슨비 안내 출력은 폼 맨 아래(발성 피드백 다음)로 이동 — feeContent 변수만 여기서 생성 */
 
   /* ── 레슨 일정 ── */
   var schedContent='';
@@ -9656,9 +9691,19 @@ function showConsultForm(cid){
 
   o+='<input type="hidden" id="ci-audio-data"><input type="hidden" id="ci-audio-type" value="audio">';
 
-  /* ── 추가 메모 ── */
-  var memoContent='<div class="f1"><label>트레이너에게 알리고 싶은 내용</label><textarea id="ci-memo" rows="3" placeholder="컨디션, 특이사항, 질문 등"></textarea></div>';
-  o+=cs('📝','추가 메모',memoContent);
+  /* ── 발성 피드백 (레벨 테스트 메모) ── */
+  var fbContent='';
+  fbContent+='<div style="font-size:12px;color:var(--tm);margin-bottom:12px;line-height:1.6">레벨 테스트 후 발성 상태를 기록합니다. 이 내용은 평가지·인쇄물에 그대로 연동됩니다.</div>';
+  fbContent+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
+  fbContent+='<div class="f1"><label>발성 문제점</label><textarea id="ci-prob" rows="6" placeholder="고음역 흉성 / 음정 불안정 / 복식호흡 미숙 / 구강 공명 부족 / 발음 부정확 / 리듬감 불안정 / 호흡 얕고 짧음"></textarea></div>';
+  fbContent+='<div class="f1"><label>개선점 &amp; 레슨 방향</label><textarea id="ci-impr" rows="6" placeholder="1단계: 복식호흡 기초 4주 / 2단계: 두성 연결 훈련 / 음정 — 계이름·피아노 매칭 / 딕션 교정 / 고음역 점진적 확장"></textarea></div>';
+  fbContent+='</div>';
+  /* 추가 메모는 데이터 호환용 hidden 유지 */
+  fbContent+='<input type="hidden" id="ci-memo">';
+  o+=cs('🎤','발성 피드백',fbContent);
+
+  /* ── 레슨비 안내 (얘기 마무리 후 안내 — 폼 맨 아래) ── */
+  o+=cs('💰','레슨비 안내',feeContent);
 
   /* ── 저장 버튼 ── */
   o+='<div style="display:flex;gap:10px;justify-content:flex-end;padding:4px 0 6px">';
@@ -9699,6 +9744,7 @@ function showConsultForm(cid){
       setV('ci-nm',ec.name);setV('ci-age',ec.age);setV('ci-ph',ec.phone);
       setV('ci-job',ec.job);setV('ci-why',ec.why);
       setV('ci-vdetail',ec.vdetail);setV('ci-prev',ec.prev);setV('ci-memo',ec.memo);
+      setV('ci-prob',ec.prob);setV('ci-impr',ec.impr);
       setV('ci-goal-s',ec.goalS);setV('ci-goal-l',ec.goalL);
       setV('ci-time',ec.time);setV('ci-when',ec.when);
       /* 성별 라디오 시각 반영 */
