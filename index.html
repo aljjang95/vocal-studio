@@ -15,6 +15,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <title>Vocal Studio</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600;1,700&family=Noto+Sans+KR:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Noto+Serif+KR:wght@300;400;500;600;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 <style>
@@ -3460,6 +3461,84 @@ function _startFirestoreListener(){
   });
 }
 
+/* ── 사진 웹용 압축 (canvas 리사이즈 + JPEG) ──
+   업로드 전 호출. 큰 원본을 maxDim 이하 / JPEG quality로 줄여 용량을 1/5~1/10로. */
+function compressImage(base64, maxDim, quality){
+  return new Promise(function(res){
+    try{
+      if(!base64 || base64.indexOf('data:image')!==0){res(base64);return;}
+      var img=new Image();
+      img.onload=function(){
+        try{
+          var w=img.width,h=img.height,m=Math.max(w,h);
+          if(m>maxDim){var r=maxDim/m;w=Math.round(w*r);h=Math.round(h*r);}
+          var c=document.createElement('canvas');c.width=w;c.height=h;
+          c.getContext('2d').drawImage(img,0,0,w,h);
+          res(c.toDataURL('image/jpeg',quality||0.7));
+        }catch(e){res(base64);}
+      };
+      img.onerror=function(){res(base64);};
+      img.src=base64;
+    }catch(e){res(base64);}
+  });
+}
+/* ── Firebase Storage 업로드 → 다운로드 URL ──
+   사진을 Storage에 올리고 URL만 DB에 저장(Firestore 1MB 압박 제거 + 크로스기기 표시). */
+function uploadPhoto(base64, path){
+  if(typeof firebase==='undefined'||typeof firebase.storage!=='function')
+    return Promise.reject(new Error('storage SDK 미로드'));
+  var ref=firebase.storage().ref(path);
+  var up=ref.putString(base64,'data_url').then(function(){return ref.getDownloadURL();});
+  /* Storage 미활성/네트워크 지연 시 putString이 무한 대기 → 타임아웃으로 폴백 보장 */
+  var to=new Promise(function(_,rej){setTimeout(function(){rej(new Error('upload timeout'));},15000);});
+  return Promise.race([up,to]);
+}
+/* 사진 입력(base64)을 압축→업로드해 URL 반환. 실패 시 압축된 base64를 _photoKey로 로컬 백업하고
+   {photo:'', _photoKey:k} 폴백 — 텍스트 데이터 흐름은 절대 막지 않는다(fail-safe). */
+function processPhotoForSave(rawBase64, idForPath, prevPhotoKey){
+  return new Promise(function(resolve){
+    if(!rawBase64 || rawBase64.indexOf('data:image')!==0){
+      resolve({photo:(rawBase64||''), _photoKey:prevPhotoKey||''}); return;
+    }
+    compressImage(rawBase64,600,0.7).then(function(small){
+      uploadPhoto(small,'studio/photos/'+idForPath+'.jpg').then(function(url){
+        resolve({photo:url, _photoKey:''}); // 성공: URL만
+      }).catch(function(){
+        /* 업로드 실패 폴백: 압축본을 로컬 백업 */
+        var k=prevPhotoKey||('vsC_ph_'+idForPath);
+        try{localStorage.setItem(k,small);resolve({photo:'', _photoKey:k});}
+        catch(e){resolve({photo:small, _photoKey:''});}
+      });
+    });
+  });
+}
+/* 1회 마이그레이션 — 기존 base64/_photoKey 사진을 압축→Storage 업로드→URL 교체.
+   콘솔/버튼에서 실행. 완료 후 Firestore 문서가 URL만 남아 대폭 축소된다. */
+async function migratePhotosToStorage(progressCb){
+  var targets=[];
+  students.forEach(function(s){targets.push(s);});
+  consults.forEach(function(c){targets.push(c);});
+  var done=0,migrated=0,failed=[];
+  for(var i=0;i<targets.length;i++){
+    var o=targets[i], raw='';
+    if(o.photo&&o.photo.indexOf('data:image')===0) raw=o.photo;
+    else if(o._photoKey){try{raw=localStorage.getItem(o._photoKey)||'';}catch(e){}}
+    if(raw&&raw.indexOf('data:image')===0){
+      try{
+        var small=await compressImage(raw,600,0.7);
+        var url=await uploadPhoto(small,'studio/photos/'+(o.id||uid())+'.jpg');
+        o.photo=url;
+        if(o._photoKey){try{localStorage.removeItem(o._photoKey);}catch(e){}}
+        o._photoKey='';
+        migrated++;
+      }catch(e){failed.push((o.name||o.id)+': '+((e&&e.message)||e));}
+    }
+    done++;
+    if(progressCb)progressCb(done,targets.length,migrated);
+  }
+  try{saveAll();}catch(e){}
+  return {total:targets.length,migrated:migrated,failed:failed};
+}
 /* Firestore 문서 1MB 제한 대응 — 사진·오디오·동의녹음 base64는 제외하고 push.
    (사진은 _photoKey/IndexedDB로 기기 로컬 관리, localStorage 저장도 동일하게 strip한다)
    미디어를 통째로 올리면 데이터가 쌓일수록 1MB를 넘겨 set이 통째로 실패 →
@@ -3489,7 +3568,6 @@ function _pushToFirestore(docRef){
   if(!docRef) return;
   var db=firebase.firestore();
   docRef=docRef||db.collection('studio').doc('data');
-  _backupOrphanPhotos(students);_backupOrphanPhotos(consults);
   return docRef.set({
     students:_stripMediaForSync(students),
     logs:logs,
@@ -5230,11 +5308,31 @@ function buildInquiryList(){
     o+='<div class="empty"><div class="ei">📞</div><div class="et">등록된 문의자가 없습니다</div><div class="ed">문의 전화가 오면 바로 저장해두세요</div></div>';
     return o;
   }
+  /* 방문 예약이 있는 문의자를 가까운 순으로 위에, 나머지는 그 아래 */
+  var _wdays=['일','월','화','수','목','금','토'];
+  var _today=toDS(new Date());
+  var sorted=inquiries.slice().sort(function(a,b){
+    var av=a.visitDate?(a.visitDate+(a.visitTime||'99:99')):'';
+    var bv=b.visitDate?(b.visitDate+(b.visitTime||'99:99')):'';
+    if(av&&bv)return av<bv?-1:(av>bv?1:0);
+    if(av)return -1; if(bv)return 1; return 0;
+  });
   o+='<div style="display:flex;flex-direction:column;gap:7px">';
-  inquiries.forEach(function(q){
+  sorted.forEach(function(q){
     var initial=(q.name&&q.name!==q.phone)?q.name.slice(0,1):'?';
     var hasName=q.name&&q.name!==q.phone;
-    o+='<div style="background:var(--s1);border:1px solid var(--b);border-radius:12px;padding:11px 14px;display:flex;align-items:center;gap:12px;transition:border-color .14s;cursor:default" onmouseenter="this.style.borderColor=\'rgba(200,169,110,.22)\'" onmouseleave="this.style.borderColor=\'rgba(255,255,255,.07)\'">';
+    /* 방문 예약 배지 */
+    var visitHtml='', cardBorder='var(--b)';
+    if(q.visitDate){
+      var vd=parseDateLocal(q.visitDate);
+      var vlabel=(vd.getMonth()+1)+'/'+vd.getDate()+'('+_wdays[vd.getDay()]+')'+(q.visitTime?' '+q.visitTime:'');
+      var isToday=q.visitDate===_today, isPast=q.visitDate<_today;
+      var vc=isToday?'var(--r)':isPast?'var(--tm)':'var(--a)';
+      var vbg=isToday?'rgba(200,80,80,.12)':isPast?'rgba(150,150,150,.08)':'rgba(200,169,110,.12)';
+      if(isToday)cardBorder='rgba(200,80,80,.35)';
+      visitHtml='<span style="display:inline-block;font-size:11px;font-weight:700;color:'+vc+';background:'+vbg+';border-radius:6px;padding:2px 8px;margin-top:4px">📅 '+(isToday?'오늘 ':'')+vlabel+' 방문'+(isPast?' (지남)':'')+'</span>';
+    }
+    o+='<div style="background:var(--s1);border:1px solid '+cardBorder+';border-radius:12px;padding:11px 14px;display:flex;align-items:center;gap:12px">';
     /* 아바타 */
     o+='<div style="width:38px;height:38px;border-radius:50%;background:rgba(200,169,110,.1);border:1px solid var(--b);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:var(--a);flex-shrink:0">'+esc(initial)+'</div>';
     /* 정보 */
@@ -5242,19 +5340,33 @@ function buildInquiryList(){
     if(hasName)o+='<div style="font-size:14px;font-weight:700;color:var(--t);margin-bottom:1px">'+esc(q.name)+'</div>';
     o+='<div style="font-size:'+(hasName?'12':'14')+'px;font-weight:'+(hasName?'400':'700')+';color:'+(hasName?'var(--tm)':'var(--t)')+';font-family:'+(hasName?'inherit':'DM Mono,monospace')+'">'+esc(q.phone||'번호 없음')+'</div>';
     if(q.memo)o+='<div style="font-size:12px;color:var(--tm);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(q.memo)+'</div>';
+    if(visitHtml)o+='<div>'+visitHtml+'</div>';
     o+='</div>';
-    /* 날짜 */
-    if(q.date)o+='<div style="font-size:11px;color:var(--tm);flex-shrink:0;text-align:right;font-family:DM Mono,monospace">'+esc(q.date.slice(5))+'</div>';
-    /* 액션 버튼 */
-    o+='<div style="display:flex;gap:5px;flex-shrink:0">';
-    if(q.phone)o+='<a href="sms:'+esc(q.phone)+'" class="btn bsm" style="background:rgba(109,200,162,.1);color:var(--g);border:1px solid rgba(109,200,162,.2);text-decoration:none;font-size:12px;padding:5px 10px">💬</a>';
-    if(q.phone)o+='<a href="tel:'+esc(q.phone)+'" class="btn bsm" style="background:rgba(110,163,200,.1);color:var(--bl);border:1px solid rgba(110,163,200,.2);text-decoration:none;font-size:12px;padding:5px 10px">📞</a>';
-    o+='<button class="btn bsm" style="background:rgba(200,80,80,.08);color:var(--r);border:1px solid rgba(200,80,80,.18);font-size:12px;padding:5px 10px" data-qid="'+q.id+'" onclick="deleteInquiry(this.dataset.qid)">✕</button>';
+    /* 우측: 상담 작성 + 연락/삭제 */
+    o+='<div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0;align-items:flex-end">';
+    o+='<button class="btn bp bsm" style="font-size:12px;padding:6px 12px;white-space:nowrap" data-qid="'+q.id+'" onclick="inquiryToConsult(this.dataset.qid)">📝 상담 작성</button>';
+    o+='<div style="display:flex;gap:5px">';
+    if(q.phone)o+='<a href="tel:'+esc(q.phone)+'" class="btn bsm" style="background:rgba(110,163,200,.1);color:var(--bl);border:1px solid rgba(110,163,200,.2);text-decoration:none;font-size:12px;padding:5px 9px">📞</a>';
+    if(q.phone)o+='<a href="sms:'+esc(q.phone)+'" class="btn bsm" style="background:rgba(109,200,162,.1);color:var(--g);border:1px solid rgba(109,200,162,.2);text-decoration:none;font-size:12px;padding:5px 9px">💬</a>';
+    o+='<button class="btn bsm" style="background:rgba(200,80,80,.08);color:var(--r);border:1px solid rgba(200,80,80,.18);font-size:12px;padding:5px 9px" data-qid="'+q.id+'" onclick="deleteInquiry(this.dataset.qid)">✕</button>';
+    o+='</div>';
     o+='</div>';
     o+='</div>';
   });
   o+='</div>';
   return o;
+}
+/* 문의자 → 신규 상담 작성 (정보 prefill) */
+var _inquiryPrefill=null;
+function inquiryToConsult(qid){
+  var q=inquiries.find(function(x){return x.id===qid;});
+  if(!q)return;
+  _inquiryPrefill={
+    name:(q.name&&q.name!==q.phone)?q.name:'',
+    phone:q.phone||'', memo:q.memo||'',
+    visitDate:q.visitDate||'', visitTime:q.visitTime||''
+  };
+  showConsultForm();
 }
 
 
@@ -5314,8 +5426,10 @@ function openAddInquiry(){
     +'<input id="iq-ph" type="tel" placeholder="010-0000-0000" style="font-size:16px;letter-spacing:.04em" oninput="fmtPhone(this)" onkeydown="if(event.key===\'Enter\')document.getElementById(\'iq-nm\').focus()"></div>'
     +'<div class="f1" style="margin-bottom:11px"><label>이름 <span style="font-size:11px;color:var(--tm);font-weight:400">(선택)</span></label>'
     +'<input id="iq-nm" placeholder="미상" onkeydown="if(event.key===\'Enter\')document.getElementById(\'iq-memo\').focus()"></div>'
-    +'<div class="f1"><label>메모 <span style="font-size:11px;color:var(--tm);font-weight:400">(선택)</span></label>'
-    +'<input id="iq-memo" placeholder="문의 내용, 방문 예정 등" onkeydown="if(event.key===\'Enter\')saveInquiry()"></div>'
+    +'<div class="f1" style="margin-bottom:11px"><label>📅 방문 상담 예약 <span style="font-size:11px;color:var(--tm);font-weight:400">(선택)</span></label>'
+    +'<div style="display:flex;gap:8px"><input id="iq-visit-date" type="date" style="flex:1"><input id="iq-visit-time" type="time" style="width:120px"></div></div>'
+    +'<div class="f1"><label>키워드 / 메모 <span style="font-size:11px;color:var(--tm);font-weight:400">(선택)</span></label>'
+    +'<input id="iq-memo" placeholder="예: 초5 여학생 / 축가 문의 / 현수막 보고" onkeydown="if(event.key===\'Enter\')saveInquiry()"></div>'
     +'</div>'
     /* 일괄 등록 탭 */
     +'<div id="iq-bulk" style="display:none">'
@@ -5368,9 +5482,11 @@ function saveInquiry(){
   var nm=(document.getElementById('iq-nm')||{value:''}).value.trim();
   var ph=(document.getElementById('iq-ph')||{value:''}).value.trim();
   var memo=(document.getElementById('iq-memo')||{value:''}).value.trim();
+  var visitDate=(document.getElementById('iq-visit-date')||{value:''}).value;
+  var visitTime=(document.getElementById('iq-visit-time')||{value:''}).value;
   if(!ph){toast('연락처를 입력해주세요','⚠️');return;}
   var displayName=nm||ph; /* 이름 없으면 번호로 표시 */
-  inquiries.unshift({id:uid(),name:displayName,phone:ph,memo:memo,date:toDS(new Date())});
+  inquiries.unshift({id:uid(),name:displayName,phone:ph,memo:memo,visitDate:visitDate,visitTime:visitTime,date:toDS(new Date())});
   saveAll();
   var m=document.getElementById('mAddInquiry');if(m)m.remove();
   toast('문의자 추가됨 ❓');
@@ -7640,24 +7756,27 @@ function checkSlotConflict(el,day){
   if(conflicts.length){warn.textContent='⚠️ '+day+' '+h+' — 이미 '+conflicts.map(function(x){return x.s.name;}).join(', ')+'님 수업 있음';}
   else{warn.textContent='';}
 }
-function saveStudent(){
+async function saveStudent(){
   try{
   var name=(gv('s-nm')).trim();if(!name){toast('이름을 입력해주세요','⚠️');return;}
   var days=Array.from(document.querySelectorAll('#s-dpick .dpb.on')).map(function(b){return b.textContent;});
   var times={};days.forEach(function(d){var el=ge('ts-'+d);if(el)times[d]=el.value;});
   var old=editSid?students.find(function(s){return s.id===editSid;}):null;
+  var sid=editSid||uid();
+  /* 사진: 새 base64면 압축→Storage 업로드, 이미 URL이면 유지, 없으면 기존 유지 */
+  var _rawPhoto=gv('s-photo-data'), _photoRes;
+  if(_rawPhoto&&_rawPhoto.indexOf('data:image')===0){
+    toast('사진 업로드 중…','📤');
+    _photoRes=await processPhotoForSave(_rawPhoto,sid,(old&&old._photoKey)||'');
+  }else if(_rawPhoto&&_rawPhoto.indexOf('http')===0){
+    _photoRes={photo:_rawPhoto,_photoKey:''};
+  }else{
+    _photoRes={photo:(old&&old.photo)||'',_photoKey:(old&&old._photoKey)||''};
+  }
   var data={
-    id:editSid||uid(),name:name,
-    photo:'',
-    _photoKey:(function(){
-      var _p=gv('s-photo-data');
-      if(_p&&_p.length>100){
-        var _k=(old&&old._photoKey)?old._photoKey:'vsC_ph_'+uid();
-        try{localStorage.setItem(_k,_p);}catch(e){return '';}
-        return _k;
-      }
-      return (old&&old._photoKey)||'';
-    })(),
+    id:sid,name:name,
+    photo:_photoRes.photo,
+    _photoKey:_photoRes._photoKey,
     cls:gv('s-cls'),gd:gv('s-gd'),age:gv('s-age'),ph:gv('s-ph'),
     st:gv('s-st'),days:days,times:times,
     schedType:curSType,freq:curFreq,
@@ -8981,20 +9100,19 @@ function ciStartAutoSave(){
   },true);
 }
 
-function saveConsult(){
+async function saveConsult(){
   var name=(gv('ci-nm')).trim();if(!name){toast('성함을 입력해주세요','⚠️');return;}
   var days=Array.from(document.querySelectorAll('#ci-dpick .dpb.on')||[]).map(function(b){return b.textContent;});
   var genres=Array.from(document.querySelectorAll('.genre-ro.on')||[]).map(function(b){return b.textContent;});
   var audioData=gv('ci-audio-data'),audioType=gv('ci-audio-type');
-  var photoData=gv('ci-photo-data');
-  var photoKey='';
-  /* 사진은 항상 별도 localStorage 키에 저장 */
-  if(photoData&&photoData.length>100){
-    photoKey='vsP_'+uid();
-    try{localStorage.setItem(photoKey,photoData);}catch(e){photoKey='';toast('사진 용량이 커서 저장이 제한됩니다','⚠️');}
-  }
+  var cid=uid();
+  /* 사진: 새 base64면 압축→Storage 업로드, 이미 URL이면 유지 */
+  var photoData=gv('ci-photo-data'), _pr;
+  if(photoData&&photoData.indexOf('data:image')===0){toast('사진 업로드 중…','📤');_pr=await processPhotoForSave(photoData,cid,'');}
+  else if(photoData&&photoData.indexOf('http')===0){_pr={photo:photoData,_photoKey:''};}
+  else{_pr={photo:'',_photoKey:''};}
   var data={
-    id:uid(),name:name,photo:'',_photoKey:photoKey||'',
+    id:cid,name:name,photo:_pr.photo,_photoKey:_pr._photoKey,
     birthYear:gv('ci-age'),age:gv('ci-age')||'' ,gd:gv('ci-gd'),phone:gv('ci-ph'),job:gv('ci-job'),
     ref:gv('ci-ref'),refDetail:(ge('ci-ref-detail')&&ge('ci-ref-detail').value)||'',
     why:gv('ci-why'),genres:genres,goalS:gv('ci-goal-s'),goalL:gv('ci-goal-l'),
@@ -9094,7 +9212,7 @@ function evalHTML(ds){
     +'</body></html>';
 }
 
-function saveAndGoEval(){
+async function saveAndGoEval(){
   /* 신청서 저장 후 평가지 2페이지로 이동 */
   var name=(gv('ci-nm')).trim();
   if(!name){toast('먼저 성함을 입력해주세요','⚠️');return;}
@@ -9102,15 +9220,14 @@ function saveAndGoEval(){
   var days=Array.from(document.querySelectorAll('#ci-dpick .dpb.on')||[]).map(function(b){return b.textContent;});
   var genres=Array.from(document.querySelectorAll('.genre-ro.on')||[]).map(function(b){return b.textContent;});
   var audioData=gv('ci-audio-data'),audioType=gv('ci-audio-type');
-  var photoData=gv('ci-photo-data');
-  var photoKey='';
-  if(photoData&&photoData.length>100){
-    photoKey='vsP_'+uid();
-    try{localStorage.setItem(photoKey,photoData);}catch(e){photoKey='';}
-  }
   var cid=uid();
+  /* 사진: 새 base64면 압축→Storage 업로드, 이미 URL이면 유지 */
+  var photoData=gv('ci-photo-data'), _pr;
+  if(photoData&&photoData.indexOf('data:image')===0){toast('사진 업로드 중…','📤');_pr=await processPhotoForSave(photoData,cid,'');}
+  else if(photoData&&photoData.indexOf('http')===0){_pr={photo:photoData,_photoKey:''};}
+  else{_pr={photo:'',_photoKey:''};}
   var tempData={
-    id:cid,name:name,photo:'',_photoKey:photoKey||'',
+    id:cid,name:name,photo:_pr.photo,_photoKey:_pr._photoKey,
     birthYear:gv('ci-age'),age:gv('ci-age')||'' ,gd:gv('ci-gd'),phone:gv('ci-ph'),job:gv('ci-job'),
     ref:gv('ci-ref'),refDetail:(ge('ci-ref-detail')&&ge('ci-ref-detail').value)||'',
     why:gv('ci-why'),genres:genres,goalS:gv('ci-goal-s'),goalL:gv('ci-goal-l'),
@@ -9714,8 +9831,20 @@ function showConsultForm(cid){
   o+='</div></div>';
   ge('content').innerHTML=o;
   setTimeout(calcFee, 50);
-  /* 신규 작성 모드: 임시저장 복원 확인 */
-  if(!cid){
+  /* 문의자 "상담 작성"으로 진입 시 정보 prefill + 안내 배너 */
+  var _didPrefill=false;
+  if(!cid && _inquiryPrefill){
+    var _ip=_inquiryPrefill; _inquiryPrefill=null; _didPrefill=true;
+    if(ge('ci-nm'))ge('ci-nm').value=_ip.name||'';
+    if(ge('ci-ph'))ge('ci-ph').value=_ip.phone||'';
+    if(_ip.visitDate&&ge('ci-first-date'))ge('ci-first-date').value=_ip.visitDate;
+    var _ib=document.createElement('div');
+    _ib.style.cssText='background:rgba(110,163,200,.12);border:1px solid rgba(110,163,200,.3);border-radius:10px;padding:10px 16px;margin-bottom:12px;font-size:13px;color:var(--bl);line-height:1.55';
+    _ib.innerHTML='📞 <b>문의자 정보</b><br>'+(_ip.name?'이름: <b>'+esc(_ip.name)+'</b> · ':'')+'☎ '+esc(_ip.phone||'')+(_ip.memo?'<br>키워드: <b>'+esc(_ip.memo)+'</b>':'')+(_ip.visitDate?'<br>📅 방문 예약: '+esc(_ip.visitDate)+(_ip.visitTime?' '+esc(_ip.visitTime):''):'');
+    var _c=ge('content'); if(_c)_c.insertBefore(_ib,_c.firstChild);
+  }
+  /* 신규 작성 모드: 임시저장 복원 확인 (문의자 prefill 진입 시엔 생략) */
+  if(!cid && !_didPrefill){
     var _draft=null;
     try{_draft=JSON.parse(localStorage.getItem('vsC_draft')||'null');}catch(e){}
     if(_draft&&_draft.name){
