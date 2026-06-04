@@ -3413,8 +3413,18 @@ function initFirebase(){
     _startFirestoreListener();
   });
 }
-function _startFirestoreListener(){
+/* Firestore 인스턴스 — undefined 필드 자동 무시(첫 작업 전 1회 settings). */
+var _fsSettingsApplied=false;
+function _fs(){
   var db=firebase.firestore();
+  if(!_fsSettingsApplied){
+    _fsSettingsApplied=true;
+    try{db.settings({ignoreUndefinedProperties:true});}catch(e){}
+  }
+  return db;
+}
+function _startFirestoreListener(){
+  var db=_fs();
   var docRef=db.collection('studio').doc('data');
 
   /* 실시간 리스너 — Firestore 변경 시 즉시 반영 */
@@ -3548,11 +3558,11 @@ function _stripMediaForSync(list){
     return (a&&a.data&&a.data.length>50000)?Object.assign({},a,{data:'[saved]'}):a;
   });};
   return (list||[]).map(function(x){return Object.assign({},x,{
-    photo:(x.photo&&x.photo.length>5000)?'':x.photo,
+    photo:(x.photo&&x.photo.length>5000)?'':(x.photo||''),
     audios:stripA(x.audios),
     videos:stripA(x.videos),
     consentRec:(x.consentRec&&x.consentRec.data&&x.consentRec.data.length>50000)
-      ?Object.assign({},x.consentRec,{data:'[saved]'}):x.consentRec
+      ?Object.assign({},x.consentRec,{data:'[saved]'}):(x.consentRec||null)
   });});
 }
 /* strip으로 Firestore에서 사진을 빼기 전에, photo 필드에만 있고 로컬 백업키(_photoKey)가 없는
@@ -3566,7 +3576,7 @@ function _backupOrphanPhotos(list){
 }
 function _pushToFirestore(docRef){
   if(!docRef) return;
-  var db=firebase.firestore();
+  var db=_fs();
   docRef=docRef||db.collection('studio').doc('data');
   return docRef.set({
     students:_stripMediaForSync(students),
@@ -3594,7 +3604,7 @@ saveAll=function(){
   _saveAllOrig();
   /* Firestore에도 저장 */
   if(typeof firebase!=='undefined'&&firebase.apps&&firebase.apps.length){
-    var db=firebase.firestore();
+    var db=_fs();
     _showSyncStatus('🔄 저장 중...');
     _pushToFirestore(db.collection('studio').doc('data'));
   }
@@ -5523,7 +5533,7 @@ function _injectInitialInquiries(){
     toast(added+'명 문의자 자동 등록됨 📞');
     /* Firebase에도 즉시 동기화 */
     try{
-      var db2=firebase.firestore();
+      var db2=_fs();
       var ref2=db2.collection('studio').doc('data');
       ref2.set({inquiries:inquiries},{merge:true});
     }catch(e){console.error('Firebase inquiry sync error:',e);}
@@ -10011,7 +10021,7 @@ function resetWeekOvr(){
     onOk:function(){
       delete weekOvr[wk];
       saveAll();
-      try{var _db3=firebase.firestore();_db3.collection('studio').doc('data').set({weekOvr:weekOvr},{merge:true});}catch(e){}
+      try{var _db3=_fs();_db3.collection('studio').doc('data').set({weekOvr:weekOvr},{merge:true});}catch(e){}
       toast('✅ 초기화 완료');render();
     }
   });
