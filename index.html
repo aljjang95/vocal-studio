@@ -991,7 +991,7 @@ body::before { animation: bgFadeIn 1.5s ease forwards; }
     position: fixed;
     top: calc(env(safe-area-inset-top,0px) + 8px);
     left: 8px;
-    z-index: 999999;
+    z-index: 60;
     background: var(--s1);
     border: 1px solid var(--season-border, rgba(220,185,120,.25));
     color: var(--season-accent, var(--a));
@@ -1011,7 +1011,7 @@ body.is-mobile #viewToggleBtn {
   position: fixed;
   top: calc(env(safe-area-inset-top,0px) + 8px);
   left: 8px;
-  z-index: 999999;
+  z-index: 60;
   background: var(--s1);
   border: 1px solid var(--season-border, rgba(220,185,120,.25));
   color: var(--season-accent, var(--a));
@@ -3497,8 +3497,30 @@ function compressImage(base64, maxDim, quality){
 function uploadPhoto(base64, path){
   if(typeof firebase==='undefined'||typeof firebase.storage!=='function')
     return Promise.reject(new Error('storage SDK 미로드'));
-  var ref=firebase.storage().ref(path);
-  var up=ref.putString(base64,'data_url').then(function(){return ref.getDownloadURL();});
+  var waitAuth=function(){
+    return new Promise(function(resolve,reject){
+      try{
+        if(!firebase.auth){resolve();return;}
+        var auth=firebase.auth();
+        if(auth.currentUser){resolve(auth.currentUser);return;}
+        var done=false,unsub=null;
+        var cleanup=function(timer){try{if(unsub)unsub();}catch(e){}clearTimeout(timer);};
+        var timer=setTimeout(function(){if(done)return;done=true;cleanup(timer);reject(new Error('auth timeout'));},7000);
+        unsub=auth.onAuthStateChanged(function(user){
+          if(done||!user)return;
+          done=true;cleanup(timer);resolve(user);
+        });
+        auth.signInAnonymously().catch(function(e){
+          if(done)return;
+          done=true;cleanup(timer);reject(e);
+        });
+      }catch(e){reject(e);}
+    });
+  };
+  var up=waitAuth().then(function(){
+    var ref=firebase.storage().ref(path);
+    return ref.putString(base64,'data_url',{contentType:'image/jpeg'}).then(function(){return ref.getDownloadURL();});
+  });
   /* Storage 미활성/네트워크 지연 시 putString이 무한 대기 → 타임아웃으로 폴백 보장 */
   var to=new Promise(function(_,rej){setTimeout(function(){rej(new Error('upload timeout'));},15000);});
   return Promise.race([up,to]);
@@ -3511,7 +3533,7 @@ function processPhotoForSave(rawBase64, idForPath, prevPhotoKey){
       resolve({photo:(rawBase64||''), _photoKey:prevPhotoKey||''}); return;
     }
     compressImage(rawBase64,600,0.7).then(function(small){
-      uploadPhoto(small,'studio/photos/'+idForPath+'.jpg').then(function(url){
+      uploadPhoto(small,'studio/photos/'+idForPath+'_'+Date.now()+'.jpg').then(function(url){
         resolve({photo:url, _photoKey:''}); // 성공: URL만
       }).catch(function(){
         /* 업로드 실패 폴백: 압축본을 로컬 백업 */
@@ -4245,9 +4267,10 @@ function render(){
     if(!ge('ta')) return;
     var _monTgl='<button class="btn bsm" style="'+((_cfg.monCollapsed)?'background:var(--a);color:#08080d;':'background:rgba(255,255,255,.06);color:var(--ts);border:1px solid var(--b);')+'" onclick="toggleMonCollapse()" title="월요일 접기/펼치기">월'+((_cfg.monCollapsed)?'▶':'◀')+'</button>';
     var _sunTgl='<button class="btn bsm" style="'+((_cfg.sunCollapsed)?'background:var(--a);color:#08080d;':'background:rgba(255,255,255,.06);color:var(--ts);border:1px solid var(--b);')+'" onclick="toggleSunCollapse()" title="일요일 접기/펼치기">일'+((_cfg.sunCollapsed)?'▶':'◀')+'</button>';
+    var _compactSchedule=(typeof isCompactViewport==='function')?isCompactViewport():isMobile();
     ge('ta').innerHTML='<div class="wn-bar"><div class="wn-btn" onclick="wkOfs--;render()">&#8249;</div><div class="wn-lbl" id="wkLbl">&#x22EF;</div><div class="wn-btn" onclick="wkOfs++;render()">&#8250;</div>'+wkBtn+'</div>'
       +'<span style="font-size:12.5px;color:var(--tm);white-space:nowrap">'+_infoTxt+'</span>'
-      +(isMobile()?'':_monTgl+_sunTgl+'<button class="btn bm" onclick="openFlexWeek()">🔄 변동 배정</button><button class="btn bg2" onclick="openWE()">📋 주간 수정</button><button class="btn bg2" onclick="openSMSParser()">📩 문자 파싱</button><button class="btn bg2" onclick="resetWeekOvr()" style="background:rgba(200,114,114,.08);color:var(--r);border:1px solid rgba(200,114,114,.18)">🔄 초기화</button>');
+      +(_compactSchedule?'':_monTgl+_sunTgl+'<button class="btn bm" onclick="openFlexWeek()">🔄 변동 배정</button><button class="btn bg2" onclick="openWE()">📋 주간 수정</button><button class="btn bg2" onclick="openSMSParser()">📩 문자 파싱</button><button class="btn bg2" onclick="resetWeekOvr()" style="background:rgba(200,114,114,.08);color:var(--r);border:1px solid rgba(200,114,114,.18)">🔄 초기화</button>');
     /* 공휴일 API 로드 후 렌더링 */
     loadHolidaysForView(function(){
       ge('content').innerHTML=isMobile()?buildMobileSchedule():buildSchedule();
@@ -5009,6 +5032,9 @@ function isMobile(){
     if(_forceView==='pc')return false;
   }
   return window.innerWidth<=768;
+}
+function isCompactViewport(){
+  return window.innerWidth<=768 || document.body.classList.contains('is-mobile');
 }
 function mSR(){var c=ge('content');if(c){c.innerHTML=buildMobileSchedule();c.scrollTop=0;setTimeout(function(){attachMobileEvents();},50);}}
 function attachMobileEvents(){
