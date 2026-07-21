@@ -747,19 +747,25 @@ body.is-mobile .content{padding:14px 14px!important;min-width:0!important;max-wi
 /* 상단바 — 제목/버튼/동기화표시가 뒤엉켜 2줄로 깨지던 문제.
    한 줄 고정 + 제목만 축소(말줄임), 동기화표시는 줄을 차지하지 않도록 우하단에 띄운다. */
 body.is-mobile .topbar{
-  position:relative!important;height:auto!important;min-height:48px!important;
-  padding:6px 10px 6px 54px!important;
-  flex-wrap:nowrap!important;gap:6px!important;align-items:center!important;overflow:hidden!important;
+  position:relative!important;height:auto!important;min-height:54px!important;
+  padding:7px 10px 12px 54px!important;
+  flex-wrap:nowrap!important;gap:6px!important;align-items:flex-start!important;overflow:hidden!important;
 }
 body.is-mobile .pt{
-  font-size:17px!important;flex:1 1 auto!important;min-width:0!important;
+  font-size:17px!important;line-height:26px!important;flex:1 1 auto!important;min-width:0!important;
   white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
 }
-body.is-mobile .topbar .btn{padding:5px 9px!important;font-size:11.5px!important;flex-shrink:0!important;}
+body.is-mobile .topbar .btn{
+  padding:5px 9px!important;font-size:11.5px!important;
+  flex-shrink:0!important;white-space:nowrap!important;align-self:flex-start!important;
+}
+/* 진단용 버튼 — 폭이 좁은 모바일에서는 제목 자리를 먹으므로 숨긴다(PC에서는 그대로 노출) */
+body.is-mobile #topAdminVerifyBtn{display:none!important;}
+/* 동기화 표시는 버튼이 없는 좌하단(제목 아래)에 띄워 줄도 차지하지 않고 버튼과도 겹치지 않게 한다 */
 body.is-mobile #topSyncStatus{
-  position:absolute!important;left:auto!important;right:10px!important;bottom:1px!important;
-  width:auto!important;max-width:58%!important;
-  font-size:9.5px!important;line-height:1.1!important;text-align:right!important;
+  position:absolute!important;left:54px!important;right:auto!important;bottom:0!important;
+  width:auto!important;max-width:60%!important;
+  font-size:9px!important;line-height:11px!important;text-align:left!important;
   white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
   pointer-events:none!important;
 }
