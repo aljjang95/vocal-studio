@@ -3097,22 +3097,54 @@ function _persistableListForBackup(list){
     consentRec:(x.consentRec&&x.consentRec.data&&x.consentRec.data.length>50000)?Object.assign({},x.consentRec,{data:'[saved]'}):(x.consentRec||null)
   });});
 }
+/* 복구 스냅샷 보관 개수. 스냅샷 1개가 전체 데이터 크기(수백KB)라
+   localStorage(약 5~10MB)에서 사진·본데이터와 공간을 다툰다. */
+var RECOVERY_KEEP=3;
+var RECOVERY_PREFIX='vsC_recovery_';
+/* 추적목록(vsC_recovery_keys) 밖의 '고아' 스냅샷까지 전수 청소한다.
+   기존 구현은 추적목록만 정리해서, 목록 갱신이 실패한 스냅샷이 영구히 남았다. */
+function _pruneRecoverySnapshots(keep){
+  keep=(typeof keep==='number'&&keep>=0)?keep:RECOVERY_KEEP;
+  var all=[];
+  try{
+    for(var i=0;i<localStorage.length;i++){
+      var key=localStorage.key(i);
+      if(key&&key.indexOf(RECOVERY_PREFIX)===0&&/^\d+$/.test(key.slice(RECOVERY_PREFIX.length)))all.push(key);
+    }
+  }catch(e){return 0;}
+  all.sort(function(a,b){return (+b.slice(RECOVERY_PREFIX.length))-(+a.slice(RECOVERY_PREFIX.length));});
+  var removed=0;
+  all.slice(keep).forEach(function(k){try{localStorage.removeItem(k);removed++;}catch(e){}});
+  try{localStorage.setItem('vsC_recovery_keys',JSON.stringify(all.slice(0,keep)));}catch(e){}
+  return removed;
+}
 function _writeRecoverySnapshot(reason){
+  /* 실제 사고: 스냅샷 12개가 7.7MB를 점유해 localStorage가 9.97MB로 포화 →
+     레슨생 저장이 '용량부족'으로 실패하고 스케줄에 안 뜨는 문제가 발생했다.
+     원인은 (1) 새 스냅샷을 먼저 쓰고 나중에 정리해 포화 상태에서 쓰기가 터지고
+     (2) 그때 추적목록 갱신도 같이 실패해 고아 스냅샷이 쌓이며
+     (3) 그 실패를 catch로 조용히 삼켜 아무도 몰랐던 것.
+     따라서 쓰기 전에 먼저 자리를 비우고, 실패는 반드시 남긴다. */
   try{
     if(!Array.isArray(students)||!Array.isArray(consults))return;
+    _pruneRecoverySnapshots(Math.max(0,RECOVERY_KEEP-1));
     var snap={t:Date.now(),reason:reason||'save',counts:{students:students.length,logs:logs.length,consults:consults.length,payments:payments.length,inquiries:inquiries.length},data:{
       vsC_s:_persistableListForBackup(students),vsC_l:logs||[],vsC_wo:weekOvr||{},vsC_c:_persistableListForBackup(consults),vsC_p:payments||[],vsC_iq:inquiries||[]
     }};
     var text=JSON.stringify(snap);
-    localStorage.setItem('vsC_recovery_latest',text);
-    var keys=[];try{keys=JSON.parse(localStorage.getItem('vsC_recovery_keys')||'[]');}catch(e){}
-    var k='vsC_recovery_'+snap.t;
+    var k=RECOVERY_PREFIX+snap.t;
     localStorage.setItem(k,text);
-    keys.push(k);
-    while(keys.length>5){var old=keys.shift();try{localStorage.removeItem(old);}catch(e2){}}
-    localStorage.setItem('vsC_recovery_keys',JSON.stringify(keys));
-  }catch(e){}
+    localStorage.setItem('vsC_recovery_latest',text);
+    _pruneRecoverySnapshots(RECOVERY_KEEP);
+  }catch(e){
+    /* 스냅샷 실패는 본저장 실패가 아니므로 사용자 흐름은 막지 않되 조용히 넘기지 않는다.
+       남은 공간을 최대한 회수해 다음 본저장이 살아날 확률을 높인다. */
+    console.error('복구 스냅샷 저장 실패(저장공간 부족 가능):',e);
+    try{_pruneRecoverySnapshots(1);}catch(e2){}
+  }
 }
+/* 앱 로드 시 1회 — 과거 버전이 남긴 고아 스냅샷을 자동 회수한다(기기별 자가치유). */
+try{_pruneRecoverySnapshots(RECOVERY_KEEP);}catch(e){}
 function _rowIdentityKeys(x,prefix,idx){
   if(!x)return [prefix+':empty:'+idx];
   var keys=[];
