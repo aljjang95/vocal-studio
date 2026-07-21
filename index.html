@@ -4414,20 +4414,33 @@ function _showSyncStatus(msg){
 
 /* saveAll 오버라이드 — localStorage + Firestore 동시 저장 */
 var _saveAllOrig=saveAll;
+function _warnLocalOnlySync(msg){
+  _showSyncStatus(msg);
+  /* 개별 저장 액션의 성공 토스트(예: "문의자 추가됨")가 saveAll 직후 뜨면서
+     이 경고를 덮어쓰는 것을 막기 위해 한 박자 늦춰 다시 띄운다.
+     작은 상태뱃지만으로는 "다른 기기에 동기화 안 됨"이 묻히기 쉽다 — 반드시 토스트로도 알린다. */
+  setTimeout(function(){toast(msg,'⚠️');},900);
+}
 saveAll=function(){
   _saveAllOrig();
   _localProtectUntil=Date.now()+8000;
   if(_splitMigrationFrozen()){
-    _showSyncStatus('🧊 마이그레이션 동결 · 로컬 저장만 완료');
+    _warnLocalOnlySync('🧊 마이그레이션 동결 · 로컬 저장만 됨 · 다른 기기 미동기화');
     return;
   }
   /* 원격 초기 로드가 끝난 뒤의 사용자 저장만 Firestore로 보낸다.
      로드 중 자동 저장/기본 데이터 주입이 기존 서버 데이터를 덮어쓰는 사고를 막는다. */
   if(typeof firebase!=='undefined'&&firebase.apps&&firebase.apps.length){
+    if(!hasAdminSession()){
+      _warnLocalOnlySync('🔒 관리자 로그인 필요 · 로컬에만 저장됨 · 다른 기기 미동기화');
+      return;
+    }
     if(!_fbReady||_fbApplyingRemote){_showSyncStatus('⏸️ 동기화 대기');return;}
     var db=_fs();
     _showSyncStatus('🔄 저장 중...');
     _pushToFirestore(db.collection('studio').doc('data'));
+  }else{
+    _warnLocalOnlySync('⚠️ Firebase 미연결 · 로컬에만 저장됨');
   }
 };
 
