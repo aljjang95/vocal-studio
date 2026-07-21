@@ -1,0 +1,77 @@
+{
+  "status": "passed",
+  "passed": true,
+  "summary": "G007 hardening was validated by enforcing the final runtime source policy, converting stale public HTML into noindex redirects, adding Firebase Hosting ignores/rewrites, writing operations procedures, adding a regression gate script, running that script, scanning public HTML for phone-number patterns, and checking whitespace. Synthetic/local gates passed; live Firebase gates remain explicitly blocked by authentication under G002/G004/G005.",
+  "artifactRefs": [
+    { "id": "g007-artifact-1", "path": "tmp/ultragoal-g007/evidence.json", "kind": "g007Evidence", "sha256": "4260737bea9807d901f5412dc2a172c1c0183fff15d0c6c915fb07c40257500c", "description": "Consolidated G007 implementation and verification evidence." },
+    { "id": "g007-artifact-2", "path": "scripts/regression-gates.mjs", "kind": "regressionGateScript", "sha256": "83da700fc139b10463191877c6ce0840335ac6f4efbf882ecfd62cebe5740be2", "description": "Node regression gate enforcing runtime source policy and invariant checks." },
+    { "id": "g007-artifact-3", "path": "docs/OPERATIONS.md", "kind": "operationsDocumentation", "sha256": "588488d93d1dc4f1473e97c33db59cfcf9407d63601b9820c342739ae761c15f", "description": "Auth, migration, media recovery, release, and regression procedure documentation." },
+    { "id": "g007-artifact-4", "path": "firebase.json", "kind": "hostingConfiguration", "sha256": "1a47ed2159bef9737421b0a0e4362c3c193ab188236a8ead7bc6bd70469d92d7", "description": "Firebase rules plus hosting ignore/redirect/header configuration enforcing deployable source policy." }
+  ],
+  "checks": [
+    { "name": "runtime source policy", "status": "passed", "evidence": "Legacy root HTML files were replaced with noindex redirects to index.html and firebase.json ignores stale modules, docs, workflow artifacts, temp evidence, and rules files from hosting deploys." },
+    { "name": "operations documentation", "status": "passed", "evidence": "docs/OPERATIONS.md documents auth/rules release, split migration, media recovery, runtime source policy, and regression/manual live gates." },
+    { "name": "regression script", "status": "passed", "evidence": "node scripts/regression-gates.mjs passed with ok=true, inlineScripts=7, invariantCount=31, and indexSha256=b5cc93f49c43ce9dc45df8200a10b95297b80dc6a7e20ee16182fa3ac44e59aa." },
+    { "name": "public phone pattern scan", "status": "passed", "evidence": "search for Korean/mobile phone-number regex across index.html, legacy wrappers, and session wrapper returned no matches." },
+    { "name": "whitespace diff check", "status": "passed", "evidence": "git diff --check over affected runtime/docs/scripts/config files passed with only LF-to-CRLF warnings." }
+  ],
+  "contractCoverage": [
+    {
+      "id": "coverage-final-runtime-source",
+      "contractRef": "G007 objective",
+      "obligation": "Choose and enforce the final runtime source structure, deleting or wiring stale modules.",
+      "status": "covered",
+      "surfaceEvidenceRefs": ["surface-runtime-source-policy", "surface-hosting-config"],
+      "adversarialCaseRefs": ["legacy-html-not-runtime", "hosting-ignores-stale-artifacts"],
+      "artifactRefs": ["g007-artifact-1", "g007-artifact-2", "g007-artifact-4"]
+    },
+    {
+      "id": "coverage-procedures",
+      "contractRef": "G007 objective",
+      "obligation": "Document auth, migration, recovery, and release procedures.",
+      "status": "covered",
+      "surfaceEvidenceRefs": ["surface-operations-docs"],
+      "adversarialCaseRefs": ["manual-live-gates-explicit"],
+      "artifactRefs": ["g007-artifact-1", "g007-artifact-3"]
+    },
+    {
+      "id": "coverage-regression-gates",
+      "contractRef": "G007 objective",
+      "obligation": "Add regression tests/manual gates for every invariant and complete final architect/QA review evidence.",
+      "status": "covered",
+      "surfaceEvidenceRefs": ["surface-regression-gates", "surface-final-review"],
+      "adversarialCaseRefs": ["anonymous-auth-forbidden", "auto-attendance-no-write", "phone-pattern-scan"],
+      "artifactRefs": ["g007-artifact-1", "g007-artifact-2"]
+    }
+  ],
+  "surfaceEvidence": [
+    { "id": "surface-runtime-source-policy", "surface": "runtime source policy", "description": "index.html is the only authoritative runtime; legacy/session HTML is noindex redirect-only.", "evidence": "legacy HTML wrapper contents and regression-gates script", "files": ["index.html", "vocal-studio.html", "vocal-studi.html", "gjc-session-2026-06-18T07-40-22-369Z_019ed9ac-83e1-7000-ac17-5d0ff48ca429.html"], "status": "passed", "contractRef": "G007 objective: final runtime source structure", "invocation": "node scripts/regression-gates.mjs", "result": "passed", "artifactRefs": ["g007-artifact-1", "g007-artifact-2"], "details": "Wrapper files contain no Firebase SDK or stale state bootstrap." },
+    { "id": "surface-hosting-config", "surface": "Firebase Hosting configuration", "description": "Hosting deploy ignores stale modules and non-runtime artifacts and rewrites legacy paths to index.html.", "evidence": "firebase.json hosting.public, ignore, rewrites, and headers", "files": ["firebase.json"], "status": "passed", "contractRef": "G007 objective: enforce final runtime structure", "invocation": "node scripts/regression-gates.mjs", "result": "passed", "artifactRefs": ["g007-artifact-2", "g007-artifact-4"], "details": "Ignore list includes .gjc, tmp, scripts, docs, js, rules, legacy HTML, and session artifacts." },
+    { "id": "surface-operations-docs", "surface": "release operations docs", "description": "Documented auth/rules deploy, split migration, media recovery, and regression/manual live gates.", "evidence": "docs/OPERATIONS.md", "files": ["docs/OPERATIONS.md"], "status": "passed", "contractRef": "G007 objective: document procedures", "invocation": "node scripts/regression-gates.mjs docs section assertions", "result": "passed", "artifactRefs": ["g007-artifact-3"], "details": "Docs explicitly keep G002/G004/G005 live gates blocked until Firebase admin auth is provided." },
+    { "id": "surface-regression-gates", "surface": "regression gate script", "description": "Node script enforces script parse, source policy, no anonymous auth, no-write attendance kill switch, helper API presence, SW version, and docs sections.", "evidence": "node scripts/regression-gates.mjs output", "files": ["scripts/regression-gates.mjs"], "status": "passed", "contractRef": "G007 objective: add regression tests/manual gates", "invocation": "node scripts/regression-gates.mjs", "result": "passed", "artifactRefs": ["g007-artifact-1", "g007-artifact-2"], "details": "Output ok=true invariantCount=31 inlineScripts=7." },
+    { "id": "surface-final-review", "surface": "final QA/review evidence", "description": "QA artifacts capture local hardening pass and aggregate live blockers.", "evidence": "tmp/ultragoal-g007/evidence.json and executor QA", "files": ["tmp/ultragoal-g007/evidence.json", "tmp/ultragoal-g007/executor-qa.json"], "status": "verified", "contractRef": "G007 objective: final architect/QA review evidence", "invocation": "gjc ultragoal review with G007 evidence and executor QA", "result": "passed", "artifactRefs": ["g007-artifact-1"], "details": "Aggregate blockers remain only the already checkpointed Firebase-auth live gates." }
+  ],
+  "adversarialCases": [
+    { "id": "legacy-html-not-runtime", "status": "passed", "result": "passed", "contractRef": "G007 objective: stale module cleanup", "scenario": "A legacy HTML path is requested or accidentally deployed.", "expectedBehavior": "The file contains only a noindex redirect to index.html and no stale app code.", "artifactRefs": ["g007-artifact-1", "g007-artifact-2"] },
+    { "id": "hosting-ignores-stale-artifacts", "status": "passed", "result": "passed", "contractRef": "G007 objective: final runtime source enforcement", "scenario": "Firebase Hosting deploy is run from the repo root.", "expectedBehavior": "Hosting ignore excludes .gjc, tmp, scripts, docs, js, rules, legacy wrappers, and GJC session artifacts.", "artifactRefs": ["g007-artifact-2", "g007-artifact-4"] },
+    { "id": "anonymous-auth-forbidden", "status": "passed", "result": "passed", "contractRef": "G002/G007 invariant", "scenario": "Regression accidentally reintroduces anonymous Firebase sign-in.", "expectedBehavior": "regression-gates fails if signInAnonymously appears in index.html.", "artifactRefs": ["g007-artifact-2"] },
+    { "id": "auto-attendance-no-write", "status": "passed", "result": "passed", "contractRef": "G002/G003/G007 invariant", "scenario": "Regression changes autoFillPastAttendance into a writer again.", "expectedBehavior": "regression-gates requires autoFillPastAttendance() to remain a return-0 no-write stub.", "artifactRefs": ["g007-artifact-2"] },
+    { "id": "phone-pattern-scan", "status": "passed", "result": "passed", "contractRef": "G001/G002/G007 invariant", "scenario": "Public root HTML accidentally includes a phone-number-like static PII literal.", "expectedBehavior": "The explicit phone regex search across runtime/wrapper HTML returns no matches.", "artifactRefs": ["g007-artifact-1"] },
+    { "id": "manual-live-gates-explicit", "status": "passed", "result": "passed", "contractRef": "G007 objective: manual gates", "scenario": "Live Firebase auth is unavailable on the workstation.", "expectedBehavior": "Operations docs and evidence clearly mark rules deploy, unauthorized denial, live split migration, and live Storage upload as manual/live gates blocked by Firebase admin auth.", "artifactRefs": ["g007-artifact-1", "g007-artifact-3"] }
+  ],
+  "e2eStatus": "passed",
+  "redTeamStatus": "passed",
+  "e2eCommands": [
+    "node scripts/regression-gates.mjs",
+    "search phone regex across public root HTML files",
+    "git diff --check over affected runtime/docs/scripts/config files"
+  ],
+  "redTeamCommands": [
+    "regression-gates anonymous auth prohibition",
+    "regression-gates auto-attendance no-write assertion",
+    "legacy HTML Firebase/stale bootstrap absence checks",
+    "public phone pattern scan"
+  ],
+  "evidence": "G007 local hardening QA passed. Evidence is in tmp/ultragoal-g007/evidence.json. Aggregate live blockers remain G002/G004/G005 Firebase admin-auth gates.",
+  "blockers": []
+}

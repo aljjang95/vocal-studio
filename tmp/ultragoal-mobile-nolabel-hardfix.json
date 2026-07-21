@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "goalId": "G012",
+  "title": "Mobile schedule no-label default viewport",
+  "timestamp": "2026-06-19T07:48:48.956667+00:00",
+  "userReport": "User cleared mobile site data but still perceived the mobile schedule as unchanged; persistent 미배정/수강중/배정 labels were unacceptable in the default schedule viewport.",
+  "changes": [
+    "Collapsed mobile schedule 배정/미배정/수강중/수정 controls behind a single default-visible 배치 button.",
+    "Moved detailed labels into an explicit expandable bottom sheet only after tapping 배치.",
+    "Ignored the old vsC_mobileSchedSummaryOpen key by switching to vsC_mobileSchedPanelOpen so stale local state cannot auto-open the old panel.",
+    "Bumped service worker cache version to vs-v2-2026-06-19-mobile-tabs-nolabel-hardfix.",
+    "Updated regression gates to enforce collapsed mobile schedule labels."
+  ],
+  "verification": {
+    "regressionGates": {
+      "command": "node scripts/regression-gates.mjs",
+      "ok": true,
+      "inlineScripts": 7,
+      "invariantCount": 46,
+      "indexSha256": "5209513c6fc86bb3a2a3f70ab86b47e26e470fa1e421b18ffaa98e9cd4f415e3"
+    },
+    "diffCheck": {
+      "command": "git diff --check -- index.html sw.js scripts/regression-gates.mjs",
+      "ok": true,
+      "note": "Only sw.js LF-to-CRLF warning observed."
+    },
+    "localMobileNoLabel": {
+      "viewport": "360x740",
+      "dayVisibleBadLabels": 0,
+      "weekVisibleBadLabels": 0,
+      "defaultVisibleAction": "배치",
+      "ok": true
+    },
+    "deploy": {
+      "command": "npx firebase-tools deploy --only hosting --project hlbvocalstudio-72481 --json",
+      "ok": true,
+      "hostingVersion": "projects/131827810958/sites/hlbvocalstudio-72481/versions/00a8640b7756fedd"
+    },
+    "deployedServiceWorker": {
+      "url": "https://hlbvocalstudio-72481.web.app/sw.js?nolabel=20260619",
+      "version": "vs-v2-2026-06-19-mobile-tabs-nolabel-hardfix",
+      "ok": true
+    },
+    "deployedMobileScreenshot": {
+      "path": "tmp/mobile-week-nolabel-proof.png",
+      "viewport": "360x740",
+      "sourceHasNoLabel": true,
+      "dayTabBottom": 107,
+      "weekTabBottom": 107,
+      "placementButtonTop": 630,
+      "visibleBadLabels": 0,
+      "ok": true
+    }
+  },
+  "hashes": {
+    "indexSha256": "5209513c6fc86bb3a2a3f70ab86b47e26e470fa1e421b18ffaa98e9cd4f415e3",
+    "swSha256": "235e6b6888326309727177a301c56f3d96052ed3ce1345319b7204c6017641d1",
+    "regressionGatesSha256": "07865226f2e37e877442e1aa17076c7e81faf8961900ce44658fa946fc1a27ed"
+  },
+  "residualBlockers": [
+    "G004/G005 live split-write and Storage upload receipts still require a logged-in admin browser to run 관리자 검증 → 라이브 G004/G005 검증 and provide/copy the JSON receipt."
+  ]
+}

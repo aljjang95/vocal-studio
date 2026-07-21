@@ -1,0 +1,70 @@
+{
+  "checkedAt": "2026-06-19T04:38:21.631210+00:00",
+  "scope": "Post-deploy update-candidate audit requested by user",
+  "currentState": {
+    "ultragoal": "blocked on G004/G005 live authenticated verification only",
+    "regressionGates": "node scripts/regression-gates.mjs passed with invariantCount=36",
+    "whitespace": "git diff --check passed for touched files",
+    "deployedWorkflowSmoke": "today/consult/students/logs/payment/timeline/schedule all rendered without browser errors in synthetic deployed data"
+  },
+  "candidates": [
+    {
+      "priority": "P0",
+      "title": "G004/G005 live verification lane",
+      "why": "The remaining ultragoal blockers are not code-complete blockers; they are authenticated-browser verification blockers. Agent headless session has no Firebase Auth user and cannot attach to the already-running Chrome profile without CDP.",
+      "evidence": [
+        "gjc ultragoal status: G004/G005 blocked",
+        "tmp/ultragoal-live-g004-g005-reprobe.json",
+        "browser probe split=admin-auth-required, media=storage-auth-required"
+      ],
+      "recommendedUpdate": "Add an in-app admin-only verification panel that runs split migration dry-run/write probe and media queue upload probe from the user’s logged-in browser, then copies/downloads a JSON receipt."
+    },
+    {
+      "priority": "P1",
+      "title": "Consult form “보류 저장” naming/behavior conflict",
+      "why": "There are now two different “보류” meanings: the new saved-consult 보류 tab, and the older form-local single draft stored as vsC_pending. This can confuse the exact workflow the user described.",
+      "evidence": [
+        "index.html saveConsultPending/loadPendingConsult",
+        "deployed consult form still exposes 보류 저장"
+      ],
+      "recommendedUpdate": "Rename form-local 보류 저장 to 임시저장, clarify it as a draft, and consider multiple saved drafts or direct “save as 보류 상담” for incomplete applications."
+    },
+    {
+      "priority": "P1",
+      "title": "Dashboard password gate consolidation",
+      "why": "The app now uses Firebase admin auth, but dashboard still has a separate local password gate with initial password 0000. That is extra friction and a confusing second auth model.",
+      "evidence": [
+        "index.html askDashboardPw/changeDashboardPw copy includes initial password 0000"
+      ],
+      "recommendedUpdate": "For verified admin sessions, bypass or retire the local dashboard password; keep an optional local privacy lock only if explicitly needed."
+    },
+    {
+      "priority": "P2",
+      "title": "Legacy consult frequency helper cleanup",
+      "why": "Function ciSetFreq(el,n) references undefined variable v. Search shows current UI uses ciFixFreq/ciFlexFreq instead, so it appears dead, but leaving it risks a future ReferenceError if reused.",
+      "evidence": [
+        "index.html lines around ciSetFreq: if(t2)t2.style.display=(v===2||v==='2')"
+      ],
+      "recommendedUpdate": "Remove ciSetFreq or correct it to use n, and add a regression invariant for consult frequency controls."
+    },
+    {
+      "priority": "P2",
+      "title": "Missing-attendance proposal controls need skip/snooze",
+      "why": "The fixed schedule collector can surface many historical weekday proposals. Confirmation now works, but operators still need a way to deliberately ignore an old non-lesson without writing 출석/결석.",
+      "evidence": [
+        "deployed browser synthetic workflow surfaced two historical proposals for one fixed weekly student"
+      ],
+      "recommendedUpdate": "Add “이번 항목 숨김/수업 아님” with an audit record, plus date-range filter."
+    },
+    {
+      "priority": "P2",
+      "title": "Mobile schedule summary row refinement",
+      "why": "The tab-blocking issue is fixed; the summary now lives below 일별/주간. A further update can make the 미배정 list collapsible so names do not consume vertical space when there are many.",
+      "evidence": [
+        "deployed mobile workflow text shows 일별/주간 then 수강중 2명 / 미배정 1명 summary row"
+      ],
+      "recommendedUpdate": "Make 미배정 row a compact collapsible chip with one-tap 변동 배정."
+    }
+  ],
+  "indexSha256": "19d5583010974a41f4aa53d610141fb42cbeb98810db2eae32660074bb599ff8"
+}

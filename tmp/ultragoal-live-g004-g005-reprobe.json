@@ -1,0 +1,23 @@
+{
+  "checkedAt": "2026-06-18T19:34:26.463149+00:00",
+  "context": "After user reported successful admin login in their own Chrome session, agent attempted to access a logged-in browser session and reprobed deployed headless gates.",
+  "chromeProfileAttach": {
+    "attempted": true,
+    "profile": "C:/Users/Administrator/AppData/Local/Google/Chrome/User Data/Default",
+    "result": "blocked: Chrome profile already running without attachable localhost CDP endpoint; GJC will not kill/relaunch existing Chrome."
+  },
+  "deployedHeadlessProbe": {
+    "url": "https://hlbvocalstudio-72481.web.app/?uxdeploy=1",
+    "authUser": null,
+    "splitMigrationWrite": {
+      "status": "blocked",
+      "errorCode": "admin-auth-required"
+    },
+    "mediaUploadQueue": {
+      "status": "blocked",
+      "errorCode": "storage-auth-required",
+      "queued": 1
+    }
+  },
+  "conclusion": "G004/G005 live write/upload gates remain blocked from this agent environment until the user either exposes an attachable CDP browser session for the already logged-in Chrome profile or runs/authorizes equivalent in-app verification from that logged-in session."
+}

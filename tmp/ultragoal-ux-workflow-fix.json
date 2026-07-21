@@ -1,0 +1,53 @@
+{
+  "checkedAt": "2026-06-18T19:31:42.667346+00:00",
+  "story": "User-reported UX fixes after admin login: attendance proposal rows must disappear after confirmation; mobile schedule header must stop blocking day/week tabs; consult applications need a hold tab for long-waiting applicants.",
+  "filesChanged": [
+    "index.html",
+    "scripts/regression-gates.mjs"
+  ],
+  "indexSha256": "19d5583010974a41f4aa53d610141fb42cbeb98810db2eae32660074bb599ff8",
+  "regressionGate": {
+    "command": "node scripts/regression-gates.mjs",
+    "ok": true,
+    "invariantCount": 36
+  },
+  "browserVerification": {
+    "localFile": "file:///C:/Users/Administrator/Desktop/vocal-studio/index.html?uxverify=1",
+    "viewport": "390x844",
+    "attendanceBatch": {
+      "beforeCount": 2,
+      "clickedOk": true,
+      "afterCount": 0,
+      "proposalLogsWritten": 2,
+      "panelAfterGone": true
+    },
+    "consultHold": {
+      "holdStatePersisted": true,
+      "holdTabCountVisible": true,
+      "holdTabShowsHeldConsult": true
+    },
+    "mobileSchedule": {
+      "topbarHasNoStudentSummary": true,
+      "contentShowsCompactSummary": true,
+      "dayWeekTabsVisible": true
+    }
+  },
+  "notes": [
+    "Attendance proposal panel now shows displayed/total count and explicit immediate-removal copy.",
+    "Batch confirmation acts on the rendered proposal set and reports whether more proposals remain.",
+    "Mobile schedule removes duplicate topbar schedule metadata and moves active/unassigned summary into a compact content row.",
+    "Consult cards can move between 대기 and 보류; held consults are excluded from schedule slots and bulk SMS."
+  ],
+  "deployedVerification": {
+    "checkedAt": "2026-06-18T19:32:43.691437+00:00",
+    "url": "https://hlbvocalstudio-72481.web.app/?uxdeploy=1",
+    "hostingVersion": "projects/131827810958/sites/hlbvocalstudio-72481/versions/9bc769edcb13f0eb",
+    "browserResult": {
+      "attendanceBefore": 2,
+      "attendanceAfter": 0,
+      "panelAfterGone": true,
+      "consultHoldOk": true,
+      "mobileScheduleOk": true
+    }
+  }
+}

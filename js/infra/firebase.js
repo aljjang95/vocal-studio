@@ -8,7 +8,7 @@
    ═══════════════════════════════════════════════════════ */
 
 /* ── Firebase 동기화 상태 변수 ── */
-var _fbReady=false, _fbSyncing=false, _fbUnsub=null, _skipRenderCount=0;
+var _fbReady=false, _fbSyncing=false, _fbUnsub=null, _skipRenderCount=0, _fbApplyingRemote=false;
 
 /* ── Firebase 앱 설정 ── */
 var firebaseConfig={
@@ -32,12 +32,14 @@ function initFirebase(){
   /* 실시간 리스너 — Firestore 변경 시 즉시 반영 */
   _fbUnsub=docRef.onSnapshot(function(snap){
     if(!snap.exists){
-      /* 첫 실행: localStorage 데이터를 Firestore로 업로드 */
-      _pushToFirestore(docRef);
+      /* 원격 문서가 없을 때 기본 39명/빈 상태가 서버를 덮지 않도록 실제 로컬 데이터가 있을 때만 부트스트랩 */
+      if(_hasBootstrapDataForFirestore()) _pushToFirestore(docRef);
+      else _showSyncStatus('⚠️ 원격 데이터 없음');
       return;
     }
     var d=snap.data();
     /* 원격 변경사항을 메모리 + localStorage에 반영 */
+    _fbApplyingRemote=true;
     try{
       var _fbStudents=d.students||[];
       /* 기본 39명 중 Firebase에 없는 사람 병합 */
@@ -67,12 +69,22 @@ function initFirebase(){
     }
     if(_skipRenderCount>0) _skipRenderCount--;
     _showSyncStatus('✅ 동기화됨');
+    _fbApplyingRemote=false;
   },function(err){
     console.error('Firestore 리스너 오류',err);
     _showSyncStatus('⚠️ 오프라인');
+    _fbApplyingRemote=false;
   });
 }
 
+function _hasBootstrapDataForFirestore(){
+  try{
+    var hasRealStudents=Array.isArray(students)&&students.length>_DEFAULT_STUDENTS.length;
+    var hasActivity=(Array.isArray(logs)&&logs.length>0)||(Array.isArray(consults)&&consults.length>0)||(Array.isArray(payments)&&payments.length>0)||(Array.isArray(inquiries)&&inquiries.length>0);
+    var hasWeek=weekOvr&&Object.keys(weekOvr).length>0;
+    return hasRealStudents||hasActivity||hasWeek;
+  }catch(e){return false;}
+}
 /* ── Firestore에 전체 데이터 업로드 ── */
 function _pushToFirestore(docRef){
   if(!docRef) return;
@@ -103,8 +115,10 @@ function _showSyncStatus(msg){
 var _saveAllOrig=saveAll;
 saveAll=function(){
   _saveAllOrig();
-  /* Firestore에도 저장 */
+  /* 원격 초기 로드가 끝난 뒤의 사용자 저장만 Firestore로 보낸다.
+     로드 중 자동 저장/기본 데이터 주입이 기존 서버 데이터를 덮어쓰는 사고를 막는다. */
   if(typeof firebase!=='undefined'&&firebase.apps&&firebase.apps.length){
+    if(!_fbReady||_fbApplyingRemote){_showSyncStatus('⏸️ 동기화 대기');return;}
     var db=firebase.firestore();
     _showSyncStatus('🔄 저장 중...');
     _pushToFirestore(db.collection('studio').doc('data'));

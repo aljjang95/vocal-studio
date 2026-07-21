@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "storyId": "G017",
+  "title": "Mobile weekly reschedule tap fix",
+  "createdAt": "2026-06-19T10:20:28.975545+00:00",
+  "objective": "Resolve the mobile weekly schedule report that a Saturday 1pm student could not be changed/tapped into the 3pm slot by making mobile week/day cells tappable after every schedule rerender, deploying Firebase and Vercel, and recording verification evidence.",
+  "diagnosis": {
+    "rootCause": "Several schedule mutation paths replaced #content with buildMobileSchedule()/buildSchedule() without re-running attachMobileEvents(), leaving newly-rendered mobile [data-cell] elements without click handlers. Weekly cells also had no inline fallback handler, so a mobile user could hit a dead empty slot after a reschedule/remove/bulk/update refresh.",
+    "brokenPreFixReproduction": {
+      "path": "manual #content.innerHTML=buildMobileSchedule() without attachMobileEvents",
+      "cell": "[data-cell][data-day=\"토\"][data-time=\"15:00\"]",
+      "resultBeforeFix": {
+        "exists": true,
+        "hasInline": false,
+        "qsDay": "",
+        "qsTime": "",
+        "modalOpen": false
+      }
+    }
+  },
+  "changes": [
+    {
+      "file": "index.html",
+      "summary": "Added renderScheduleContent() so schedule redraws always reattach mobile events."
+    },
+    {
+      "file": "index.html",
+      "summary": "Added mCellClick(el,event) and assigns cell onclick handlers idempotently from attachMobileEvents()."
+    },
+    {
+      "file": "index.html",
+      "summary": "Added inline onclick fallback plus mobile tap affordance styles to mobile week/day empty cells."
+    },
+    {
+      "file": "index.html",
+      "summary": "Replaced all direct schedule #content redraw paths with renderScheduleContent()."
+    },
+    {
+      "file": "sw.js",
+      "summary": "Bumped service worker cache to vs-v2-2026-06-19-mobile-week-tap-fix."
+    },
+    {
+      "file": "scripts/regression-gates.mjs",
+      "summary": "Added invariants for mobile rerender/cell tap fallback and updated SW version gate."
+    }
+  ],
+  "verification": {
+    "regressionGates": {
+      "command": "node scripts/regression-gates.mjs",
+      "ok": true,
+      "inlineScripts": 7,
+      "invariantCount": 54,
+      "indexSha256": "9e161e81d78e7dcb345df814d556b0492cbea3e8a56be1d237fe56277694eece"
+    },
+    "localMobileManualRedrawTap": {
+      "viewport": "360x740",
+      "cell": "토 15:00",
+      "hasInlineHandler": true,
+      "actualPointerClickOpenedQuickSlot": true,
+      "afterClick": {
+        "qsDay": "토",
+        "qsTime": "15:00",
+        "modalClass": "ov open",
+        "selectableStudentVisible": true
+      }
+    },
+    "localMobileRescheduleFlow": {
+      "scenario": "Synthetic 수강중 fixed student at 토 13:00 changed to 토 15:00 through openTempReschedule/saveTempReschedule.",
+      "studentAt13AfterSave": false,
+      "studentAt15AfterSave": true,
+      "postSaveCellStillTappable": true,
+      "postSaveTap": {
+        "cell": "토 16:00",
+        "qsDay": "토",
+        "qsTime": "16:00",
+        "modalOpen": true
+      }
+    },
+    "firebaseDeployedMobileTap": {
+      "url": "https://hlbvocalstudio-72481.web.app/?tapfix=20260619b",
+      "cellHasInlineHandler": true,
+      "hasMCellClick": true,
+      "tapResult": {
+        "qsDay": "토",
+        "qsTime": "15:00",
+        "modalOpen": true
+      }
+    },
+    "vercelDeployedMobileRescheduleFlow": {
+      "url": "https://vocal-studio-tan.vercel.app/?tapfix=20260619b",
+      "hasMCellClick": true,
+      "studentAt13AfterSave": false,
+      "studentAt15AfterSave": true,
+      "postSaveCellStillTappable": true,
+      "postSaveTap": {
+        "cell": "토 16:00",
+        "qsDay": "토",
+        "qsTime": "16:00",
+        "modalOpen": true
+      }
+    },
+    "serviceWorkerVersion": "vs-v2-2026-06-19-mobile-week-tap-fix"
+  },
+  "deployments": {
+    "firebaseHostingVersion": "projects/131827810958/sites/hlbvocalstudio-72481/versions/12e3698126f8f87d",
+    "firebaseFreshSwUrl": "https://hlbvocalstudio-72481.web.app/sw.js?tapfix=20260619",
+    "vercelProductionAlias": "https://vocal-studio-tan.vercel.app",
+    "vercelDeploymentId": "dpl_GNnRcYVZsp7eeiUF3V8RL5rPcyG3",
+    "vercelDeploymentUrl": "https://vocal-studio-c453wc6mk-aljjang95s-projects.vercel.app",
+    "vercelFreshSwUrl": "https://vocal-studio-tan.vercel.app/sw.js?tapfix=20260619"
+  },
+  "hashes": {
+    "indexSha256": "9e161e81d78e7dcb345df814d556b0492cbea3e8a56be1d237fe56277694eece",
+    "swSha256": "0d7d3440590b85971946d36f495839cc5b0f5b6d6c77afbab4862c275a685770",
+    "regressionGatesSha256": "ee3a9239c49d3a900be5ef6fcd4b24089f9b85c9f95971b22a92daf9efcb9e61"
+  },
+  "remainingAggregateBlockers": [
+    {
+      "goalId": "G004",
+      "status": "blocked",
+      "blocker": "Live split Firestore write/dual-read receipt still requires an authenticated admin browser session."
+    },
+    {
+      "goalId": "G005",
+      "status": "blocked",
+      "blocker": "Live Storage upload/cross-device media verification still requires an authenticated admin browser session."
+    }
+  ]
+}

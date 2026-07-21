@@ -1,0 +1,76 @@
+{
+  "createdAt": "2026-06-18T12:07:18.394766",
+  "currentRemoteUpdateTime": "2026-06-18T02:42:26.007491Z",
+  "currentCounts": {
+    "students": 39,
+    "logs": 0,
+    "weekOvr": 0,
+    "consults": 1,
+    "payments": 0,
+    "inquiries": 1
+  },
+  "recoveredCounts": {
+    "students": 47,
+    "logs": 85,
+    "weekOvr": 14,
+    "consults": 16,
+    "payments": 13,
+    "inquiries": 185
+  },
+  "sources": {
+    "students": {
+      "profile": "Profile 5",
+      "origin": "_https://aljjang95.github.io",
+      "item": "vsC_s",
+      "seq": 255660,
+      "file": "011575.ldb",
+      "vlen": 308323,
+      "count": 47
+    },
+    "logs": {
+      "profile": "Profile 5",
+      "origin": "_https://aljjang95.github.io",
+      "item": "vsC_l",
+      "seq": 255658,
+      "file": "011575.ldb",
+      "vlen": 35005,
+      "count": 85
+    },
+    "weekOvr": {
+      "profile": "Profile 5",
+      "origin": "_https://aljjang95.github.io",
+      "item": "vsC_wo",
+      "seq": 275319,
+      "file": "012511.ldb",
+      "vlen": 18331,
+      "count": 14
+    },
+    "consults": {
+      "profile": "Profile 5",
+      "origin": "_https://aljjang95.github.io",
+      "item": "vsC_c",
+      "seq": 255656,
+      "file": "011575.ldb",
+      "vlen": 20963,
+      "count": 16
+    },
+    "payments": {
+      "profile": "Profile 5",
+      "origin": "_https://aljjang95.github.io",
+      "item": "vsC_p",
+      "seq": 255659,
+      "file": "011575.ldb",
+      "vlen": 3569,
+      "count": 13
+    },
+    "inquiries": {
+      "profile": "Profile 5",
+      "origin": "_https://aljjang95.github.io",
+      "item": "vsC_iq",
+      "seq": 255657,
+      "file": "011575.ldb",
+      "vlen": 38049,
+      "count": 185
+    }
+  }
+}

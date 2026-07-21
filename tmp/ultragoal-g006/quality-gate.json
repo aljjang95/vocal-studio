@@ -1,0 +1,347 @@
+{
+  "architectReview": {
+    "architectureStatus": "CLEAR",
+    "productStatus": "CLEAR",
+    "codeStatus": "CLEAR",
+    "recommendation": "APPROVE",
+    "commands": [
+      "read/search over index.html schedule, flex, quick-slot, week-edit, lesson-record, student-save, reset surfaces",
+      "node inline script parse for index.html",
+      "browser synthetic checks for G006 schedule engine/group/conflict/reset/render behavior",
+      "browser synthetic checks for consult-to-student mapping and cancel/makeup override behavior",
+      "git diff --check -- index.html firestore.rules",
+      "gjc ultragoal review --spec tmp/ultragoal-g006/evidence.json --executor-qa-json tmp/ultragoal-g006/executor-qa.json --json"
+    ],
+    "evidence": "G006 implementation centralizes weekly schedules behind schedule engine v2 while preserving getWeekSched compatibility, adds group/shared-slot/primary-payer/per-member attendance metadata, gates new overbook conflicts, snapshots reset state, and has passing real-browser synthetic verification plus GJC ultragoal review verdict=pass cleanPassEligible=true.",
+    "blockers": []
+  },
+  "executorQa": {
+    "status": "passed",
+    "passed": true,
+    "summary": "G006 schedule engine v2 was validated with source inspection, inline-script syntax parsing, real-browser synthetic schedule scenarios, conflict audit/blocking checks, group attendance checks, consult-to-student mapping checks, cancellation/makeup override checks, PC/mobile render checks, and git diff whitespace checking. Synthetic data only; no customer data used.",
+    "artifactRefs": [
+      {
+        "id": "g006-artifact-1",
+        "path": "tmp/ultragoal-g006/evidence.json",
+        "kind": "g006Evidence",
+        "sha256": "501e47a62e6303f410a171ad3c46796ef692ef52765e0459b9c05bfd88fb0526",
+        "description": "Consolidated G006 implementation and verification evidence."
+      },
+      {
+        "id": "g006-artifact-2",
+        "path": "tmp/ultragoal-g006/browser-automation-transcript.json",
+        "kind": "browserAutomationTranscript",
+        "sha256": "97ccaa582ced50a14c1385c882d639fe62995e182bb6c075724d1d3c4ad1948d",
+        "description": "Structured browser automation transcript for schedule engine, group, mapping, override, and render assertions."
+      }
+    ],
+    "checks": [
+      {
+        "name": "source inspection",
+        "status": "passed",
+        "evidence": "read/search over index.html confirmed getWeekSched is backed by buildScheduleEngine and active save/reset/lesson-record paths are wired to conflict gates, group metadata, reset snapshots, and per-member attendance enrichment."
+      },
+      {
+        "name": "inline script parse",
+        "status": "passed",
+        "evidence": "Node extracted and parsed all seven inline scripts in index.html successfully; main app script parsed as 8520 lines."
+      },
+      {
+        "name": "browser schedule behavior",
+        "status": "passed",
+        "evidence": "Chromium synthetic run verified group fixed slots, group consult slots, conflict audit, conflict decision blocking, one-off override audit, PC schedule rendering, and mobile schedule rendering."
+      },
+      {
+        "name": "browser group attendance",
+        "status": "passed",
+        "evidence": "Chromium synthetic run verified saveGroupAttendanceForSlot creates one shared-slot log with primaryPayerId and per-member attendanceByMember including divergent attendance statuses and notes."
+      },
+      {
+        "name": "browser conversion and override behavior",
+        "status": "passed",
+        "evidence": "Chromium synthetic run verified consult-to-student group mapping preserves group type, both members, primary payer, cancellation metadata, makeup metadata, and excludes canceled slots from conflict audit."
+      },
+      {
+        "name": "whitespace diff check",
+        "status": "passed",
+        "evidence": "git diff --check -- index.html firestore.rules passed with only the pre-existing firestore.rules LF-to-CRLF warning."
+      }
+    ],
+    "contractCoverage": [
+      {
+        "id": "coverage-unified-schedule-engine",
+        "contractRef": "G006 objective",
+        "obligation": "Unify fixed, flex, consult, makeup/cancel, one-off overrides, conflicts, and resets under a schedule engine.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "surface-schedule-engine",
+          "surface-reset-snapshot"
+        ],
+        "adversarialCaseRefs": [
+          "overbook-conflict",
+          "cancelled-slot-no-conflict",
+          "makeup-override-metadata"
+        ],
+        "artifactRefs": [
+          "g006-artifact-1",
+          "g006-artifact-2"
+        ]
+      },
+      {
+        "id": "coverage-first-class-groups",
+        "contractRef": "G006 objective",
+        "obligation": "Add first-class group enrollment/member/primary-payer/shared-slot/per-member-attendance semantics.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "surface-group-semantics",
+          "surface-group-attendance"
+        ],
+        "adversarialCaseRefs": [
+          "divergent-member-attendance"
+        ],
+        "artifactRefs": [
+          "g006-artifact-1",
+          "g006-artifact-2"
+        ]
+      },
+      {
+        "id": "coverage-runtime-surfaces",
+        "contractRef": "G006 objective",
+        "obligation": "Verify PC/mobile schedule behavior, conflict blocking/overbook audit, safe reset, and consult-to-student conversion mapping.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "surface-runtime-render",
+          "surface-conflict-gates",
+          "surface-consult-conversion"
+        ],
+        "adversarialCaseRefs": [
+          "overbook-conflict",
+          "consult-group-conversion"
+        ],
+        "artifactRefs": [
+          "g006-artifact-1",
+          "g006-artifact-2"
+        ]
+      }
+    ],
+    "surfaceEvidence": [
+      {
+        "id": "surface-schedule-engine",
+        "surface": "schedule engine v2",
+        "description": "buildScheduleEngine produces existing slotsByKey compatibility plus engine metadata, conflicts, audit events, and counts for fixed/flex/consult/override schedules.",
+        "evidence": "index.html schedule engine block and browser synthetic engine checks",
+        "files": [
+          "index.html"
+        ],
+        "status": "passed",
+        "contractRef": "G006 objective: unified schedule engine",
+        "invocation": "Chromium vsScheduleEngine.build(mon) with synthetic fixed, flex, consult, one-off, cancel, and makeup data",
+        "result": "passed",
+        "artifactRefs": [
+          "g006-artifact-1",
+          "g006-artifact-2"
+        ],
+        "details": "Engine returned slots, conflict audit, and override metadata while getWeekSched remained the compatibility adapter."
+      },
+      {
+        "id": "surface-conflict-gates",
+        "surface": "conflict blocking and overbook audit",
+        "description": "Conflict decisions and new-conflict gates block save paths that introduce overbooked slots while retaining audit details.",
+        "evidence": "index.html conflict helpers and browser decision checks",
+        "files": [
+          "index.html"
+        ],
+        "status": "passed",
+        "contractRef": "G006 objective: conflict blocking/overbook audit",
+        "invocation": "Chromium vsScheduleEngine.decision and auditScheduleConflicts checks",
+        "result": "passed",
+        "artifactRefs": [
+          "g006-artifact-1",
+          "g006-artifact-2"
+        ],
+        "details": "Flex-week, quick-slot, full-week edit, and student save paths call the conflict gate before saving newly introduced conflicts."
+      },
+      {
+        "id": "surface-group-semantics",
+        "surface": "group lesson semantics",
+        "description": "Group slots carry normalized members, groupId, primaryPayerId, sharedSlot, and attendanceByMember metadata.",
+        "evidence": "browser synthetic group fixed and consult slot checks",
+        "files": [
+          "index.html"
+        ],
+        "status": "passed",
+        "contractRef": "G006 objective: first-class group lessons",
+        "invocation": "Chromium group fixed slot and group consult slot checks",
+        "result": "passed",
+        "artifactRefs": [
+          "g006-artifact-1",
+          "g006-artifact-2"
+        ],
+        "details": "Both regular students and confirmed consult schedules preserve group members and primary payer semantics."
+      },
+      {
+        "id": "surface-group-attendance",
+        "surface": "per-member group attendance",
+        "description": "saveGroupAttendanceForSlot writes shared group attendance metadata without duplicating the billable primary slot.",
+        "evidence": "browser synthetic saveGroupAttendanceForSlot check",
+        "files": [
+          "index.html"
+        ],
+        "status": "passed",
+        "contractRef": "G006 objective: per-member attendance semantics",
+        "invocation": "Chromium saveGroupAttendanceForSlot('g1', date, time, attendanceByMember)",
+        "result": "passed",
+        "artifactRefs": [
+          "g006-artifact-1",
+          "g006-artifact-2"
+        ],
+        "details": "Sample log includes sharedSlot=true, primaryPayerId, two groupMembers, and divergent member attendance statuses."
+      },
+      {
+        "id": "surface-reset-snapshot",
+        "surface": "safe schedule reset",
+        "description": "resetWeekOvr captures a recovery/audit snapshot before deleting weekly overrides and skips direct remote weekOvr writes during split migration freeze.",
+        "evidence": "index.html resetWeekOvr and createScheduleResetSnapshot plus browser snapshot check",
+        "files": [
+          "index.html"
+        ],
+        "status": "passed",
+        "contractRef": "G006 objective: safe reset",
+        "invocation": "Chromium createScheduleResetSnapshot(wk, mon, before)",
+        "result": "passed",
+        "artifactRefs": [
+          "g006-artifact-1",
+          "g006-artifact-2"
+        ],
+        "details": "Snapshot captures before-state and auditBefore in localStorage-backed reset audit history."
+      },
+      {
+        "id": "surface-consult-conversion",
+        "surface": "consult-to-student conversion mapping",
+        "description": "Conversion normalization preserves group type, both members, primary payer, groupId, and sharedSlot when consults become students.",
+        "evidence": "normalizeScheduleGroupEnrollment browser check and saveStudent wiring",
+        "files": [
+          "index.html"
+        ],
+        "status": "passed",
+        "contractRef": "G006 objective: consult-to-student conversion mapping",
+        "invocation": "Chromium vsScheduleEngine.normalize with group consult source and converted student shape",
+        "result": "passed",
+        "artifactRefs": [
+          "g006-artifact-1",
+          "g006-artifact-2"
+        ],
+        "details": "Mapped output is group/sharedSlot=true, primaryPayerId=010-6000, members Lead and Partner."
+      },
+      {
+        "id": "surface-runtime-render",
+        "surface": "PC/mobile schedule rendering",
+        "description": "The existing PC and mobile schedule renderers consume getWeekSched without crashing after the engine adapter change.",
+        "evidence": "Chromium buildSchedule() and buildMobileSchedule() synthetic render checks",
+        "files": [
+          "index.html"
+        ],
+        "status": "passed",
+        "contractRef": "G006 objective: PC/mobile schedule behavior",
+        "invocation": "Chromium buildSchedule(); _forceView='mobile'; buildMobileSchedule()",
+        "result": "passed",
+        "artifactRefs": [
+          "g006-artifact-1",
+          "g006-artifact-2"
+        ],
+        "details": "PC render included group and consult names; mobile render returned a non-empty schedule UI string."
+      }
+    ],
+    "adversarialCases": [
+      {
+        "id": "overbook-conflict",
+        "status": "passed",
+        "result": "passed",
+        "contractRef": "G006 objective: conflicts and overbook audit",
+        "scenario": "A group fixed lesson and a solo lesson occupy the same Tuesday 10:00 slot.",
+        "expectedBehavior": "The engine records an overbook conflict and the decision helper blocks adding another student to that slot.",
+        "artifactRefs": [
+          "g006-artifact-1",
+          "g006-artifact-2"
+        ]
+      },
+      {
+        "id": "divergent-member-attendance",
+        "status": "passed",
+        "result": "passed",
+        "contractRef": "G006 objective: per-member attendance",
+        "scenario": "Two members of the same group receive different attendance statuses for the same shared lesson.",
+        "expectedBehavior": "One shared-slot log stores attendanceByMember for each member and keeps the primary payer metadata.",
+        "artifactRefs": [
+          "g006-artifact-1",
+          "g006-artifact-2"
+        ]
+      },
+      {
+        "id": "consult-group-conversion",
+        "status": "passed",
+        "result": "passed",
+        "contractRef": "G006 objective: conversion mapping",
+        "scenario": "A group consult with two members and a primary payer is normalized as a student conversion payload.",
+        "expectedBehavior": "The mapped student remains a group shared slot with both members and the original primary payer.",
+        "artifactRefs": [
+          "g006-artifact-1",
+          "g006-artifact-2"
+        ]
+      },
+      {
+        "id": "cancelled-slot-no-conflict",
+        "status": "passed",
+        "result": "passed",
+        "contractRef": "G006 objective: makeup/cancel semantics",
+        "scenario": "A canceled fixed slot and an active makeup slot share the same time.",
+        "expectedBehavior": "The canceled slot remains visible as metadata but is excluded from conflict audit.",
+        "artifactRefs": [
+          "g006-artifact-1",
+          "g006-artifact-2"
+        ]
+      },
+      {
+        "id": "makeup-override-metadata",
+        "status": "passed",
+        "result": "passed",
+        "contractRef": "G006 objective: makeup/cancel semantics",
+        "scenario": "A flex one-off override is marked as makeup with a source lesson date.",
+        "expectedBehavior": "The engine preserves overrideType='makeup' and makeupOf metadata on the slot.",
+        "artifactRefs": [
+          "g006-artifact-1",
+          "g006-artifact-2"
+        ]
+      }
+    ],
+    "e2eStatus": "passed",
+    "redTeamStatus": "passed",
+    "e2eCommands": [
+      "node inline script parse for index.html",
+      "Chromium file:///C:/Users/Administrator/Desktop/vocal-studio/index.html synthetic G006 schedule/group behavior checks",
+      "Chromium consult mapping and cancel/makeup override checks",
+      "git diff --check -- index.html firestore.rules"
+    ],
+    "redTeamCommands": [
+      "Browser overbook conflict and decision helper check",
+      "Browser cancelled-slot conflict exclusion check",
+      "Browser divergent group member attendance check",
+      "Browser consult-to-student group conversion mapping check"
+    ],
+    "evidence": "G006 local/browser QA passed. Evidence is in tmp/ultragoal-g006/evidence.json and tmp/ultragoal-g006/browser-automation-transcript.json.",
+    "blockers": []
+  },
+  "iteration": {
+    "status": "passed",
+    "fullRerun": true,
+    "rerunCommands": [
+      "node inline script parse for index.html",
+      "Chromium file:///C:/Users/Administrator/Desktop/vocal-studio/index.html synthetic G006 schedule/group behavior checks",
+      "Chromium consult mapping and cancel/makeup override checks",
+      "git diff --check -- index.html firestore.rules",
+      "gjc ultragoal review --spec tmp/ultragoal-g006/evidence.json --executor-qa-json tmp/ultragoal-g006/executor-qa.json --json"
+    ],
+    "evidence": "Full G006 quality gate rerun passed: script parse passed, browser synthetic checks passed, whitespace check passed with only known firestore.rules line-ending warning, and gjc ultragoal review returned verdict=pass cleanPassEligible=true findings=[].",
+    "blockers": []
+  }
+}

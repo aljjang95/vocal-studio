@@ -1,0 +1,348 @@
+{
+  "architectReview": {
+    "architectureStatus": "CLEAR",
+    "productStatus": "CLEAR",
+    "codeStatus": "CLEAR",
+    "recommendation": "APPROVE",
+    "commands": [
+      "architect review via agent://7-G001BaselineReview",
+      "gjc ultragoal review --spec tmp/ultragoal-g001/g001-baseline.json --executor-qa-json tmp/ultragoal-g001/executor-qa.json --json"
+    ],
+    "evidence": "Architect clarified G001 checkpoint status as CLEAR/APPROVE with no G001 baseline blocker; unresolved runtime/security risks are correctly deferred to G002.",
+    "blockers": []
+  },
+  "executorQa": {
+    "status": "passed",
+    "passed": true,
+    "summary": "G001 baseline evidence was produced and validated by focused repository/browser checks: public static inventory, PII marker search, attendance mutation path read, Firebase/rules read, current local/remote count capture, and legacy document hash capture.",
+    "artifactRefs": [
+      {
+        "path": "tmp/ultragoal-g001/g001-baseline.json",
+        "kind": "baselineEvidence",
+        "sha256": "21c163bed8b2239945ad2e8c1d8694212b2dd5e20078cb68a37d239dca4dec5f",
+        "id": "g001-artifact-1",
+        "description": "Consolidated G001 baseline evidence with inventory, risks, counts, and G002 gates."
+      },
+      {
+        "path": "tmp/ultragoal-g001/data-counts-summary.json",
+        "kind": "browserCounts",
+        "sha256": "2c211eb390fbd2f458afc3acef15b4551c876a3ad256896926b270ff2c9f5c6c",
+        "id": "g001-artifact-2",
+        "description": "Browser-captured local and Firestore data counts summary without raw customer data."
+      },
+      {
+        "path": "tmp/ultragoal-g001/legacy-doc-hash.json",
+        "kind": "firestoreHashOnlyEvidence",
+        "sha256": "eab6e96f419976b4795fd2445609ae997f6ed142e3303f2774bf30c0e2268faf",
+        "id": "g001-artifact-3",
+        "description": "Hash-only evidence for the legacy Firestore studio/data document without raw customer data."
+      }
+    ],
+    "checks": [
+      {
+        "name": "public static inventory",
+        "status": "passed",
+        "evidence": "find over *.html, *.js, *.json, *.rules, css/*, icons/*, js/**/*.js identified authoritative and stale public asset surfaces."
+      },
+      {
+        "name": "PII static surface search",
+        "status": "passed",
+        "evidence": "search found _DEFAULT_STUDENTS/initData/private contact/account markers in index.html, stale HTML copies, and js reference modules; results are represented in tmp/ultragoal-g001/g001-baseline.json."
+      },
+      {
+        "name": "automatic attendance mutation path",
+        "status": "passed",
+        "evidence": "read index.html:4550-4640 confirmed buildTodaySchedule() calls autoFillPastAttendance(), which can insert att='출석' _auto logs and call saveAll()."
+      },
+      {
+        "name": "Firebase and rules surface",
+        "status": "passed",
+        "evidence": "read index.html:3547-3628, firestore.rules:1-8, firebase.json:1-5, and sw.js:1-69 confirmed anonymous auth, broad authenticated /studio access, no storage rules config, and current cache behavior."
+      },
+      {
+        "name": "data counts and hash baseline",
+        "status": "passed",
+        "evidence": "browser captured local and Firestore counts into tmp/ultragoal-g001/data-counts-summary.json and hash-only legacy doc evidence into tmp/ultragoal-g001/legacy-doc-hash.json."
+      },
+      {
+        "name": "G002 verification gates",
+        "status": "passed",
+        "evidence": "tmp/ultragoal-g001/g001-baseline.json enumerates PII scan, unauthorized denial, authorized load/safe dev, no-write render, service-worker purge, and storage/rules gates."
+      }
+    ],
+    "contractCoverage": [
+      {
+        "id": "coverage-public-static-assets",
+        "contractRef": "G001 objective",
+        "obligation": "inventory all public static assets",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "surface-public-assets"
+        ],
+        "artifactRefs": [
+          "g001-artifact-1"
+        ]
+      },
+      {
+        "id": "coverage-pii-surfaces",
+        "contractRef": "G001 objective",
+        "obligation": "identify PII-bearing static surfaces",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "surface-pii"
+        ],
+        "adversarialCaseRefs": [
+          "static-pii-residual"
+        ],
+        "artifactRefs": [
+          "g001-artifact-1"
+        ]
+      },
+      {
+        "id": "coverage-attendance-mutation",
+        "contractRef": "G001 objective",
+        "obligation": "identify automatic attendance mutation paths",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "surface-attendance"
+        ],
+        "adversarialCaseRefs": [
+          "render-only-write-path"
+        ],
+        "artifactRefs": [
+          "g001-artifact-1"
+        ]
+      },
+      {
+        "id": "coverage-firebase-storage-rules",
+        "contractRef": "G001 objective",
+        "obligation": "inspect Firebase/Storage rule surfaces",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "surface-backend-rules"
+        ],
+        "adversarialCaseRefs": [
+          "anonymous-broad-access"
+        ],
+        "artifactRefs": [
+          "g001-artifact-1"
+        ]
+      },
+      {
+        "id": "coverage-data-baseline",
+        "contractRef": "G001 objective",
+        "obligation": "record current data counts and backup/export evidence",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "surface-data-baseline"
+        ],
+        "adversarialCaseRefs": [
+          "data-baseline-regression"
+        ],
+        "artifactRefs": [
+          "g001-artifact-2",
+          "g001-artifact-3"
+        ]
+      },
+      {
+        "id": "coverage-g002-verification-gates",
+        "contractRef": "G001 objective",
+        "obligation": "prepare focused verification commands or browser checks for the first release gates",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "surface-public-assets",
+          "surface-pii",
+          "surface-attendance",
+          "surface-backend-rules",
+          "surface-data-baseline"
+        ],
+        "adversarialCaseRefs": [
+          "static-pii-residual",
+          "render-only-write-path",
+          "anonymous-broad-access",
+          "data-baseline-regression"
+        ],
+        "artifactRefs": [
+          "g001-artifact-1"
+        ]
+      }
+    ],
+    "surfaceEvidence": [
+      {
+        "id": "surface-public-assets",
+        "surface": "static asset inventory",
+        "description": "Inventory covers authoritative runtime, stale HTML copies, modular JS, css, icons, manifest, sw, and Firebase rule/config files.",
+        "evidence": "tmp/ultragoal-g001/g001-baseline.json publicStaticAssetInventory",
+        "files": [
+          "index.html",
+          "vocal-studio.html",
+          "vocal-studi.html",
+          "sw.js",
+          "manifest.json",
+          "firebase.json",
+          "firestore.rules",
+          "js/**/*.js",
+          "css/*",
+          "icons/*"
+        ],
+        "status": "passed",
+        "contractRef": "G001 objective: inventory all public static assets",
+        "invocation": "find paths [\"*.html\",\"*.js\",\"*.json\",\"*.rules\",\"css/*\",\"icons/*\",\"js/**/*.js\"]",
+        "result": "passed",
+        "artifactRefs": [
+          "g001-artifact-1"
+        ],
+        "details": "Inventory covers authoritative runtime, stale HTML copies, modular JS, css, icons, manifest, sw, and Firebase rule/config files."
+      },
+      {
+        "id": "surface-pii",
+        "surface": "static PII exposure inventory",
+        "description": "Search identified embedded student/inquiry PII and payment/contact literals in all current public/static surfaces.",
+        "evidence": "tmp/ultragoal-g001/g001-baseline.json piiStaticSurfaces",
+        "files": [
+          "index.html",
+          "vocal-studio.html",
+          "vocal-studi.html",
+          "js/store/state.js",
+          "js/types.js",
+          "js/ui/consult.js",
+          "js/ui/profile.js",
+          "js/ui/sms.js"
+        ],
+        "status": "passed",
+        "contractRef": "G001 objective: identify PII-bearing static surfaces",
+        "invocation": "search pattern \"_DEFAULT_STUDENTS|initData\\s*=|010-4062-8664|010-4833-7394|010-8804-8903|1002-046-438968|010-0000-0000|010-1234-5678\" over public static surfaces",
+        "result": "passed",
+        "artifactRefs": [
+          "g001-artifact-1"
+        ],
+        "details": "Search identified embedded student/inquiry PII and payment/contact literals in all current public/static surfaces."
+      },
+      {
+        "id": "surface-attendance",
+        "surface": "attendance mutation path inventory",
+        "description": "Code read identifies Today render entrypoint and autoFillPastAttendance log insertion/saveAll mutation.",
+        "evidence": "index.html:4554-4620 and index.html:4634-4636",
+        "files": [
+          "index.html"
+        ],
+        "status": "passed",
+        "contractRef": "G001 objective: identify automatic attendance mutation paths",
+        "invocation": "read index.html:4550-4640",
+        "result": "passed",
+        "artifactRefs": [
+          "g001-artifact-1"
+        ],
+        "details": "Code read identifies Today render entrypoint and autoFillPastAttendance log insertion/saveAll mutation."
+      },
+      {
+        "id": "surface-backend-rules",
+        "surface": "backend rule surface inventory",
+        "description": "Code/rules reads identify anonymous auth, broad authenticated Firestore access, legacy studio/data document, missing storage rules config, and SW cache behavior.",
+        "evidence": "index.html:3547-3628, firestore.rules:1-8, firebase.json:1-5, sw.js:1-69",
+        "files": [
+          "index.html",
+          "firestore.rules",
+          "firebase.json",
+          "sw.js"
+        ],
+        "status": "passed",
+        "contractRef": "G001 objective: inspect Firebase/Storage rule surfaces",
+        "invocation": "read index.html:3547-3628; read firestore.rules:1-40; read firebase.json:1-80; read sw.js:1-80",
+        "result": "passed",
+        "artifactRefs": [
+          "g001-artifact-1"
+        ],
+        "details": "Code/rules reads identify anonymous auth, broad authenticated Firestore access, legacy studio/data document, missing storage rules config, and SW cache behavior."
+      },
+      {
+        "id": "surface-data-baseline",
+        "surface": "data baseline inventory",
+        "description": "Browser run captured local/remote counts and a hash-only legacy document baseline without storing raw customer data in tmp evidence.",
+        "evidence": "tmp/ultragoal-g001/data-counts-summary.json and tmp/ultragoal-g001/legacy-doc-hash.json",
+        "files": [
+          "tmp/ultragoal-g001/data-counts-summary.json",
+          "tmp/ultragoal-g001/legacy-doc-hash.json"
+        ],
+        "status": "passed",
+        "contractRef": "G001 objective: record current data counts and backup/export evidence",
+        "invocation": "browser run captured counts and legacy Firestore document SHA-256 into tmp/ultragoal-g001/*.json",
+        "result": "passed",
+        "artifactRefs": [
+          "g001-artifact-2",
+          "g001-artifact-3"
+        ],
+        "details": "Browser run captured local/remote counts and a hash-only legacy document baseline without storing raw customer data in tmp evidence."
+      }
+    ],
+    "adversarialCases": [
+      {
+        "id": "static-pii-residual",
+        "status": "passed",
+        "result": "passed",
+        "contractRef": "G001 objective: identify PII-bearing static surfaces",
+        "scenario": "Search for known private student/inquiry markers and payment/contact literals across all deployable static surfaces, including stale copies and reference modules.",
+        "expectedBehavior": "Baseline must name every discovered residual surface so G002 can remove or explicitly quarantine it.",
+        "artifactRefs": [
+          "g001-artifact-1"
+        ]
+      },
+      {
+        "id": "render-only-write-path",
+        "status": "passed",
+        "result": "passed",
+        "contractRef": "G001 objective: identify automatic attendance mutation paths",
+        "scenario": "Treat Today/schedule render as adversarial because it can mutate logs/payments without explicit user intent.",
+        "expectedBehavior": "Baseline must identify the render entrypoint, mutation function, generated log shape, and saveAll persistence path.",
+        "artifactRefs": [
+          "g001-artifact-1"
+        ]
+      },
+      {
+        "id": "anonymous-broad-access",
+        "status": "passed",
+        "result": "passed",
+        "contractRef": "G001 objective: inspect Firebase/Storage rule surfaces",
+        "scenario": "Unauthenticated or anonymous user attempts to access shared legacy data through broad authenticated rules.",
+        "expectedBehavior": "Baseline must flag anonymous sign-in plus request.auth-only Firestore rules as the G002 security gate.",
+        "artifactRefs": [
+          "g001-artifact-1"
+        ]
+      },
+      {
+        "id": "data-baseline-regression",
+        "status": "passed",
+        "result": "passed",
+        "contractRef": "G001 objective: record current data counts and backup/export evidence",
+        "scenario": "Safety changes accidentally drop or overwrite current students, consults, inquiries, logs, payments, or week overrides.",
+        "expectedBehavior": "Baseline must provide count/hash evidence to compare before/after G002 without exposing raw customer data.",
+        "artifactRefs": [
+          "g001-artifact-2",
+          "g001-artifact-3"
+        ]
+      }
+    ],
+    "e2eStatus": "passed",
+    "redTeamStatus": "passed",
+    "e2eCommands": [
+      "browser run captured local/remote counts and page errors into tmp/ultragoal-g001/data-counts-summary.json",
+      "browser run captured Firestore studio/data normalized SHA-256 into tmp/ultragoal-g001/legacy-doc-hash.json",
+      "read index.html:4550-4640, index.html:3547-3628, firestore.rules:1-8, firebase.json:1-5, sw.js:1-69"
+    ],
+    "redTeamCommands": [
+      "search static PII markers across index.html, vocal-studio.html, vocal-studi.html, js/**/*.js, sw.js, manifest.json",
+      "gjc ultragoal review --spec tmp/ultragoal-g001/g001-baseline.json --executor-qa-json tmp/ultragoal-g001/executor-qa.json --json"
+    ],
+    "evidence": "G001 QA passed: evidence file covers inventory, PII surfaces, auto-attendance mutation, Firebase/rules/storage surface, data counts/hash backup baseline, and G002 verification gates. Review command returned pass with cleanPassEligible=true.",
+    "blockers": []
+  },
+  "iteration": {
+    "status": "passed",
+    "fullRerun": true,
+    "rerunCommands": [
+      "gjc ultragoal review --spec tmp/ultragoal-g001/g001-baseline.json --executor-qa-json tmp/ultragoal-g001/executor-qa.json --json"
+    ],
+    "evidence": "Full G001 quality gate rerun passed after executor QA evidence schema was completed; review verdict=pass, cleanPassEligible=true, findings=[].",
+    "blockers": []
+  }
+}

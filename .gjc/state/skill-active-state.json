@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "active": true,
+  "skill": "ralplan",
+  "phase": "architect",
+  "updated_at": "2026-06-18T14:11:31.371Z",
+  "active_skills": [
+    {
+      "skill": "ralplan",
+      "phase": "architect",
+      "active": true,
+      "activated_at": "2026-06-18T14:11:31.371Z",
+      "updated_at": "2026-06-18T14:11:31.371Z",
+      "hud": {
+        "version": 1,
+        "summary": "persisted architect stage 6",
+        "chips": [
+          {
+            "label": "stage",
+            "value": "architect",
+            "priority": 10
+          },
+          {
+            "label": "iter",
+            "value": "3",
+            "priority": 30
+          },
+          {
+            "label": "stages",
+            "value": "R·A·C·F·A·A",
+            "priority": 35
+          }
+        ],
+        "updated_at": "2026-06-18T14:11:31.367Z"
+      }
+    },
+    {
+      "skill": "ultragoal",
+      "phase": "blocked",
+      "active": true,
+      "activated_at": "2026-06-19T06:47:27.937Z",
+      "updated_at": "2026-06-19T06:47:27.937Z",
+      "session_id": "019ed9ac-83e1-7000-ac17-5d0ff48ca429",
+      "hud": {
+        "version": 1,
+        "chips": [
+          {
+            "label": "blocked",
+            "value": "2",
+            "priority": 5,
+            "severity": "blocked"
+          },
+          {
+            "label": "goals",
+            "value": "8/10",
+            "priority": 10
+          },
+          {
+            "label": "current",
+            "value": "blocked",
+            "priority": 20
+          },
+          {
+            "label": "status",
+            "value": "blocked",
+            "priority": 30
+          },
+          {
+            "label": "ledger",
+            "value": "goal_checkpointed:G010",
+            "priority": 35
+          }
+        ],
+        "updated_at": "2026-06-19T06:47:27.934Z"
+      },
+      "receipt": {
+        "version": 1,
+        "skill": "ultragoal",
+        "owner": "gjc-runtime",
+        "command": "gjc ultragoal (reconcile)",
+        "state_path": "C:\\Users\\Administrator\\Desktop\\vocal-studio\\.gjc\\state\\sessions\\019ed9ac-83e1-7000-ac17-5d0ff48ca429\\skill-active-state.json",
+        "storage_path": "C:\\Users\\Administrator\\Desktop\\vocal-studio\\.gjc\\state\\sessions\\019ed9ac-83e1-7000-ac17-5d0ff48ca429\\ultragoal-state.json",
+        "mutated_at": "2026-06-19T06:47:27.927Z",
+        "fresh_until": "2026-06-19T07:17:27.927Z",
+        "status": "fresh",
+        "mutation_id": "ultragoal:reconcile:2026-06-19T06:47:27.927Z",
+        "verb": "reconcile",
+        "forced": true,
+        "from_phase": "blocked",
+        "to_phase": "blocked"
+      }
+    }
+  ],
+  "active_subskills": []
+}

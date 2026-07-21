@@ -1,0 +1,34 @@
+**[ITERATE]**
+
+**Justification**: The planner artifact is substantial and mostly aligned with the codebase, but it is not execution-ready because the later Architect artifact is `BLOCK` and its required revisions have not been folded into a revised plan. The gaps are concrete, not stylistic: public static PII remains broader than the active `index.html`; Phase 1 can ship while `buildTodaySchedule()` still writes attendance through `autoFillPastAttendance()`; migration lacks a freeze plus live hash or server revision checkpoint before split writes; media placeholders can be fossilized as successful migrated media; and stale non-runtime modules need an explicit source policy before implementation. Executors would have to infer ordering and gates from the Architect criticism rather than from an approved consensus plan.
+
+**Summary**:
+- Clarity: Direction and phase names are clear, and Option A is understandable. Not clear enough for execution because the Architect BLOCK deltas are not integrated as mandatory phase gates.
+- Verifiability: The plan contains useful gates and an expanded test plan, but the first-release no-write gate, all-public-asset PII scan, migration freeze/hash comparison, media placeholder quarantine, and runtime-source invariant need exact acceptance wording.
+- Completeness: Broad domains are covered: auth, rules, attendance, cycle/payment, split Firestore, media, schedule/group, tests, and cleanup. Completeness fails at the seams where release ordering matters.
+- Big Picture: Security-first staged modernization is the right overall path for this monolithic static app. The big-picture flaw is allowing a security-only first production slice to leave known billing/attendance corruption active.
+- Principle/Option Consistency: Principle 2 says rendering must never mutate attendance, but Phase 1 does not require the no-write kill switch. Principle 4 requires known-good reversible migration, but the plan does not require a frozen live legacy hash or server revision checkpoint before migration writes. Option C includes lockdown plus attendance disablement, yet Option A Phase 1 splits them.
+- Alternatives Depth: Alternatives are fair enough: staged modernization, big-bang rewrite, and lockdown-only hotfix are considered with meaningful trade-offs. Architect adds a useful steelman that should be reflected in the revised plan.
+- Risk/Verification Rigor: Strong baseline, but pre-mortem and gates must expand to cover concurrent legacy writes during export, stale service worker and JS asset PII, media `[saved]` false success, non-runtime patches, and owner lockout/backout drills.
+
+**Referenced artifacts and source checks**:
+- Read `.gjc/plans/ralplan/2026-06-18-1053-60bb/stage-01-planner.md` and `.gjc/plans/ralplan/2026-06-18-1053-60bb/stage-03-architect.md`.
+- Verified representative source references in `index.html`, `sw.js`, `firestore.rules`, `firebase.json`, `js/app.js`, `js/store/state.js`, `js/types.js`, `js/core/cycle.js`, and `js/ui/payment.js`.
+- Searched phone-number patterns across `index.html`, `js/**/*.js`, `sw.js`, and `manifest.json`. Matches are not limited to `index.html`: real numbers also appear in `js/store/state.js`, `js/types.js`, `js/ui/consult.js`, `js/ui/profile.js`, `js/ui/sms.js`, and generated runtime sections in `index.html`.
+
+**Representative implementation simulation**:
+1. Phase 1 static PII removal: An executor can remove `_DEFAULT_STUDENTS` from `index.html`, but without an explicit public-root static asset inventory and fail gate, downloadable unused modules such as `js/store/state.js`, `js/types.js`, and `js/ui/consult.js` still ship real names and phone numbers. This violates the security driver even if Firestore rules are fixed.
+2. Phase 1 first release: The plan allows auth and PII work to ship before Phase 2. In the current runtime, `buildTodaySchedule()` calls `autoFillPastAttendance()`, which inserts `att:출석` logs and calls `saveAll()`. Opening Today after the security release can still mutate attendance and downstream payment state without confirmation.
+3. Phase 4 migration: The plan has export, dry-run, deterministic IDs, checksums, and backout pointer, but current `_pushToFirestore()` writes the whole legacy document and the listener can merge local data back. Without a maintenance window or legacy write freeze plus live hash comparison immediately before migration writes, the exported rollback baseline can diverge from what was migrated.
+4. Media split cutover: Current media stripping writes `[saved]` placeholders while IndexedDB saves are not awaited. A split migration that treats those placeholders as migrated data can permanently mark missing local-only media as good. A manifest and quarantine state must precede cutover.
+5. Runtime source policy: `js/app.js` states the modular entrypoint is unused, while module cycle/payment logic differs from `index.html`. Assigning implementation to `js/**/*.js` before wiring modules into `index.html` can produce passing non-runtime code.
+
+**Required fixes before execution approval**:
+1. Revise Phase 0 or Phase 1 to require an inventory and removal of real private PII from every public static asset under the deployed root, including `index.html`, `sw.js`, `manifest.json`, and all `js/**/*.js`; make the gate a repeatable scan plus manual cache verification.
+2. Move the no-write attendance kill switch into the first production slice. The minimum release must prove Today render, schedule render, refresh, and navigation create zero attendance or payment writes; the richer proposal queue can remain Phase 2.
+3. Add a migration freeze and checkpoint gate before any split-collection writes: lock auth or enter maintenance mode, capture update time or revision plus SHA-256 of live legacy data, rerun export immediately before migration, compare live hash before writing, and abort on drift.
+4. Add media manifest and placeholder quarantine before Firestore split cutover. Required media must resolve to Storage object, verified IndexedDB recoverability, explicit local-only degraded state, or `recoveryRequired`; `[saved]` alone must fail migration checks.
+5. Add a runtime-source policy at Phase 0: until `index.html` explicitly loads extracted modules, `index.html` is the only runtime logic. Unused modules may receive PII removal, deletion, or same-slice extraction only when wired into runtime with focused tests.
+6. Expand acceptance criteria and pre-mortem to include stale public JS assets, old service worker caches, concurrent legacy writes during export, media false success, non-runtime patches, owner lockout, and rollback drill evidence.
+
+Verdict: ITERATE. The plan is close, but executors should not begin until a revised planner artifact incorporates the Architect BLOCK items as mandatory sequencing and verification gates.

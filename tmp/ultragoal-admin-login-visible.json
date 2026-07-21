@@ -1,0 +1,16 @@
+{
+  "fixedAt": "2026-06-18T19:03:43.838Z",
+  "problem": "The first 관리자 로그인 button was inside the desktop sidebar, which is hidden on mobile/is-mobile layouts, so the user could not see it.",
+  "solution": "Added a persistent topbar 관리자 로그인/로그아웃 control and wired auth-state updates for both sidebar and topbar controls.",
+  "deployment": {
+    "command": "npx firebase-tools deploy --only hosting --project hlbvocalstudio-72481 --json",
+    "status": "success",
+    "hostingVersion": "projects/131827810958/sites/hlbvocalstudio-72481/versions/5d01eaf507dbe027"
+  },
+  "verification": {
+    "regressionGates": "pass; inlineScripts=7; invariantCount=31; indexSha256=3d4756b3a36dc4a65bc706226c28fe25fbc3274901baf045ed1e570e9632a79b",
+    "mobileViewport": { "width": 390, "height": 844 },
+    "topbarLoginButton": { "exists": true, "display": "flex", "text": "관리자 로그인", "rect": { "x": 269.8125, "y": 8.5, "w": 106.1875, "h": 34 } }
+  },
+  "userInstruction": "Open https://hlbvocalstudio-72481.web.app/ and use the top-right 관리자 로그인 button."
+}

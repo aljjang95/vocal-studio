@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "goalId": "G011",
+  "title": "Mobile schedule tab hard separation",
+  "timestamp": "2026-06-19T07:08:54.329051+00:00",
+  "userReport": "User reported that the deployed mobile schedule still showed 미배정 in/near the 일별·주간 schedule tabs.",
+  "changes": [
+    "Deleted three obsolete duplicate buildMobileWeekView definitions that still contained top-flow 미배정/변동 배정 rows.",
+    "Kept one authoritative mobile week renderer only.",
+    "Rendered day and week 배정/미배정/수강중/수정 controls only as bottom fixed action rails, away from the 일별/주간 tab switch.",
+    "Bumped service worker cache version to vs-v2-2026-06-19-mobile-tabs-hardfix.",
+    "Updated regression gates to enforce the fixed-bottom mobile controls and new SW version."
+  ],
+  "filesChanged": [
+    "index.html",
+    "sw.js",
+    "scripts/regression-gates.mjs",
+    ".gjc/ultragoal/goals.json",
+    ".gjc/ultragoal/ledger.jsonl"
+  ],
+  "verification": {
+    "regressionGates": {
+      "command": "node scripts/regression-gates.mjs",
+      "ok": true,
+      "inlineScripts": 7,
+      "invariantCount": 46,
+      "indexSha256": "387b1b49d07b6ba5a46f6fee3b53206aa3d9970b43400c440b5c75c1ce99d0f0"
+    },
+    "diffCheck": {
+      "command": "git diff --check -- index.html sw.js scripts/regression-gates.mjs",
+      "ok": true,
+      "note": "Only sw.js LF-to-CRLF warning observed."
+    },
+    "localMobileLayout": {
+      "viewport": "360x740",
+      "dayTabBottom": 107,
+      "dayFirstControlTop": 627,
+      "dayGapPx": 520,
+      "weekTabBottom": 107,
+      "weekFirstControlTop": 627,
+      "weekGapPx": 520,
+      "ok": true
+    },
+    "deploy": {
+      "command": "npx firebase-tools deploy --only hosting --project hlbvocalstudio-72481 --json",
+      "ok": true,
+      "hostingVersion": "projects/131827810958/sites/hlbvocalstudio-72481/versions/65b4d1aca6bc99f6"
+    },
+    "deployedServiceWorker": {
+      "url": "https://hlbvocalstudio-72481.web.app/sw.js?hardfix=20260619",
+      "version": "vs-v2-2026-06-19-mobile-tabs-hardfix",
+      "ok": true
+    },
+    "deployedMobileLayout": {
+      "url": "https://hlbvocalstudio-72481.web.app/?mobilehardfix=20260619",
+      "viewport": "360x740",
+      "sourceHasHardfix": true,
+      "duplicateBuildMobileWeekViewCount": 1,
+      "dayTabBottom": 107,
+      "dayFirstControlTop": 627,
+      "dayGapPx": 520,
+      "weekTabBottom": 107,
+      "weekFirstControlTop": 627,
+      "weekGapPx": 520,
+      "ok": true
+    }
+  },
+  "hashes": {
+    "indexSha256": "387b1b49d07b6ba5a46f6fee3b53206aa3d9970b43400c440b5c75c1ce99d0f0",
+    "swSha256": "4bb5fd6d0dee742bc0a07e4f31be9c668fb5333fbcc2ad0ca58870a81cde17ab",
+    "regressionGatesSha256": "f55e1e9775e8fc0d804a0412421c0211d97d07997ccdfdedc603dd3486240d20"
+  },
+  "residualBlockers": [
+    "G004/G005 live split-write and Storage upload receipts still require the logged-in admin browser to run 관리자 검증 → 라이브 G004/G005 검증 and provide/copy the JSON receipt."
+  ]
+}

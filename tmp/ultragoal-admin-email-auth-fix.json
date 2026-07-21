@@ -1,0 +1,22 @@
+{
+  "fixedAt": "2026-06-18T18:51:41.340Z",
+  "problem": "Admin access was UID-only; the correct Google account could authenticate with a different Firebase Auth UID and be treated as unauthorized.",
+  "solution": {
+    "indexHtml": "VS_ADMIN_EMAILS now includes the verified admin email and the sidebar has explicit 관리자 로그인/로그아웃 controls.",
+    "firestoreRules": "isAdmin now accepts allowlisted UID OR verified allowlisted email.",
+    "storageRules": "isAdmin now accepts allowlisted UID OR verified allowlisted email.",
+    "docs": "OPERATIONS now documents allowlisted admin UID or verified admin email."
+  },
+  "deployed": {
+    "hostingVersion": "projects/131827810958/sites/hlbvocalstudio-72481/versions/ce826edf5859bfd3",
+    "rulesDeploy": "success",
+    "hostingUrl": "https://hlbvocalstudio-72481.web.app/"
+  },
+  "verification": {
+    "regressionGates": "pass; inlineScripts=7; invariantCount=31; indexSha256=808031c40f440410a578228307014d20fc8ffc01a307128458bf38a1d4780a7a",
+    "deployedUi": "관리자 로그인 button present; allowlisted email evaluates admin; other email does not.",
+    "unauthDenial": "Firestore read/write and Storage read/upload all remain 403.",
+    "googleProvider": "enabled=true"
+  },
+  "remainingManualAction": "Open the deployed app in the target Chrome profile and click 관리자 로그인 with aljjang95@gmail.com; the app should then show 🔐 관리자 인증됨."
+}

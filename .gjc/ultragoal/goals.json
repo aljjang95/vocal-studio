@@ -1,0 +1,467 @@
+{
+  "version": 1,
+  "brief": "Approved plan: .gjc/plans/ralplan/2026-06-18-1053-60bb/pending-approval.md\nGlobal constraints: preserve current customer data, avoid regressions, verify each gate, treat index.html as authoritative runtime until modules are explicitly loaded. Do not silently weaken the approved safety gates. Phase 1 is indivisible for release purposes: public-static-asset PII removal, authorized access/rules, service-worker cache purge, and automatic-attendance no-write kill switch must ship together only after verification.\n\n@goal: Phase 0 safety inventory and execution baseline\nEstablish the runtime/source-of-truth policy and baseline evidence needed before product changes: inventory all public static assets, identify PII-bearing static surfaces, identify automatic attendance mutation paths, inspect Firebase/Storage rule surfaces, record current data counts and backup/export evidence, and prepare focused verification commands or browser checks that will prove the first release gates.\n\n@goal: Phase 1 emergency safety release\nImplement the first approved executable slice without breaking current operation: remove private PII from every deployed public static asset, replace anonymous broad data access with an authorized/admin access model and rules compatible with the app, add Storage rules/deploy config where missing, purge old service-worker caches/versioning, and install the no-write automatic-attendance kill switch so load/refresh/navigation/Today/schedule render create zero attendance or payment writes. Verify unauthorized denial, authorized load path or safe local-dev path, PII scan, cache version, and no-write render behavior.\n\n@goal: Attendance proposal workflow and unified payment cycle service\nReplace former automatic attendance behavior with explicit missing-attendance proposals and confirmation. Introduce one canonical cycle/payment calculation service for active runtime surfaces, align lesson logs, dashboard, payment cards, profile/timeline, alerts, offsets, edits/deletes, and add focused tests/verification for billing correctness.\n\n@goal: Split Firestore migration with freeze and media manifest\nDesign and implement the split collection model and migration path with maintenance/freeze or live-hash checkpoint, deterministic ids, schema metadata, audit events, dry-run reports, idempotent writes, dual-read verification, media manifest, and placeholder quarantine so [saved] media is never treated as successful migrated media.\n\n@goal: Durable media persistence and recovery manager\nMove required media durability to Firebase Storage-backed records, use IndexedDB only as queue/cache, add retry/quota/error surfacing, unified load path for photos/audio/video/consent recordings, orphan scan, recoveryRequired state, snapshot list/diff, selective restore/export/import, and verification across reload/cross-device or explicit degraded state.\n\n@goal: Schedule engine v2 and first-class group lessons\nUnify fixed, flex, consult, makeup/cancel, one-off overrides, conflicts, resets, conversion mapping, and group lessons under a schedule engine. Add first-class group enrollment/member/primary-payer/shared-slot/per-member-attendance semantics and verify PC/mobile schedule behavior, conflict blocking/overbook audit, safe reset, and consult-to-student conversion mapping.\n\n@goal: Runtime source cleanup and regression hardening\nChoose and enforce the final runtime source structure, delete or wire stale modules, document auth/migration/recovery/release procedures, add regression tests/manual gates for every invariant, and complete final architect/QA review evidence for the A-to-Z upgrade.",
+  "gjcGoalMode": "aggregate",
+  "gjcObjective": "Complete the durable ultragoal plan in .gjc/ultragoal/goals.json, including later accepted/appended stories, under the original brief constraints; use .gjc/ultragoal/ledger.jsonl as the audit trail.",
+  "goals": [
+    {
+      "id": "G001",
+      "title": "Phase 0 safety inventory and execution baseline",
+      "objective": "Establish the runtime/source-of-truth policy and baseline evidence needed before product changes: inventory all public static assets, identify PII-bearing static surfaces, identify automatic attendance mutation paths, inspect Firebase/Storage rule surfaces, record current data counts and backup/export evidence, and prepare focused verification commands or browser checks that will prove the first release gates.",
+      "status": "complete",
+      "createdAt": "2026-06-18T12:54:29.956Z",
+      "updatedAt": "2026-06-18T13:15:26.820Z",
+      "startedAt": "2026-06-18T12:54:35.072Z",
+      "completedAt": "2026-06-18T13:15:26.820Z",
+      "evidence": "G001 complete: baseline evidence captured in tmp/ultragoal-g001/g001-baseline.json; current data counts/hash captured; architect review CLEAR/APPROVE; executor QA/review pass cleanPassEligible=true.",
+      "completionVerification": {
+        "schemaVersion": 1,
+        "receiptId": "3bee281b-1f85-4c6e-b277-80a852bf85b9",
+        "verifiedAt": "2026-06-18T13:15:26.820Z",
+        "goalId": "G001",
+        "receiptKind": "per-goal",
+        "goalStatusBeforeCheckpoint": "active",
+        "gjcGoalMode": "aggregate",
+        "gjcObjective": "Complete the durable ultragoal plan in .gjc/ultragoal/goals.json, including later accepted/appended stories, under the original brief constraints; use .gjc/ultragoal/ledger.jsonl as the audit trail.",
+        "qualityGateHash": "95eeb45d5b978d4f441a1bf2cf6249c6e666a9d6fd27533fa67b79d1ae88adba",
+        "gjcGoalSnapshotHash": "6f00e4b0e70f6895e2458bef29f04c8bf2a515e7d29de031ad0435c56b12b540",
+        "planGeneration": "289897a77cccc1df39a4daf609876cf2823493da9b3941cdc87c77d45ad04036",
+        "basis": {
+          "planHashBeforeCheckpoint": "629c40c71d45f488bc1ac51d9eedf8e9c0a608048527b1bea2f4a4da83f4cb84",
+          "latestRelevantLedgerEventIdBeforeCheckpoint": "9fbe16ee-3c95-4bac-bfdc-98cf50830d17",
+          "goalUpdatedAtBeforeCheckpoint": "2026-06-18T13:15:26.820Z",
+          "relevantGoalIdsBeforeCheckpoint": [
+            "G001"
+          ],
+          "requiredGoalSetHashBeforeCheckpoint": "51c3c47445fae65de277644fee8ba51b6398c7beb1378d720dc279eb369290f8"
+        },
+        "checkpointLedgerEventId": "8d4b2cbf-1413-4479-a0ba-a388151504b0"
+      }
+    },
+    {
+      "id": "G002",
+      "title": "Phase 1 emergency safety release",
+      "objective": "Implement the first approved executable slice without breaking current operation: remove private PII from every deployed public static asset, replace anonymous broad data access with an authorized/admin access model and rules compatible with the app, add Storage rules/deploy config where missing, purge old service-worker caches/versioning, and install the no-write automatic-attendance kill switch so load/refresh/navigation/Today/schedule render create zero attendance or payment writes. Verify unauthorized denial, authorized load path or safe local-dev path, PII scan, cache version, and no-write render behavior.",
+      "status": "complete",
+      "createdAt": "2026-06-18T12:54:29.956Z",
+      "updatedAt": "2026-06-18T15:22:21.688Z",
+      "startedAt": "2026-06-18T13:15:26.837Z",
+      "completedAt": "2026-06-18T15:22:21.688Z",
+      "evidence": "G002 complete: live emergency safety release deployed to hlbvocalstudio-72481 after Firebase authentication. Hosting, Firestore rules, and Storage rules deploys succeeded; deployed SW cache version verified; unauthenticated Firestore/Storage reads and writes return 403; deployed unauth browser load enters local-only safe mode; automatic attendance render remains no-write. Evidence: tmp/ultragoal-g002/live-release-evidence.json.",
+      "completionVerification": {
+        "schemaVersion": 1,
+        "receiptId": "7b7eea1d-55f7-4925-8d16-91a7498be668",
+        "verifiedAt": "2026-06-18T15:22:21.688Z",
+        "goalId": "G002",
+        "receiptKind": "per-goal",
+        "goalStatusBeforeCheckpoint": "blocked",
+        "gjcGoalMode": "aggregate",
+        "gjcObjective": "Complete the durable ultragoal plan in .gjc/ultragoal/goals.json, including later accepted/appended stories, under the original brief constraints; use .gjc/ultragoal/ledger.jsonl as the audit trail.",
+        "qualityGateHash": "5971f9a606ec90a7157a78eac96686e4f9bd6b35c5c8ee7131669098c1cf11b0",
+        "gjcGoalSnapshotHash": "63151b4190130ce12d3dc5afd407d57a1b4ee8be2cdb082b33892fd70eccdb34",
+        "planGeneration": "a94a938bdf12d80d341efdad43ebb07c805b9500ffd5d02bdb8aafce299ef647",
+        "basis": {
+          "planHashBeforeCheckpoint": "11aeb0ebe38a011743809a9782b1cfcfe4ef9aff73d5d2879f44f30a768d887b",
+          "latestRelevantLedgerEventIdBeforeCheckpoint": "66f79d2c-3692-4afb-bf83-231f3ec94ca0",
+          "goalUpdatedAtBeforeCheckpoint": "2026-06-18T15:22:21.688Z",
+          "relevantGoalIdsBeforeCheckpoint": [
+            "G002"
+          ],
+          "requiredGoalSetHashBeforeCheckpoint": "67e34f0f5c557e28833fc3a20a9644eb846e8bdb118fd3c72017596a76398e7a"
+        },
+        "checkpointLedgerEventId": "fd4e648b-f4f7-4328-8601-ef908ff86be5"
+      }
+    },
+    {
+      "id": "G003",
+      "title": "Attendance proposal workflow and unified payment cycle service",
+      "objective": "Replace former automatic attendance behavior with explicit missing-attendance proposals and confirmation. Introduce one canonical cycle/payment calculation service for active runtime surfaces, align lesson logs, dashboard, payment cards, profile/timeline, alerts, offsets, edits/deletes, and add focused tests/verification for billing correctness.",
+      "status": "complete",
+      "createdAt": "2026-06-18T12:54:29.956Z",
+      "updatedAt": "2026-06-18T14:10:48.049Z",
+      "startedAt": "2026-06-18T13:34:25.314Z",
+      "completedAt": "2026-06-18T14:10:48.049Z",
+      "evidence": "G003 complete: explicit missing-attendance proposal workflow and canonical cycle/payment service implemented in index.html; QA evidence, browser transcript/screenshot, and quality-gate pass are in tmp/ultragoal-g003/.",
+      "completionVerification": {
+        "schemaVersion": 1,
+        "receiptId": "9cd95f73-eeed-4f8d-a95e-f5c162329021",
+        "verifiedAt": "2026-06-18T14:10:48.049Z",
+        "goalId": "G003",
+        "receiptKind": "per-goal",
+        "goalStatusBeforeCheckpoint": "active",
+        "gjcGoalMode": "aggregate",
+        "gjcObjective": "Complete the durable ultragoal plan in .gjc/ultragoal/goals.json, including later accepted/appended stories, under the original brief constraints; use .gjc/ultragoal/ledger.jsonl as the audit trail.",
+        "qualityGateHash": "b843683269a762a93e02463124d66c162256a31b132118d028e634f95812baac",
+        "gjcGoalSnapshotHash": "383c77e2d4bba7ed1c49a5dbf16e2a710832c47d3c8bf83a74808e6118ec4b40",
+        "planGeneration": "555328b1195901b5d11462b00730a74d7433c00cc71a84e9f017df7ef420c795",
+        "basis": {
+          "planHashBeforeCheckpoint": "e4156c2dabf85c002ca92ab159cc86debdc70596b24d2d65b5e53291d28f5f98",
+          "latestRelevantLedgerEventIdBeforeCheckpoint": "0350aa17-797d-41cb-b08c-0c7ff4475844",
+          "goalUpdatedAtBeforeCheckpoint": "2026-06-18T14:10:48.049Z",
+          "relevantGoalIdsBeforeCheckpoint": [
+            "G003"
+          ],
+          "requiredGoalSetHashBeforeCheckpoint": "ac03f7f9012e215c12662a11f22332dc3c1f740bdeecb0f5bd8cb76bfcca9bd5"
+        },
+        "checkpointLedgerEventId": "0dac875e-8403-4de6-a8dc-c66534394205"
+      }
+    },
+    {
+      "id": "G004",
+      "title": "Split Firestore migration with freeze and media manifest",
+      "objective": "Design and implement the split collection model and migration path with maintenance/freeze or live-hash checkpoint, deterministic ids, schema metadata, audit events, dry-run reports, idempotent writes, dual-read verification, media manifest, and placeholder quarantine so [saved] media is never treated as successful migrated media.",
+      "status": "blocked",
+      "createdAt": "2026-06-18T12:54:29.956Z",
+      "updatedAt": "2026-06-19T04:53:19.144Z",
+      "startedAt": "2026-06-18T14:10:48.070Z",
+      "evidence": "G004 blocker narrowed with shipped admin verification panel: logged-in admins can now open 관리자 검증 and run 라이브 G004/G005 검증 to generate a JSON receipt from their authenticated browser. Agent headless dry-run remains admin-auth-required. Evidence: tmp/ultragoal-priority-update-batch.json."
+    },
+    {
+      "id": "G005",
+      "title": "Durable media persistence and recovery manager",
+      "objective": "Move required media durability to Firebase Storage-backed records, use IndexedDB only as queue/cache, add retry/quota/error surfacing, unified load path for photos/audio/video/consent recordings, orphan scan, recoveryRequired state, snapshot list/diff, selective restore/export/import, and verification across reload/cross-device or explicit degraded state.",
+      "status": "blocked",
+      "createdAt": "2026-06-18T12:54:29.956Z",
+      "updatedAt": "2026-06-19T04:53:27.559Z",
+      "evidence": "G005 blocker narrowed with shipped admin verification panel: logged-in admins can now open 관리자 검증 and run 라이브 G004/G005 검증 to execute a Storage upload probe and copy the JSON receipt. Agent headless dry-run remains admin-auth-required. Evidence: tmp/ultragoal-priority-update-batch.json."
+    },
+    {
+      "id": "G006",
+      "title": "Schedule engine v2 and first-class group lessons",
+      "objective": "Unify fixed, flex, consult, makeup/cancel, one-off overrides, conflicts, resets, conversion mapping, and group lessons under a schedule engine. Add first-class group enrollment/member/primary-payer/shared-slot/per-member-attendance semantics and verify PC/mobile schedule behavior, conflict blocking/overbook audit, safe reset, and consult-to-student conversion mapping.",
+      "status": "complete",
+      "createdAt": "2026-06-18T12:54:29.956Z",
+      "updatedAt": "2026-06-18T14:42:17.181Z",
+      "completedAt": "2026-06-18T14:42:17.181Z",
+      "evidence": "G006 complete: schedule engine v2 and first-class group lesson semantics implemented in index.html; QA evidence, browser transcript, and quality-gate pass are in tmp/ultragoal-g006/. Local runtime verification covers fixed/flex/consult/one-off/cancel/makeup, conflicts, reset snapshots, consult conversion mapping, PC/mobile rendering, and per-member group attendance.",
+      "completionVerification": {
+        "schemaVersion": 1,
+        "receiptId": "b87d0abd-9782-4f9a-adcc-63e8995d327d",
+        "verifiedAt": "2026-06-18T14:42:17.181Z",
+        "goalId": "G006",
+        "receiptKind": "per-goal",
+        "goalStatusBeforeCheckpoint": "active",
+        "gjcGoalMode": "aggregate",
+        "gjcObjective": "Complete the durable ultragoal plan in .gjc/ultragoal/goals.json, including later accepted/appended stories, under the original brief constraints; use .gjc/ultragoal/ledger.jsonl as the audit trail.",
+        "qualityGateHash": "fa60300ea075d5933aca338013e26a1c24e7826edddf2e8a93a81c3c9dd76548",
+        "gjcGoalSnapshotHash": "40e3b2b94a8d2c2ea22b512f163855547bd4c74b9f65b640e844b5ac1ed7284a",
+        "planGeneration": "5610e858702b8fb8c08142fbb1d5e5cdab10bb0aec9b06c04be273d17c89a933",
+        "basis": {
+          "planHashBeforeCheckpoint": "6c0e4d3255cb1a6235a1bb49ec2616dbd890776ca20f70975f6c5eddc8189f06",
+          "latestRelevantLedgerEventIdBeforeCheckpoint": "55557058-c28b-4d5f-a773-bd806094f0fa",
+          "goalUpdatedAtBeforeCheckpoint": "2026-06-18T14:42:17.181Z",
+          "relevantGoalIdsBeforeCheckpoint": [
+            "G006"
+          ],
+          "requiredGoalSetHashBeforeCheckpoint": "2f82e72a6d17959cbf961c74e96ed9247fb4d76a443a3611eb41d061ed4cecf0"
+        },
+        "checkpointLedgerEventId": "60fd16dd-d4a7-496d-98e1-96922bb799ed"
+      }
+    },
+    {
+      "id": "G007",
+      "title": "Runtime source cleanup and regression hardening",
+      "objective": "Choose and enforce the final runtime source structure, delete or wire stale modules, document auth/migration/recovery/release procedures, add regression tests/manual gates for every invariant, and complete final architect/QA review evidence for the A-to-Z upgrade.",
+      "status": "complete",
+      "createdAt": "2026-06-18T12:54:29.956Z",
+      "updatedAt": "2026-06-18T14:48:31.152Z",
+      "startedAt": "2026-06-18T14:42:17.199Z",
+      "completedAt": "2026-06-18T14:48:31.152Z",
+      "evidence": "G007 complete: final runtime source policy enforced with index.html authoritative, stale public HTML/session artifacts wired to noindex redirects, Firebase Hosting ignores/rewrites added, operations procedures documented, regression gate script added and passing, public phone-pattern scan clean, and GJC review passed. Aggregate live release remains blocked by G002/G004/G005 Firebase admin-auth gates.",
+      "completionVerification": {
+        "schemaVersion": 1,
+        "receiptId": "37984cff-8aa1-421f-ac85-5027c48b7a32",
+        "verifiedAt": "2026-06-18T14:48:31.152Z",
+        "goalId": "G007",
+        "receiptKind": "per-goal",
+        "goalStatusBeforeCheckpoint": "active",
+        "gjcGoalMode": "aggregate",
+        "gjcObjective": "Complete the durable ultragoal plan in .gjc/ultragoal/goals.json, including later accepted/appended stories, under the original brief constraints; use .gjc/ultragoal/ledger.jsonl as the audit trail.",
+        "qualityGateHash": "dd30bec8e366cd2e783474720ba71370cbf08dae4c2bee8fa4d6d729c3446975",
+        "gjcGoalSnapshotHash": "9d3b040e150004e64d0066acbf5180c5639d12b0291b05bdc9a12334bba13867",
+        "planGeneration": "1b5115cc6aa8270d1fe638c9a872c79be4d75c4be6091a44536dba4fe11adaeb",
+        "basis": {
+          "planHashBeforeCheckpoint": "ef19f7a55f2b1937a2a567c3e8004bb244c35fbbafec0d34c2926bef94f2285f",
+          "latestRelevantLedgerEventIdBeforeCheckpoint": "98026a5a-57ec-45fe-b1ce-05cdea449a39",
+          "goalUpdatedAtBeforeCheckpoint": "2026-06-18T14:48:31.152Z",
+          "relevantGoalIdsBeforeCheckpoint": [
+            "G007"
+          ],
+          "requiredGoalSetHashBeforeCheckpoint": "f6e0ce9ae97b6dd4a766f3afadddc4fbb2fcb0bd92322ec53f3c4c2bd39887f5"
+        },
+        "checkpointLedgerEventId": "0f77d5ae-c390-4512-83b1-f9307abb68c6"
+      }
+    },
+    {
+      "id": "G008",
+      "title": "Post-login UX workflow fixes",
+      "objective": "Resolve later accepted user-reported workflow friction after admin login: make missing-attendance confirmations visibly remove handled rows, move mobile schedule status metadata away from day/week tab controls, and add a consult hold workflow for long-waiting applicants without regressing existing safety gates.",
+      "status": "complete",
+      "createdAt": "2026-06-18T19:33:16.312089+00:00",
+      "updatedAt": "2026-06-18T19:33:16.312089+00:00",
+      "startedAt": "2026-06-18T19:33:16.312089+00:00",
+      "completedAt": "2026-06-18T19:33:16.312089+00:00",
+      "evidence": "G008 complete: post-login UX workflow fixes shipped and verified. Attendance proposal batch confirmations now remove handled items immediately and show displayed/total count; mobile schedule no longer puts 수강중/미배정 metadata in the topbar where it blocks 일별/주간 tabs; 상담신청자 now has a 보류 tab with 대기↔보류 card actions, held consults excluded from schedule slots and bulk SMS. Regression gates pass and deployed browser verification passed. Evidence: tmp/ultragoal-ux-workflow-fix.json; hosting version projects/131827810958/sites/hlbvocalstudio-72481/versions/9bc769edcb13f0eb.",
+      "completionVerification": {
+        "schemaVersion": 1,
+        "receiptId": "e505e816-b0b2-4654-a917-819d6fb1cc4f",
+        "verifiedAt": "2026-06-18T19:33:16.312089+00:00",
+        "goalId": "G008",
+        "receiptKind": "appended-story",
+        "evidenceFile": "tmp/ultragoal-ux-workflow-fix.json",
+        "hostingVersion": "projects/131827810958/sites/hlbvocalstudio-72481/versions/9bc769edcb13f0eb",
+        "regressionGate": "node scripts/regression-gates.mjs",
+        "indexSha256": "19d5583010974a41f4aa53d610141fb42cbeb98810db2eae32660074bb599ff8"
+      }
+    },
+    {
+      "id": "G009",
+      "title": "Priority UX and verification update batch",
+      "objective": "Implement the prioritized update candidates and the newly reported mobile weekly schedule overlap fix: add an authenticated admin verification receipt path, clarify consult draft versus hold semantics, reduce redundant dashboard auth friction, remove a latent consult frequency bug, add missing-attendance hide handling, and reposition mobile schedule controls so lesson-placement/status text does not block day/week tapping.",
+      "status": "complete",
+      "createdAt": "2026-06-19T04:52:36.832708+00:00",
+      "updatedAt": "2026-06-19T04:52:36.832708+00:00",
+      "startedAt": "2026-06-19T04:52:36.832708+00:00",
+      "completedAt": "2026-06-19T04:52:36.832708+00:00",
+      "evidence": "G009 complete: priority update batch shipped. Added authenticated 관리자 검증 panel for G004/G005 JSON receipts, clarified consult form 임시저장 wording, bypassed dashboard local password for Firebase admin sessions, fixed ciSetFreq undefined variable risk, added 수업 아님 hiding for missing-attendance proposals, and separated/collapsed mobile schedule 수강중/미배정 controls so day/week tabs and schedule actions remain tappable. Regression gates, diff check, local browser, deployed browser verification, and hosting deploy succeeded. Evidence: tmp/ultragoal-priority-update-batch.json; hosting version projects/131827810958/sites/hlbvocalstudio-72481/versions/d5c2ae0e5f559da8.",
+      "completionVerification": {
+        "schemaVersion": 1,
+        "receiptId": "1cfde71e-b482-46b0-84d1-f2f3f7b932d6",
+        "verifiedAt": "2026-06-19T04:52:36.832708+00:00",
+        "goalId": "G009",
+        "receiptKind": "appended-story",
+        "evidenceFile": "tmp/ultragoal-priority-update-batch.json",
+        "hostingVersion": "projects/131827810958/sites/hlbvocalstudio-72481/versions/d5c2ae0e5f559da8",
+        "regressionGate": "node scripts/regression-gates.mjs",
+        "indexSha256": "def46b67e335064dc30a8c2045832efaea09d4d3c55ef7ed6415a848b29c6f94"
+      }
+    },
+    {
+      "id": "G010",
+      "title": "Mobile schedule tab-overlap hotfix",
+      "objective": "Fix the still-visible mobile weekly schedule overlap by ensuring 수강중/미배정/배정 controls cannot visually or physically overlap the 일별/주간 tab switch, and force mobile browsers onto the fresh release via service-worker cache version bump.",
+      "status": "complete",
+      "createdAt": "2026-06-19T06:47:05.801793+00:00",
+      "updatedAt": "2026-06-19T06:47:05.801793+00:00",
+      "startedAt": "2026-06-19T06:47:05.801793+00:00",
+      "completedAt": "2026-06-19T06:47:05.801793+00:00",
+      "evidence": "G010 complete: mobile schedule overlap hotfix deployed after user still saw 미배정/배정 text near 일별/주간 tabs. Removed sticky mobile view switch behavior, moved week-view 배정/미배정/수정/수강중 controls to a bottom fixed action rail, kept day-view status below the date header, and bumped service worker cache to vs-v2-2026-06-19-mobile-overlap-fix. Deployed browser verification at 360x740 shows a 507px gap between 일별/주간 tabs and first status/action controls. Evidence: tmp/ultragoal-mobile-overlap-hotfix.json; hosting version projects/131827810958/sites/hlbvocalstudio-72481/versions/2546356aec3b1a81.",
+      "completionVerification": {
+        "schemaVersion": 1,
+        "receiptId": "b8763ddd-4ff0-475b-a3c7-4931418694d7",
+        "verifiedAt": "2026-06-19T06:47:05.801793+00:00",
+        "goalId": "G010",
+        "receiptKind": "appended-story",
+        "evidenceFile": "tmp/ultragoal-mobile-overlap-hotfix.json",
+        "hostingVersion": "projects/131827810958/sites/hlbvocalstudio-72481/versions/2546356aec3b1a81",
+        "regressionGate": "node scripts/regression-gates.mjs",
+        "indexSha256": "14e4476af7fe3605bac870985473d63bf1fddeb9926d5a444d883a111feacbba",
+        "swVersion": "vs-v2-2026-06-19-mobile-overlap-fix"
+      }
+    },
+    {
+      "id": "G011",
+      "title": "Mobile schedule tab hard separation",
+      "objective": "Resolve the follow-up deployed mobile report that 미배정/배정 text still appeared in the 일별/주간 schedule tab area by removing obsolete duplicate mobile week renderers, forcing all mobile schedule status/action controls into bottom fixed rails, bumping the service-worker cache, deploying, and verifying local/deployed mobile layout evidence.",
+      "status": "complete",
+      "createdAt": "2026-06-19T07:08:54.329051+00:00",
+      "updatedAt": "2026-06-19T07:08:54.329051+00:00",
+      "startedAt": "2026-06-19T07:08:54.329051+00:00",
+      "completedAt": "2026-06-19T07:08:54.329051+00:00",
+      "evidence": "G011 complete: mobile schedule tab hard separation deployed. Obsolete duplicate mobile week renderers with top 미배정/변동 배정 rows were removed; one authoritative mobile week renderer remains; day/week status-action controls are bottom fixed only; service worker cache bumped to vs-v2-2026-06-19-mobile-tabs-hardfix. Local and deployed 360x740 browser verification show a 520px gap between 일별/주간 tabs and first 배정/미배정/수강중 controls, duplicate buildMobileWeekView count is 1, and deployed SW version is verified. Evidence: tmp/ultragoal-mobile-tabs-hardfix.json; hosting version projects/131827810958/sites/hlbvocalstudio-72481/versions/65b4d1aca6bc99f6.",
+      "completionVerification": {
+        "schemaVersion": 1,
+        "receiptId": "2cec8f36-61f0-4072-8728-44fd551f2098",
+        "verifiedAt": "2026-06-19T07:08:54.329051+00:00",
+        "goalId": "G011",
+        "receiptKind": "appended-story",
+        "evidenceFile": "tmp/ultragoal-mobile-tabs-hardfix.json",
+        "hostingVersion": "projects/131827810958/sites/hlbvocalstudio-72481/versions/65b4d1aca6bc99f6",
+        "regressionGate": "node scripts/regression-gates.mjs",
+        "indexSha256": "387b1b49d07b6ba5a46f6fee3b53206aa3d9970b43400c440b5c75c1ce99d0f0",
+        "swVersion": "vs-v2-2026-06-19-mobile-tabs-hardfix",
+        "deployedMobileGapPx": 520,
+        "duplicateBuildMobileWeekViewCount": 1
+      }
+    },
+    {
+      "id": "G012",
+      "title": "Mobile schedule no-label default viewport",
+      "objective": "Resolve the mobile follow-up where clearing site data still left the schedule feeling unchanged by hiding all persistent 미배정/수강중/배정/수정 labels from the default mobile schedule viewport, exposing them only after tapping a compact 배치 control, bumping the service-worker cache, deploying, and capturing proof screenshot evidence.",
+      "status": "complete",
+      "createdAt": "2026-06-19T07:48:48.956667+00:00",
+      "updatedAt": "2026-06-19T07:48:48.956667+00:00",
+      "startedAt": "2026-06-19T07:48:48.956667+00:00",
+      "completedAt": "2026-06-19T07:48:48.956667+00:00",
+      "evidence": "G012 complete: mobile schedule default viewport no longer shows persistent 미배정/수강중/배정/수정 labels. The detailed controls are collapsed behind a single 배치 button, stale open-state key is ignored, service worker cache bumped to vs-v2-2026-06-19-mobile-tabs-nolabel-hardfix, and hosting deployed. Local and deployed checks show zero visible bad labels in day/week default views; proof screenshot saved at tmp/mobile-week-nolabel-proof.png. Evidence: tmp/ultragoal-mobile-nolabel-hardfix.json; hosting version projects/131827810958/sites/hlbvocalstudio-72481/versions/00a8640b7756fedd.",
+      "completionVerification": {
+        "schemaVersion": 1,
+        "receiptId": "e32dad41-4303-47aa-8d0c-0231e7db2edd",
+        "verifiedAt": "2026-06-19T07:48:48.956667+00:00",
+        "goalId": "G012",
+        "receiptKind": "appended-story",
+        "evidenceFile": "tmp/ultragoal-mobile-nolabel-hardfix.json",
+        "proofScreenshot": "tmp/mobile-week-nolabel-proof.png",
+        "hostingVersion": "projects/131827810958/sites/hlbvocalstudio-72481/versions/00a8640b7756fedd",
+        "regressionGate": "node scripts/regression-gates.mjs",
+        "indexSha256": "5209513c6fc86bb3a2a3f70ab86b47e26e470fa1e421b18ffaa98e9cd4f415e3",
+        "swVersion": "vs-v2-2026-06-19-mobile-tabs-nolabel-hardfix",
+        "visibleBadLabels": 0
+      }
+    },
+    {
+      "id": "G013",
+      "title": "Missing-attendance edit resolution fix",
+      "objective": "Resolve the follow-up report that 확인 필요한 미기록 수업 remains visible after manually editing/saving the lesson record by marking matching proposal keys as resolved on save/confirmation, verifying local/deployed browser behavior, bumping cache, deploying, and recording audit evidence.",
+      "status": "complete",
+      "createdAt": "2026-06-19T07:57:04.542678+00:00",
+      "updatedAt": "2026-06-19T07:57:04.542678+00:00",
+      "startedAt": "2026-06-19T07:57:04.542678+00:00",
+      "completedAt": "2026-06-19T07:57:04.542678+00:00",
+      "evidence": "G013 complete: 확인 필요한 미기록 수업 now disappears after the matching lesson record is saved/edited. Added explicit proposal resolution tracking for lesson-record saves and proposal confirmations; resolved marks suppress only while a matching log exists. Regression gates pass, local/deployed browser checks prove the target proposal is present before save and absent after save, deployed SW version is vs-v2-2026-06-19-attendance-resolve-fix. Evidence: tmp/ultragoal-attendance-edit-resolution-fix.json; hosting version projects/131827810958/sites/hlbvocalstudio-72481/versions/e0345296cbd2bf31.",
+      "completionVerification": {
+        "schemaVersion": 1,
+        "receiptId": "3a849d9c-e3ae-43ed-bdfa-325e17fc8ecf",
+        "verifiedAt": "2026-06-19T07:57:04.542678+00:00",
+        "goalId": "G013",
+        "receiptKind": "appended-story",
+        "evidenceFile": "tmp/ultragoal-attendance-edit-resolution-fix.json",
+        "hostingVersion": "projects/131827810958/sites/hlbvocalstudio-72481/versions/e0345296cbd2bf31",
+        "regressionGate": "node scripts/regression-gates.mjs",
+        "indexSha256": "6ea16b49754f49151c4f5771b6be9e3f33759852e4f88290f6a6cd1a1652ba76",
+        "swVersion": "vs-v2-2026-06-19-attendance-resolve-fix",
+        "deployedProposalAfterSaveVisible": false
+      }
+    },
+    {
+      "id": "G014",
+      "title": "Vercel production deploy alignment",
+      "objective": "Resolve the newly identified mismatch where the user was likely viewing Vercel rather than Firebase Hosting by adding Vercel static deploy config, deploying the current runtime to Vercel production, verifying the mobile no-label schedule and missing-attendance fix on the Vercel domain, and recording audit evidence.",
+      "status": "complete",
+      "createdAt": "2026-06-19T08:06:36.566409+00:00",
+      "updatedAt": "2026-06-19T08:06:36.566409+00:00",
+      "startedAt": "2026-06-19T08:06:36.566409+00:00",
+      "completedAt": "2026-06-19T08:06:36.566409+00:00",
+      "evidence": "G014 complete: Vercel production deployment is now aligned with the latest runtime fixes. Added vercel.json and .vercelignore, ran scoped Vercel prod deploy, created/linked aljjang95s-projects/vocal-studio, and verified https://vocal-studio-tan.vercel.app serves service worker vs-v2-2026-06-19-attendance-resolve-fix plus the mobile no-label schedule and attendance edit-resolution code. Proof screenshot: tmp/vercel-mobile-proof.png. Evidence: tmp/ultragoal-vercel-production-deploy.json; deployment dpl_ypfdVcjWqQANyEVzSZLKzwdqDsDY.",
+      "completionVerification": {
+        "schemaVersion": 1,
+        "receiptId": "6c279d08-b4d0-496d-9536-5e0c53315dce",
+        "verifiedAt": "2026-06-19T08:06:36.566409+00:00",
+        "goalId": "G014",
+        "receiptKind": "appended-story",
+        "evidenceFile": "tmp/ultragoal-vercel-production-deploy.json",
+        "proofScreenshot": "tmp/vercel-mobile-proof.png",
+        "productionAlias": "https://vocal-studio-tan.vercel.app",
+        "deploymentId": "dpl_ypfdVcjWqQANyEVzSZLKzwdqDsDY",
+        "swVersion": "vs-v2-2026-06-19-attendance-resolve-fix",
+        "visibleBadLabels": 0,
+        "sourceHasAttendanceFix": true
+      }
+    },
+    {
+      "id": "G015",
+      "title": "Vercel Firebase sync/domain alignment",
+      "objective": "Resolve the newly reported Vercel empty-data/sync mismatch by diagnosing the Vercel local-mode state, authorizing the Vercel production domains for Firebase Auth, adding visible sync guidance, redeploying Firebase and Vercel, and recording evidence that the Vercel app now reaches the admin OAuth path rather than silently showing empty local data.",
+      "status": "complete",
+      "createdAt": "2026-06-19T08:35:33.123911+00:00",
+      "updatedAt": "2026-06-19T08:35:33.123911+00:00",
+      "startedAt": "2026-06-19T08:35:33.123911+00:00",
+      "completedAt": "2026-06-19T08:35:33.123911+00:00",
+      "evidence": "G015 complete: Vercel empty-data issue traced to unauthenticated Vercel origin plus Firebase Auth unauthorized-domain, not confirmed server data loss. Added Vercel production domains to Firebase Auth authorizedDomains, added visible top sync status showing 관리자 인증 필요 · 로컬 모드, redeployed Firebase and Vercel, verified Vercel sw version vs-v2-2026-06-19-vercel-sync-fix and signInAdmin no longer immediately rejects with unauthorized-domain. User must complete admin Google login on Vercel to load Firestore server data. Evidence: tmp/ultragoal-vercel-firebase-sync-fix.json; Vercel deployment dpl_9ai9ZWtxiiZ1kizmU1QAz9qrECkm; Firebase hosting version projects/131827810958/sites/hlbvocalstudio-72481/versions/035adb4666b7f8f0.",
+      "completionVerification": {
+        "schemaVersion": 1,
+        "receiptId": "e6b6735a-0145-48db-b866-6e1bdfa9a4a1",
+        "verifiedAt": "2026-06-19T08:35:33.123911+00:00",
+        "goalId": "G015",
+        "receiptKind": "appended-story",
+        "evidenceFile": "tmp/ultragoal-vercel-firebase-sync-fix.json",
+        "vercelProductionAlias": "https://vocal-studio-tan.vercel.app",
+        "vercelDeploymentId": "dpl_9ai9ZWtxiiZ1kizmU1QAz9qrECkm",
+        "firebaseHostingVersion": "projects/131827810958/sites/hlbvocalstudio-72481/versions/035adb4666b7f8f0",
+        "swVersion": "vs-v2-2026-06-19-vercel-sync-fix",
+        "authDomainAuthorized": true,
+        "requiresUserAdminLogin": true
+      }
+    },
+    {
+      "id": "G016",
+      "title": "Displayed missing-attendance batch removal fix",
+      "objective": "Resolve the repeated report that 표시 항목 actions in 확인 필요한 미기록 수업 do not remove displayed items by making 출석 batch one-tap, forcing displayed proposal keys to resolve immediately, verifying local/Vercel behavior, deploying to Firebase and Vercel, and recording audit evidence.",
+      "status": "complete",
+      "createdAt": "2026-06-19T09:00:17.056042+00:00",
+      "updatedAt": "2026-06-19T09:00:17.056042+00:00",
+      "startedAt": "2026-06-19T09:00:17.056042+00:00",
+      "completedAt": "2026-06-19T09:00:17.056042+00:00",
+      "evidence": "G016 complete: 표시 항목 출석 확정 now applies immediately and removes every currently displayed missing-attendance proposal. Batch processing marks all displayed proposal keys resolved, 결석 batch uses the same forced removal path after confirmation, and resolved keys suppress immediately. Local and Vercel browser checks show beforeCount=2, afterCount=0, stillVisible=0, logsCreated=2. Firebase and Vercel deployed with service worker vs-v2-2026-06-19-proposal-batch-fix. Evidence: tmp/ultragoal-proposal-batch-removal-fix.json; Firebase hosting version projects/131827810958/sites/hlbvocalstudio-72481/versions/14d5174bce5ce678; Vercel deployment dpl_CVRtSMgfbC9nvmR8rLCHtDD4Tyf9.",
+      "completionVerification": {
+        "schemaVersion": 1,
+        "receiptId": "61cb3475-d1b9-4953-b291-2079b72acbbf",
+        "verifiedAt": "2026-06-19T09:00:17.056042+00:00",
+        "goalId": "G016",
+        "receiptKind": "appended-story",
+        "evidenceFile": "tmp/ultragoal-proposal-batch-removal-fix.json",
+        "firebaseHostingVersion": "projects/131827810958/sites/hlbvocalstudio-72481/versions/14d5174bce5ce678",
+        "vercelDeploymentId": "dpl_CVRtSMgfbC9nvmR8rLCHtDD4Tyf9",
+        "vercelProductionAlias": "https://vocal-studio-tan.vercel.app",
+        "swVersion": "vs-v2-2026-06-19-proposal-batch-fix",
+        "displayedItemsStillVisibleAfterBatch": 0
+      }
+    },
+    {
+      "id": "G017",
+      "title": "Mobile weekly reschedule tap fix",
+      "objective": "Resolve the mobile weekly schedule report that a Saturday 1pm student could not be changed/tapped into the 3pm slot by making mobile week/day cells tappable after every schedule rerender, deploying Firebase and Vercel, and recording verification evidence.",
+      "status": "complete",
+      "createdAt": "2026-06-19T10:20:28.975545+00:00",
+      "updatedAt": "2026-06-19T10:20:28.975545+00:00",
+      "startedAt": "2026-06-19T10:20:28.975545+00:00",
+      "completedAt": "2026-06-19T10:20:28.975545+00:00",
+      "evidence": "G017 complete: mobile weekly schedule cells remain tappable after schedule rerenders. Saturday 13:00→15:00 synthetic mobile reschedule flow passes locally and on Vercel; empty 토 15:00/16:00 cells open quick-slot modals after forced redraw/post-save. Firebase and Vercel deployed with service worker vs-v2-2026-06-19-mobile-week-tap-fix. Evidence: tmp/ultragoal-mobile-week-tap-fix.json; Firebase hosting version projects/131827810958/sites/hlbvocalstudio-72481/versions/12e3698126f8f87d; Vercel deployment dpl_GNnRcYVZsp7eeiUF3V8RL5rPcyG3.",
+      "completionVerification": {
+        "schemaVersion": 1,
+        "receiptId": "6517d0ea-7644-4443-8fe5-81f210e27862",
+        "verifiedAt": "2026-06-19T10:20:28.975545+00:00",
+        "goalId": "G017",
+        "receiptKind": "appended-story",
+        "evidenceFile": "tmp/ultragoal-mobile-week-tap-fix.json",
+        "firebaseHostingVersion": "projects/131827810958/sites/hlbvocalstudio-72481/versions/12e3698126f8f87d",
+        "vercelDeploymentId": "dpl_GNnRcYVZsp7eeiUF3V8RL5rPcyG3",
+        "vercelProductionAlias": "https://vocal-studio-tan.vercel.app",
+        "regressionGate": "node scripts/regression-gates.mjs",
+        "indexSha256": "9e161e81d78e7dcb345df814d556b0492cbea3e8a56be1d237fe56277694eece",
+        "swVersion": "vs-v2-2026-06-19-mobile-week-tap-fix",
+        "mobileSaturday13To15Verified": true,
+        "postSaveCellTapVerified": true
+      }
+    },
+    {
+      "id": "G018",
+      "title": "Student full life-history timeline",
+      "objective": "Resolve the student single-view request by showing every lesson record as a comfortable full life-history timeline, not a short recent/previous-week snippet, while preserving quick edit access and deploying the update.",
+      "status": "complete",
+      "createdAt": "2026-06-19T13:02:46.413614+00:00",
+      "updatedAt": "2026-06-19T13:02:46.413614+00:00",
+      "startedAt": "2026-06-19T13:02:46.413614+00:00",
+      "completedAt": "2026-06-19T13:02:46.413614+00:00",
+      "evidence": "G018 complete: 레슨생 단일 보기의 레슨 기록 탭이 전체 기록을 처음부터 현재까지 월별 성장 일대기로 표시합니다. 오늘 카드의 이전 기록도 최근 5건 제한을 없애고 이전 기록 전체 N건으로 펼쳐 볼 수 있습니다. Regression gates, local browser, deployed Vercel browser checks passed. Firebase and Vercel deployed with service worker vs-v2-2026-06-19-student-life-timeline. Evidence: tmp/ultragoal-student-life-timeline.json; Firebase hosting version projects/131827810958/sites/hlbvocalstudio-72481/versions/891271671b3c0c7e; Vercel deployment dpl_DiQujRBxNKtqwqxWauqkLyypxHbS.",
+      "completionVerification": {
+        "schemaVersion": 1,
+        "receiptId": "fb26478a-6c09-402d-9d0f-b6476d1e802d",
+        "verifiedAt": "2026-06-19T13:02:46.413614+00:00",
+        "goalId": "G018",
+        "receiptKind": "appended-story",
+        "evidenceFile": "tmp/ultragoal-student-life-timeline.json",
+        "firebaseHostingVersion": "projects/131827810958/sites/hlbvocalstudio-72481/versions/891271671b3c0c7e",
+        "vercelDeploymentId": "dpl_DiQujRBxNKtqwqxWauqkLyypxHbS",
+        "vercelProductionAlias": "https://vocal-studio-tan.vercel.app",
+        "regressionGate": "node scripts/regression-gates.mjs",
+        "indexSha256": "d20b091401b912149fdb0807a5630eab44a2ebd7f4a8404b9b8e250f3a16dbdf",
+        "swVersion": "vs-v2-2026-06-19-student-life-timeline",
+        "profileLifeTimelineAllRecordsVerified": true,
+        "todayPreviousRecordsUncappedVerified": true
+      }
+    }
+  ],
+  "createdAt": "2026-06-18T12:54:29.956Z",
+  "updatedAt": "2026-06-19T13:02:46.413614+00:00"
+}

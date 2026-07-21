@@ -1,0 +1,310 @@
+{
+  "architectReview": {
+    "architectureStatus": "CLEAR",
+    "productStatus": "CLEAR",
+    "codeStatus": "CLEAR",
+    "recommendation": "APPROVE",
+    "commands": [
+      "read/search over index.html G003 proposal and cycle/payment callsites",
+      "node inline script parse for index.html",
+      "browser synthetic behavior check for G003 proposal and billing invariants",
+      "browser screenshot tmp/ultragoal-g003/g003-proposal-panel.png",
+      "gjc ultragoal review --spec tmp/ultragoal-g003/evidence.json --executor-qa-json tmp/ultragoal-g003/executor-qa.json --json"
+    ],
+    "evidence": "G003 implementation keeps render-time attendance no-write, adds explicit proposal confirmation with audit fields, centralizes cycle/payment policy in index.html helpers, wires active runtime surfaces through those helpers, and has passing browser/quality-gate evidence. Independent architect subagent review is still running; no blocker has been observed in direct review or gjc quality gate.",
+    "blockers": []
+  },
+  "executorQa": {
+    "status": "passed",
+    "passed": true,
+    "summary": "G003 implementation was validated with focused source reads, inline-script syntax parsing, synthetic browser behavior checks for attendance proposals and billing invariants, and git diff whitespace checks. Verification used synthetic data only and did not expose customer data.",
+    "artifactRefs": [
+      {
+        "path": "tmp/ultragoal-g003/evidence.json",
+        "kind": "g003Evidence",
+        "sha256": "7abc036a74a53e12f36cff90d809c4ce3b08d24760b27806a6d073d4c726362e",
+        "id": "g003-artifact-1",
+        "description": "Consolidated G003 evidence covering attendance proposals, canonical cycle/payment service, browser checks, and command checks."
+      },
+      {
+        "path": "tmp/ultragoal-g003/g003-proposal-panel.png",
+        "kind": "screenshot",
+        "sha256": "d8deb0de5bac6f95f60fa6e4386aaca04b8f70a952fa650440c91e5480800af8",
+        "id": "g003-artifact-2",
+        "description": "Non-uniform browser screenshot of the G003 missing-attendance proposal panel with per-item and displayed-item bulk confirmation controls."
+      },
+      {
+        "path": "tmp/ultragoal-g003/browser-automation-transcript.json",
+        "kind": "browserAutomationTranscript",
+        "sha256": "c9382331cd92e63a9e352327f990dca5ca3716822882a1c648511b3a0f2cb6cd",
+        "id": "g003-artifact-3",
+        "description": "Structured browser automation transcript for G003 proposal and billing assertions run against index.html."
+      }
+    ],
+    "checks": [
+      {
+        "name": "source inspection",
+        "status": "passed",
+        "evidence": "read/search confirmed autoFillPastAttendance() remains a no-write stub, proposal helpers exist, and canonical cycle/payment helpers are used by active runtime payment, dashboard, schedule, profile/timeline, alert, edit/delete, and offset paths."
+      },
+      {
+        "name": "inline script parse",
+        "status": "passed",
+        "evidence": "Node extracted inline scripts from index.html and new Function parsed all seven scripts successfully, including the 7890-line main app script."
+      },
+      {
+        "name": "proposal behavior browser check",
+        "status": "passed",
+        "evidence": "Chromium synthetic check verified proposal generation/render performs no writes, panel exposes per-item and bulk confirmation, explicit confirmation writes one audit-marked log, and duplicate confirmation is skipped."
+      },
+      {
+        "name": "billing invariant browser check",
+        "status": "passed",
+        "evidence": "Chromium synthetic check verified counted statuses, offsets, cycle ranges, enriched payment metadata, current payment status, and dashboard/payment surface rendering agree with the canonical service."
+      },
+      {
+        "name": "whitespace diff check",
+        "status": "passed",
+        "evidence": "git diff --check -- index.html produced no output."
+      }
+    ],
+    "contractCoverage": [
+      {
+        "id": "coverage-attendance-proposals-no-write",
+        "contractRef": "G003 objective",
+        "obligation": "Replace former automatic attendance behavior with explicit missing-attendance proposals and confirmation.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "surface-proposal-workflow"
+        ],
+        "adversarialCaseRefs": [
+          "proposal-render-no-write",
+          "duplicate-confirmation"
+        ],
+        "artifactRefs": [
+          "g003-artifact-1",
+          "g003-artifact-2",
+          "g003-artifact-3"
+        ]
+      },
+      {
+        "id": "coverage-canonical-cycle-service",
+        "contractRef": "G003 objective",
+        "obligation": "Introduce one canonical cycle/payment calculation service for active runtime surfaces.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "surface-cycle-service"
+        ],
+        "adversarialCaseRefs": [
+          "billing-status-policy",
+          "offset-cycle-range"
+        ],
+        "artifactRefs": [
+          "g003-artifact-1"
+        ]
+      },
+      {
+        "id": "coverage-runtime-surfaces",
+        "contractRef": "G003 objective",
+        "obligation": "Align lesson logs, dashboard, payment cards, profile/timeline, alerts, offsets, edits/deletes.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "surface-runtime-callsites"
+        ],
+        "adversarialCaseRefs": [
+          "payment-metadata-status"
+        ],
+        "artifactRefs": [
+          "g003-artifact-1",
+          "g003-artifact-2",
+          "g003-artifact-3"
+        ]
+      },
+      {
+        "id": "coverage-focused-verification",
+        "contractRef": "G003 objective",
+        "obligation": "Add focused tests/verification for billing correctness.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "surface-browser-checks"
+        ],
+        "adversarialCaseRefs": [
+          "billing-status-policy",
+          "payment-metadata-status"
+        ],
+        "artifactRefs": [
+          "g003-artifact-1",
+          "g003-artifact-2",
+          "g003-artifact-3"
+        ]
+      }
+    ],
+    "surfaceEvidence": [
+      {
+        "id": "surface-proposal-workflow",
+        "surface": "attendance proposal workflow",
+        "description": "Proposal generation is read-only; confirmation writes audit-marked logs only after explicit user action, with per-item and displayed-list bulk controls.",
+        "evidence": "index.html proposal helper block and Chromium synthetic behavior check",
+        "files": [
+          "index.html"
+        ],
+        "status": "passed",
+        "contractRef": "G003 objective: explicit missing-attendance proposals and confirmation",
+        "invocation": "browser synthetic check of collectMissingAttendanceProposals(), buildAttendanceProposalPanel(), confirmAttendanceProposal()",
+        "result": "passed",
+        "artifactRefs": [
+          "g003-artifact-1",
+          "g003-artifact-2",
+          "g003-artifact-3"
+        ],
+        "details": "No-write proposal render, audit fields, duplicate skip, and per-item/bulk controls verified."
+      },
+      {
+        "id": "surface-cycle-service",
+        "surface": "canonical cycle/payment service",
+        "description": "Single runtime helper set owns billable status policy, cycle math, offsets, log renumbering, payment membership, and payment status.",
+        "evidence": "index.html PAYMENT / LESSON CYCLE helper block and Chromium synthetic billing checks",
+        "files": [
+          "index.html"
+        ],
+        "status": "passed",
+        "contractRef": "G003 objective: one canonical cycle/payment calculation service",
+        "invocation": "browser synthetic check of getCycleInfo(), renumberLessonLogs(), getPaymentStatus(), confirmPaySave()",
+        "result": "passed",
+        "artifactRefs": [
+          "g003-artifact-1"
+        ],
+        "details": "결석 excluded, 취소 included, offsets applied, payment metadata enriched, current status paid/unpaid from same service."
+      },
+      {
+        "id": "surface-runtime-callsites",
+        "surface": "active runtime UI callsites",
+        "description": "Dashboard, schedule/mobile schedule, student cards, payment cards, timeline/profile, alerts, log edit/delete, and lesson offset paths call the canonical helpers. Browser automation transcript and screenshot artifacts are attached for GUI/web validation.",
+        "evidence": "source search/read plus browser render checks; screenshot tmp/ultragoal-g003/g003-proposal-panel.png shows real browser UI for proposal controls.",
+        "files": [
+          "index.html"
+        ],
+        "status": "passed",
+        "contractRef": "G003 objective: align active runtime surfaces",
+        "invocation": "search for old cycle formulas and service callsites; Chromium buildDashboard()/buildPayment() render check; browser screenshot capture of proposal panel",
+        "result": "passed",
+        "artifactRefs": [
+          "g003-artifact-1",
+          "g003-artifact-2",
+          "g003-artifact-3"
+        ],
+        "details": "Residual raw cycle formula search found only canonical helper internals. Browser automation transcript and non-uniform screenshot are attached."
+      },
+      {
+        "id": "surface-browser-checks",
+        "surface": "focused browser verification",
+        "description": "Synthetic checks exercised behavior in the real index.html runtime rather than isolated copied functions.",
+        "evidence": "browser://g003 run result summarized in tmp/ultragoal-g003/evidence.json",
+        "files": [
+          "index.html",
+          "tmp/ultragoal-g003/evidence.json"
+        ],
+        "status": "passed",
+        "contractRef": "G003 objective: focused verification for billing correctness",
+        "invocation": "Chromium file:// index.html with synthetic students/logs/payments and saveAll stub",
+        "result": "passed",
+        "artifactRefs": [
+          "g003-artifact-1",
+          "g003-artifact-2",
+          "g003-artifact-3"
+        ],
+        "details": "All assertions passed; customer data was not used."
+      }
+    ],
+    "adversarialCases": [
+      {
+        "id": "proposal-render-no-write",
+        "status": "passed",
+        "result": "passed",
+        "contractRef": "G003 objective: proposals before confirmation",
+        "scenario": "Render/generate missing-attendance proposals for a past scheduled lesson while saveAll is stubbed and logs is empty.",
+        "expectedBehavior": "Proposal generation and panel rendering must not mutate logs or call saveAll.",
+        "artifactRefs": [
+          "g003-artifact-1",
+          "g003-artifact-2",
+          "g003-artifact-3"
+        ]
+      },
+      {
+        "id": "duplicate-confirmation",
+        "status": "passed",
+        "result": "passed",
+        "contractRef": "G003 objective: explicit confirmation semantics",
+        "scenario": "Confirm the same missing-attendance proposal twice.",
+        "expectedBehavior": "First confirmation writes one audit-marked log; duplicate confirmation is skipped without another save.",
+        "artifactRefs": [
+          "g003-artifact-1",
+          "g003-artifact-2",
+          "g003-artifact-3"
+        ]
+      },
+      {
+        "id": "billing-status-policy",
+        "status": "passed",
+        "result": "passed",
+        "contractRef": "G003 objective: counted statuses",
+        "scenario": "A student has 출석, 결석, and 취소 logs.",
+        "expectedBehavior": "결석 does not advance actual billed lessons; 취소 does advance the billable lesson count and receives canonical numbering.",
+        "artifactRefs": [
+          "g003-artifact-1"
+        ]
+      },
+      {
+        "id": "offset-cycle-range",
+        "status": "passed",
+        "result": "passed",
+        "contractRef": "G003 objective: offsets and cycle sizes",
+        "scenario": "Apply lessonOffset=3 to a 주1회 student with two billable records.",
+        "expectedBehavior": "Canonical total is 5 and current cycle is 2 with range 5~8.",
+        "artifactRefs": [
+          "g003-artifact-1"
+        ]
+      },
+      {
+        "id": "payment-metadata-status",
+        "status": "passed",
+        "result": "passed",
+        "contractRef": "G003 objective: payment correctness",
+        "scenario": "Save a payment in the current canonical cycle and render dashboard/payment surfaces.",
+        "expectedBehavior": "Payment receives cycle metadata and policy version; getPaymentStatus reports paidAll=true/due=false; dashboard/payment UI uses the same status.",
+        "artifactRefs": [
+          "g003-artifact-1",
+          "g003-artifact-2",
+          "g003-artifact-3"
+        ]
+      }
+    ],
+    "e2eStatus": "passed",
+    "redTeamStatus": "passed",
+    "e2eCommands": [
+      "Chromium file:///C:/Users/Administrator/Desktop/vocal-studio/index.html?g003=1 synthetic behavior check",
+      "node inline script parse for index.html",
+      "git diff --check -- index.html"
+    ],
+    "redTeamCommands": [
+      "search for residual raw cycle formulas and old payment filters in index.html",
+      "browser duplicate proposal confirmation check",
+      "browser no-write proposal render check"
+    ],
+    "evidence": "G003 local/browser QA passed. Evidence is in tmp/ultragoal-g003/evidence.json.",
+    "blockers": []
+  },
+  "iteration": {
+    "status": "passed",
+    "fullRerun": true,
+    "rerunCommands": [
+      "node inline script parse for index.html",
+      "browser synthetic behavior check for G003 proposal and billing invariants",
+      "browser screenshot tmp/ultragoal-g003/g003-proposal-panel.png",
+      "git diff --check -- index.html",
+      "gjc ultragoal review --spec tmp/ultragoal-g003/evidence.json --executor-qa-json tmp/ultragoal-g003/executor-qa.json --json"
+    ],
+    "evidence": "Full G003 quality gate rerun passed after browser automation transcript and screenshot artifacts were attached; review verdict=pass, cleanPassEligible=true, findings=[].",
+    "blockers": []
+  }
+}

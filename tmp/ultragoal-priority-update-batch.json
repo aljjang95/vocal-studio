@@ -1,0 +1,48 @@
+{
+  "checkedAt": "2026-06-19T04:52:16.411494+00:00",
+  "story": "Priority update batch requested by user: implement top-ranked update candidates and fix mobile weekly schedule control overlap.",
+  "filesChanged": [
+    "index.html",
+    "scripts/regression-gates.mjs"
+  ],
+  "hostingVersion": "projects/131827810958/sites/hlbvocalstudio-72481/versions/d5c2ae0e5f559da8",
+  "indexSha256": "def46b67e335064dc30a8c2045832efaea09d4d3c55ef7ed6415a848b29c6f94",
+  "changes": [
+    "Added admin verification modal/button for logged-in admins to run G004 split write probe and G005 Storage upload probe from the authenticated browser and copy a JSON receipt.",
+    "Renamed old consult form local “보류 저장” draft workflow to “임시저장” to avoid conflict with the real 보류 tab.",
+    "Dashboard now opens directly for Firebase admin sessions; local password remains as pre-login privacy lock.",
+    "Fixed ciSetFreq undefined variable risk.",
+    "Added “수업 아님” hide action for missing-attendance proposals.",
+    "Moved mobile schedule active/unassigned summary into compact separated rows under day/week controls, with collapsible unassigned list and shorter 배정 buttons."
+  ],
+  "verification": {
+    "regressionGate": {
+      "command": "node scripts/regression-gates.mjs",
+      "ok": true,
+      "invariantCount": 43
+    },
+    "diffCheck": {
+      "command": "git diff --check -- index.html scripts/regression-gates.mjs",
+      "ok": true
+    },
+    "localBrowser": {
+      "attendanceHideOk": true,
+      "draftWordingOk": true,
+      "ciSetFreqOk": true,
+      "adminDryRunRequiresAuthInHeadless": true,
+      "dayScheduleSeparated": true,
+      "weekScheduleSeparated": true,
+      "errors": []
+    },
+    "deployedBrowser": {
+      "url": "https://hlbvocalstudio-72481.web.app/?prioritydeploy=1",
+      "attendanceHideOk": true,
+      "draftWordingOk": true,
+      "adminDryRunRequiresAuthInHeadless": true,
+      "dayScheduleSeparated": true,
+      "weekScheduleSeparated": true,
+      "errors": []
+    }
+  },
+  "remainingBlocker": "G004/G005 completion still requires the user to run the new 관리자 검증 panel from their authenticated admin browser and provide/copy the JSON receipt, because the agent headless browser is intentionally unauthenticated."
+}

@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "goalId": "G013",
+  "title": "Missing-attendance edit resolution fix",
+  "timestamp": "2026-06-19T07:57:04.542678+00:00",
+  "userReport": "User reported that 확인 필요한 미기록 수업 should disappear after 수정/save but did not.",
+  "changes": [
+    "Added markAttendanceProposalResolved and isAttendanceProposalSuppressed so resolved proposal keys are tracked explicitly.",
+    "Saving a lesson record now marks the matching scheduled missing-attendance proposal as lesson-record-saved.",
+    "Single and batch proposal confirmations also mark exact proposal keys as confirmed/batch-confirmed.",
+    "Resolved marks only suppress while a matching lesson log still exists; deleted logs can surface as proposals again.",
+    "Bumped service worker cache version to vs-v2-2026-06-19-attendance-resolve-fix."
+  ],
+  "verification": {
+    "regressionGates": {
+      "command": "node scripts/regression-gates.mjs",
+      "ok": true,
+      "inlineScripts": 7,
+      "invariantCount": 48,
+      "indexSha256": "6ea16b49754f49151c4f5771b6be9e3f33759852e4f88290f6a6cd1a1652ba76"
+    },
+    "diffCheck": {
+      "command": "git diff --check -- index.html sw.js scripts/regression-gates.mjs",
+      "ok": true,
+      "note": "Only sw.js LF-to-CRLF warning observed."
+    },
+    "localBrowser": {
+      "url": "file:///C:/Users/Administrator/Desktop/vocal-studio/index.html?attendancefix=1",
+      "scenario": "Synthetic past fixed lesson proposal, open lesson record, save, then collect proposals again.",
+      "beforeHasTarget": true,
+      "afterHasTarget": false,
+      "logsCreated": 1,
+      "hiddenReason": "lesson-record-saved",
+      "ok": true
+    },
+    "deploy": {
+      "command": "npx firebase-tools deploy --only hosting --project hlbvocalstudio-72481 --json",
+      "ok": true,
+      "hostingVersion": "projects/131827810958/sites/hlbvocalstudio-72481/versions/e0345296cbd2bf31"
+    },
+    "deployedServiceWorker": {
+      "url": "https://hlbvocalstudio-72481.web.app/sw.js?attendancefix=20260619",
+      "version": "vs-v2-2026-06-19-attendance-resolve-fix",
+      "ok": true
+    },
+    "deployedBrowser": {
+      "url": "https://hlbvocalstudio-72481.web.app/?attendancefix=20260619",
+      "sourceHasFix": true,
+      "beforeHasTarget": true,
+      "afterHasTarget": false,
+      "logsCreated": 1,
+      "hiddenReason": "lesson-record-saved",
+      "ok": true
+    }
+  },
+  "hashes": {
+    "indexSha256": "6ea16b49754f49151c4f5771b6be9e3f33759852e4f88290f6a6cd1a1652ba76",
+    "swSha256": "bfcf39bf78b65a4b31a841a2a3765ad4240946654d5d6b1ce4bfa1b264a3ea16",
+    "regressionGatesSha256": "91cb2de4bc94362f5802d05218f9d17d437a80cf03fa074961671bf2bf554a6c"
+  },
+  "residualBlockers": [
+    "G004/G005 live split-write and Storage upload receipts still require a logged-in admin browser to run 관리자 검증 → 라이브 G004/G005 검증 and provide/copy the JSON receipt."
+  ]
+}

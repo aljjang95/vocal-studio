@@ -281,7 +281,7 @@ function printBeforeSheet(did,mode){
 
   w.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>레슨 평가지</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>'+css+'</style></head><body>');
   w.document.write('<h1>HLB보컬스튜디오</h1>');
-  w.document.write('<div class="studioname">원장 양경렬 &nbsp;·&nbsp; ☎ 010-8804-8903</div>');
+  w.document.write('<div class="studioname">원장 &nbsp;·&nbsp; ☎ [스튜디오 연락처]</div>');
   w.document.write('<div class="sub">수강생: <strong>'+esc(data.name)+'</strong>&nbsp;&nbsp;|&nbsp;&nbsp;레슨 유의사항 &amp; 트레이너 초기 평가&nbsp;&nbsp;|&nbsp;&nbsp;'+ds+'</div>');
 
   /* ── 트레이너 초기 평가 ── */
@@ -310,8 +310,8 @@ function printBeforeSheet(did,mode){
   /* ── 입금 계좌 ── */
   w.document.write('<div class="account-box">');
   w.document.write('<div class="account-title">입금 계좌</div>');
-  w.document.write('<div class="account-row">우리은행 &nbsp; 1002-046-438968 &nbsp; (양경렬)</div>');
-  w.document.write('<div class="account-row">기업은행 &nbsp; 010-8804-8903 &nbsp; (양경렬)</div>');
+  w.document.write('<div class="account-row">우리은행 &nbsp; [입금 계좌] &nbsp; (예금주)</div>');
+  w.document.write('<div class="account-row">기업은행 &nbsp; [스튜디오 연락처] &nbsp; (예금주)</div>');
   w.document.write('<div style="font-size:10px;color:#888;margin-top:2px">카카오톡 오픈채팅: HLB보컬스튜디오</div>');
   w.document.write('</div>');
   w.document.write('</div>');

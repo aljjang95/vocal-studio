@@ -1,0 +1,70 @@
+{
+  "goalId": "G007",
+  "title": "Runtime source cleanup and regression hardening",
+  "status": "local-hardening-verified",
+  "verifiedAt": "2026-06-18T14:45:01.477Z",
+  "implementation": {
+    "runtimeSourcePolicy": {
+      "authoritativeRuntime": "index.html",
+      "legacyHtml": [
+        "vocal-studio.html redirects to index.html and is noindex",
+        "vocal-studi.html redirects to index.html and is noindex",
+        "gjc-session-2026-06-18T07-40-22-369Z_019ed9ac-83e1-7000-ac17-5d0ff48ca429.html redirects to index.html and is noindex"
+      ],
+      "hosting": "firebase.json now defines hosting.public='.' with ignores for .gjc, tmp, scripts, docs, js, rules files, legacy HTML wrappers, and session artifacts."
+    },
+    "documentation": {
+      "file": "docs/OPERATIONS.md",
+      "covers": [
+        "runtime source policy",
+        "Firebase auth and rules release gate",
+        "split migration procedure",
+        "media recovery procedure",
+        "regression gates and manual live gates"
+      ]
+    },
+    "regressionGate": {
+      "file": "scripts/regression-gates.mjs",
+      "covers": [
+        "inline script syntax parse",
+        "Firebase hosting ignore/source policy",
+        "legacy HTML redirect wrappers",
+        "anonymous auth prohibition",
+        "auto-attendance no-write kill switch",
+        "attendance proposal helpers",
+        "canonical cycle policy",
+        "split migration API",
+        "media recovery API",
+        "schedule engine v2 API",
+        "service worker cache version",
+        "operations documentation sections"
+      ]
+    }
+  },
+  "verification": {
+    "regressionGates": {
+      "command": "node scripts/regression-gates.mjs",
+      "result": "pass",
+      "output": {
+        "ok": true,
+        "checkedAt": "2026-06-18T14:45:01.477Z",
+        "inlineScripts": 7,
+        "indexSha256": "b5cc93f49c43ce9dc45df8200a10b95297b80dc6a7e20ee16182fa3ac44e59aa",
+        "invariantCount": 31
+      }
+    },
+    "publicPhonePatternScan": {
+      "command": "search phone regex across index.html, vocal-studio.html, vocal-studi.html, gjc-session-*.html",
+      "result": "pass; no matches found"
+    },
+    "whitespace": {
+      "command": "git diff --check -- index.html firebase.json docs/OPERATIONS.md scripts/regression-gates.mjs vocal-studio.html vocal-studi.html gjc-session-*.html firestore.rules storage.rules sw.js",
+      "result": "pass with LF-to-CRLF warnings only"
+    }
+  },
+  "remainingAggregateBlockers": [
+    "G002 remains blocked on Firebase CLI/admin authentication for live Firestore/Storage rules deploy and unauthorized-denial verification.",
+    "G004 remains blocked on the same Firebase admin authentication for live split writes and dual-read verification.",
+    "G005 remains blocked on the same Firebase admin authentication for live Storage upload and cross-device media verification."
+  ]
+}

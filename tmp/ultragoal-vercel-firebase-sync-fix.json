@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "goalId": "G015",
+  "title": "Vercel Firebase sync/domain alignment",
+  "timestamp": "2026-06-19T08:35:33.123911+00:00",
+  "userReport": "User reported the Vercel link showed an empty app and suspected local/server sync mismatch.",
+  "diagnosis": {
+    "vercelUnauthState": "Vercel production page had currentUser=null, syncStatus=관리자 인증 필요 · 로컬 모드, and local origin counts all zero.",
+    "notDataLoss": "Firebase server data was not proven deleted; the Vercel origin had empty localStorage and could not authenticate to Firestore before admin login.",
+    "authFailure": "signInAdmin on Vercel initially returned auth/unauthorized-domain.",
+    "serverBaseline": "Prior remote count baseline exists with students=48, consults=17, inquiries=185, logs=13, payments=11, weekOverrideWeeks=14 in tmp/ultragoal-g001/data-counts-summary.json."
+  },
+  "changes": [
+    "Authorized vocal-studio-tan.vercel.app and the generated Vercel deployment domain in Firebase Auth authorizedDomains.",
+    "Added visible topSyncStatus in the app topbar so mobile explicitly shows 관리자 인증 필요 · 로컬 모드 instead of silently looking empty.",
+    "Improved admin login failure status for unauthorized-domain cases.",
+    "Bumped service worker cache version to vs-v2-2026-06-19-vercel-sync-fix.",
+    "Redeployed both Firebase Hosting and Vercel production after the sync/domain changes."
+  ],
+  "verification": {
+    "firebaseAuthDomains": {
+      "authorizedDomains": [
+        "localhost",
+        "hlbvocalstudio-72481.firebaseapp.com",
+        "hlbvocalstudio-72481.web.app",
+        "vocal-studio-tan.vercel.app",
+        "vocal-studio-evszk5hwy-aljjang95s-projects.vercel.app"
+      ],
+      "ok": true
+    },
+    "regressionGates": {
+      "command": "node scripts/regression-gates.mjs",
+      "ok": true,
+      "inlineScripts": 7,
+      "invariantCount": 49,
+      "indexSha256": "b5e02726f50b6c4aa3b93bc79d0f9bd1e25b37e4b664dbfd71606e6b207d8d9e"
+    },
+    "diffCheck": {
+      "command": "git diff --check -- index.html sw.js scripts/regression-gates.mjs vercel.json .vercelignore",
+      "ok": true,
+      "note": "Only sw.js LF-to-CRLF warning observed."
+    },
+    "firebaseDeploy": {
+      "command": "npx firebase-tools deploy --only hosting --project hlbvocalstudio-72481 --json",
+      "ok": true,
+      "hostingVersion": "projects/131827810958/sites/hlbvocalstudio-72481/versions/035adb4666b7f8f0"
+    },
+    "vercelDeploy": {
+      "command": "npx vercel deploy --prod --yes --scope aljjang95s-projects",
+      "ok": true,
+      "deploymentId": "dpl_9ai9ZWtxiiZ1kizmU1QAz9qrECkm",
+      "productionAlias": "https://vocal-studio-tan.vercel.app"
+    },
+    "vercelServiceWorker": {
+      "url": "https://vocal-studio-tan.vercel.app/sw.js?syncfix=20260619",
+      "version": "vs-v2-2026-06-19-vercel-sync-fix",
+      "ok": true
+    },
+    "vercelMobileUnauthGuidance": {
+      "url": "https://vocal-studio-tan.vercel.app/?syncfix=20260619",
+      "topSync": "🔒 관리자 인증 필요 · 로컬 모드",
+      "display": "block",
+      "counts": {
+        "students": 0,
+        "consults": 0,
+        "inquiries": 0,
+        "logs": 0
+      },
+      "sourceHasTopSync": true,
+      "sourceHasNoLabel": true,
+      "sourceHasAttendanceFix": true,
+      "ok": true
+    },
+    "authDomainProbe": {
+      "afterAuthorizedDomainPatch": "signInAdmin no longer rejected immediately with auth/unauthorized-domain; it reached OAuth popup/pending state in headless browser. User must complete Google admin login to load server data.",
+      "ok": true
+    }
+  },
+  "hashes": {
+    "indexSha256": "b5e02726f50b6c4aa3b93bc79d0f9bd1e25b37e4b664dbfd71606e6b207d8d9e",
+    "swSha256": "fe30d833dfb432287e7a744f8357b7d76c1fc435fa5443a089a2b9c9fb568afb"
+  },
+  "residualBlockers": [
+    "Actual Firestore data display on Vercel still requires the user to complete Google admin login on that Vercel domain.",
+    "G004/G005 live split-write and Storage upload receipts still require a logged-in admin browser to run 관리자 검증 → 라이브 G004/G005 검증 and provide/copy the JSON receipt.",
+    "Future automatic Vercel Git deployments require committing/pushing local changes; direct production deployment is already current."
+  ]
+}

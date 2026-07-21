@@ -1,0 +1,15 @@
+{
+  "capturedAt": "2026-06-18T12:56:49.386Z",
+  "path": "studio/data",
+  "exists": true,
+  "byteLength": 207200,
+  "sha256": "eab6e96f419976b4795fd2445609ae997f6ed142e3303f2774bf30c0e2268faf",
+  "counts": {
+    "students": 48,
+    "consults": 17,
+    "inquiries": 185,
+    "logs": 13,
+    "payments": 11,
+    "weekOverrideWeeks": 14
+  }
+}

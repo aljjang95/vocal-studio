@@ -1,0 +1,35 @@
+{
+  "auditedAt": "2026-06-18T15:24:00.000Z",
+  "project": "hlbvocalstudio-72481",
+  "hostingUrl": "https://hlbvocalstudio-72481.web.app/",
+  "firebaseAuth": {
+    "cli": "authenticated as aljjang95@gmail.com",
+    "projectsList": "success; project hlbvocalstudio-72481 ACTIVE"
+  },
+  "deploy": {
+    "predeployRegression": "pass; node scripts/regression-gates.mjs invariantCount=31",
+    "hostingFirestoreStorage": "success; hosting version projects/131827810958/sites/hlbvocalstudio-72481/versions/9d6f3c6de2692c36",
+    "rulesRedeploy": "success"
+  },
+  "liveG002": {
+    "status": "complete",
+    "deployedServiceWorkerVersion": "vs-v2-2026-06-18-safety-release",
+    "unauthFirestoreRead": 403,
+    "unauthFirestoreWrite": 403,
+    "unauthStorageRead": 403,
+    "unauthStorageUpload": 403,
+    "safeUnauthBrowserLoad": "currentUser=null; syncStatus=관리자 인증 필요 · 로컬 모드",
+    "noWriteRender": "autoFillPastAttendance returns 0; buildTodaySchedule created no logs and no saveAll calls"
+  },
+  "liveG004": {
+    "status": "still-blocked-for-app-live-write",
+    "dryRun": "ready",
+    "writeAttempt": "blocked",
+    "error": { "code": "admin-auth-required", "message": "Firebase admin authentication required for split writes." }
+  },
+  "liveG005": {
+    "status": "still-blocked-for-app-live-storage-upload",
+    "queueAuthProbe": { "status": "blocked", "code": "storage-auth-required", "queued": 1, "processed": 0 }
+  },
+  "remainingHumanAction": "Sign into the deployed app as one of the allowlisted Firebase Auth UIDs, or enable/configure the app's Google provider and allowlisted admin account, then rerun G004 split write and G005 Storage upload/cross-device checks."
+}

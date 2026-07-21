@@ -69,7 +69,7 @@ function getWeekSched(mon) {
     c.confirmedDates.forEach(function(cd) {
       if (!cd.date || !cd.time) return;
       if (cd.date < monStr || cd.date > monEndStr) return;
-      var dow = dayNames[new Date(cd.date).getDay()];
+      var dow = dayNames[parseDateLocal(cd.date).getDay()];
       var k = dow + '_' + cd.time;
       if (!res[k]) res[k] = [];
       var already = res[k].some(function(x) { return x.s && x.s.id === c.id; });

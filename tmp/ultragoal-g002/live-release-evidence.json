@@ -1,0 +1,85 @@
+{
+  "goalId": "G002",
+  "title": "Phase 1 emergency safety release",
+  "status": "live-deployed-verified",
+  "verifiedAt": "2026-06-18T15:20:55.349Z",
+  "deployment": {
+    "project": "hlbvocalstudio-72481",
+    "commands": [
+      "npx firebase-tools projects:list --json",
+      "node scripts/regression-gates.mjs",
+      "npx firebase-tools deploy --only hosting,firestore:rules,storage --project hlbvocalstudio-72481 --json",
+      "npx firebase-tools deploy --only firestore:rules,storage --project hlbvocalstudio-72481 --json"
+    ],
+    "result": "success",
+    "hostingVersion": "projects/131827810958/sites/hlbvocalstudio-72481/versions/9d6f3c6de2692c36",
+    "hostingUrl": "https://hlbvocalstudio-72481.web.app/"
+  },
+  "verification": {
+    "predeployRegression": {
+      "result": "pass",
+      "inlineScripts": 7,
+      "invariantCount": 31,
+      "indexSha256": "b5cc93f49c43ce9dc45df8200a10b95297b80dc6a7e20ee16182fa3ac44e59aa"
+    },
+    "deployedHosting": {
+      "result": "pass",
+      "evidence": "read https://hlbvocalstudio-72481.web.app/ returned deployed Vocal Studio content"
+    },
+    "deployedServiceWorker": {
+      "result": "pass",
+      "version": "vs-v2-2026-06-18-safety-release"
+    },
+    "unauthorizedDenial": {
+      "result": "pass",
+      "checks": [
+        {
+          "name": "firestore unauth read studio/data",
+          "status": 403,
+          "message": "Missing or insufficient permissions."
+        },
+        {
+          "name": "firestore unauth write studio/unauthProbe",
+          "status": 403,
+          "message": "Missing or insufficient permissions."
+        },
+        {
+          "name": "storage unauth metadata read",
+          "status": 403,
+          "message": "Permission denied."
+        },
+        {
+          "name": "storage unauth upload",
+          "status": 403,
+          "message": "Permission denied."
+        }
+      ]
+    },
+    "safeUnauthLoad": {
+      "result": "pass",
+      "syncStatus": "🔒 관리자 인증 필요 · 로컬 모드",
+      "currentUser": null,
+      "fbAuthReady": true
+    },
+    "noWriteRender": {
+      "result": "pass",
+      "checks": [
+        "autoFillPastAttendance() returns 0",
+        "buildTodaySchedule() returns html",
+        "buildTodaySchedule() created no logs and called no saveAll in synthetic live browser run"
+      ]
+    },
+    "publicPiiScan": {
+      "result": "pass",
+      "evidence": "public phone regex scan returned no matches during final audit"
+    },
+    "whitespace": {
+      "result": "pass",
+      "evidence": "git diff --check warnings only"
+    }
+  },
+  "artifacts": [
+    "tmp/ultragoal-deploy-attempt.json",
+    "tmp/ultragoal-g002/evidence.json"
+  ]
+}

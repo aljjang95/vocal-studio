@@ -1,0 +1,48 @@
+{
+  "goalId": "G002",
+  "title": "Phase 1 emergency safety release",
+  "status": "implementation_ready_but_deploy_blocked",
+  "capturedAt": "2026-06-18T13:35:00.000Z",
+  "implemented": {
+    "staticPiiRemoval": [
+      "Removed embedded default student datasets from index.html, vocal-studio.html, js/store/state.js, and js/types.js by making _DEFAULT_STUDENTS empty.",
+      "Removed embedded initial inquiry phone seed arrays from index.html, vocal-studio.html, and js/ui/consult.js by making initData empty.",
+      "Removed private phone/account/name markers from index.html, vocal-studio.html, vocal-studi.html, js/store/state.js, js/ui/consult.js, js/ui/profile.js, and js/ui/sms.js.",
+      "Replaced sample phone placeholders with non-real placeholder text."
+    ],
+    "authAndRules": [
+      "index.html no longer calls signInAnonymously during initFirebase().",
+      "index.html starts Firestore listener only when current Firebase user UID is in VS_ADMIN_UIDS.",
+      "index.html disables Firestore sync into local-only mode when there is no authorized user.",
+      "firestore.rules restricts /studio/{docId} read/write to the allowlisted admin UIDs.",
+      "storage.rules restricts Storage read/write to the same admin UID allowlist.",
+      "firebase.json now references both firestore.rules and storage.rules."
+    ],
+    "automaticAttendanceKillSwitch": [
+      "autoFillPastAttendance() is now a no-write stub returning 0.",
+      "buildTodaySchedule() still calls the stub for compatibility, but render paths no longer write logs, payments, week overrides, or vsC_lastAutoFill."
+    ],
+    "serviceWorker": [
+      "sw.js VERSION changed to vs-v2-2026-06-18-safety-release, causing activation to delete older vs-v1 caches."
+    ]
+  },
+  "verification": {
+    "piiScan": "passed: search found no private phone/account/email/name markers or embedded seed objects across index.html, vocal-studio.html, vocal-studi.html, js/**/*.js, sw.js, manifest.json, firebase.json, firestore.rules, storage.rules.",
+    "authorizedLoad": "passed in headless browser: allowlisted UID toUXxzS4OqYqD4n0F65YTtQeZ1s2 loaded students=48, consults=17, inquiries=185, logs=13, payments=11, weekOverrideWeeks=14 with no page errors.",
+    "safeLocalDevPath": "passed over http://127.0.0.1:8765: no auth user, fbReady=false, status='🔒 관리자 인증 필요 · 로컬 모드', counts remain empty, and no anonymous user was created.",
+    "noWriteRender": "passed: after removing vsC_lastAutoFill and navigating Today then schedule, local logs/payments/weekOvr counts stayed 13/11/14 and remote data hash excluding updatedAt stayed 2201ab9235076747c341d281b1ef4286a2943bc3677eb58eba5d08a63d819ebd.",
+    "serviceWorkerCache": "passed over localhost: registration active, cache keys=[vs-v2-2026-06-18-safety-release], stale vs-v1 caches=[].",
+    "syntax": "passed: browser load had no page errors; node --check passed for changed JS modules; git diff --check reported no whitespace errors, only CRLF warnings."
+  },
+  "deployBlocker": {
+    "blocker": "Firebase CLI is not authenticated in this workstation session, so Firestore/Storage rules could not be deployed or dry-run deployed against the live project.",
+    "commands": [
+      "firebase --version -> command not found",
+      "npx firebase-tools --version -> 15.21.0",
+      "npx firebase-tools projects:list --json -> Failed to authenticate, have you run firebase login?",
+      "npx firebase-tools deploy --only firestore:rules,storage --project hlbvocalstudio-72481 --dry-run --json -> Failed to authenticate, have you run firebase login?",
+      "npx firebase-tools emulators:exec --only firestore,storage --project demo-hlbvocalstudio ... -> Could not spawn java -version"
+    ],
+    "requiredToFinishG002": "Run firebase login on this workstation, then deploy/verify rules for project hlbvocalstudio-72481 or provide a CI token/service account."
+  }
+}

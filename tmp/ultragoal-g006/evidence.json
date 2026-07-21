@@ -1,0 +1,101 @@
+{
+  "goalId": "G006",
+  "title": "Schedule engine v2 and first-class group lessons",
+  "status": "local-implementation-verified",
+  "verifiedAt": "2026-06-18T14:38:29.703Z",
+  "implementation": {
+    "file": "index.html",
+    "scheduleEngineVersion": "schedule-v2-2026-06-18",
+    "added": [
+      "buildScheduleEngine(mon, opts) returning slotsByKey, conflicts, auditEvents, counts",
+      "getWeekSched(mon) adapter backed by schedule engine v2 for existing PC/mobile surfaces",
+      "first-class group metadata: groupId, primaryPayerId, sharedSlot, normalized members, per-member attendanceByMember",
+      "consult confirmed dates represented through the same engine including group consult members",
+      "fixed, flex, consult, one-off override, cancellation, and makeup metadata represented in one engine path",
+      "overbook conflict audit and conflict decision helper exposed on window.vsScheduleEngine",
+      "conflict gates for flex-week saves, quick-slot saves, full-week edits, and current-week student schedule saves",
+      "safe reset snapshots stored in localStorage key vsC_schedule_reset_audit before deleting week overrides",
+      "split-migration-freeze guard around reset direct Firestore weekOvr write",
+      "consult-to-student group normalization for conversion mapping",
+      "group lesson record enrichment and saveGroupAttendanceForSlot helper"
+    ],
+    "exposedApi": [
+      "window.vsScheduleEngine.build",
+      "window.vsScheduleEngine.conflicts",
+      "window.vsScheduleEngine.decision",
+      "window.vsScheduleEngine.members",
+      "window.vsScheduleEngine.normalize",
+      "window.vsScheduleEngine.saveGroupAttendance",
+      "window.vsScheduleEngine.resetSnapshots"
+    ]
+  },
+  "verification": {
+    "syntax": {
+      "command": "node inline script parser for every <script> in index.html",
+      "result": "pass",
+      "scripts": ["script 1 ok", "script 2 ok", "script 3 ok", "script 4 ok", "script 5 ok", "script 6 ok (8520 lines)", "script 7 ok (181 lines)"]
+    },
+    "browserSyntheticPrimary": {
+      "tool": "headless Chromium on file:///C:/Users/Administrator/Desktop/vocal-studio/index.html",
+      "result": "pass",
+      "checks": [
+        "group fixed slot present",
+        "group slot has shared-slot metadata",
+        "group slot has normalized members",
+        "overbook conflict audited",
+        "group consult slot present",
+        "group consult members preserved",
+        "conflict decision blocks overbook",
+        "group attendance save succeeds",
+        "attendance metadata is per member",
+        "attendance keeps primary payer",
+        "one-off override conflict is audited",
+        "reset snapshot captures before-state and audit",
+        "pc schedule renders group and consult",
+        "mobile schedule renders without crash"
+      ],
+      "engineCounts": { "slots": 3, "conflicts": 1 },
+      "sampleGroupAttendanceLog": {
+        "sid": "g1",
+        "sn": "Anna / Bella",
+        "date": "2026-06-16",
+        "scheduleEngineVersion": "schedule-v2-2026-06-18",
+        "groupId": "grp_g1",
+        "primaryPayerId": "g1-payer",
+        "sharedSlot": true,
+        "attendanceByMember": {
+          "010-1000": { "name": "Anna", "att": "출석" },
+          "010-2000": { "name": "Bella", "att": "결석", "note": "감기" }
+        }
+      }
+    },
+    "browserSyntheticMappingAndOverrides": {
+      "result": "pass",
+      "checks": [
+        "consult-to-student group mapping preserves group type",
+        "consult-to-student mapping preserves both members",
+        "consult-to-student mapping preserves primary payer",
+        "cancel override remains in schedule metadata",
+        "makeup override keeps source metadata",
+        "cancelled slot is excluded from conflict audit"
+      ],
+      "mappedConsultToStudent": {
+        "lessonType": "group",
+        "primaryPayerId": "010-6000",
+        "sharedSlot": true,
+        "memberNames": ["Lead", "Partner"]
+      },
+      "overrideSlotSummary": [
+        { "id": "cancel-a", "absent": true, "overrideType": "cancel" },
+        { "id": "makeup-b", "absent": false, "overrideType": "makeup", "makeupOf": "2026-06-10" }
+      ]
+    },
+    "whitespace": {
+      "command": "git diff --check -- index.html firestore.rules",
+      "result": "pass with pre-existing line-ending warning for firestore.rules only"
+    }
+  },
+  "limitations": [
+    "Live multi-device Firebase behavior remains bounded by G002 authentication/rules deployment blocker; G006 local runtime behavior does not require deploy to verify schedule engine semantics."
+  ]
+}

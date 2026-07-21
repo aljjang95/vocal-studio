@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "kind": "browserAutomationTranscript",
+  "tool": "browser.open/browser.run",
+  "url": "file:///C:/Users/Administrator/Desktop/vocal-studio/index.html?g003=1",
+  "checkedAt": "2026-06-18T13:58:13.691Z",
+  "screenshotPath": "tmp/ultragoal-g003/g003-proposal-panel.png",
+  "setup": "Synthetic in-page data only: one active weekly student, empty logs, empty payments, empty week overrides. saveAll/toast/render helpers were stubbed during logic assertions to count writes without persisting data.",
+  "assertions": [
+    {
+      "name": "proposal generation returns scheduled missing lessons",
+      "passed": true,
+      "observed": {
+        "proposalCount": 2,
+        "dates": [
+          "2026-06-10",
+          "2026-06-17"
+        ]
+      },
+      "timestamp": "2026-06-18T13:58:13.691Z",
+      "status": "passed"
+    },
+    {
+      "name": "proposal render is no-write and exposes per-item plus bulk confirmation",
+      "passed": true,
+      "observed": {
+        "logs": 0,
+        "saveCalls": 0,
+        "panelContains": [
+          "출석 확정",
+          "표시 항목 출석 확정",
+          "표시 항목 결석"
+        ]
+      },
+      "timestamp": "2026-06-18T13:58:13.691Z",
+      "status": "passed"
+    },
+    {
+      "name": "proposal confirmation writes exactly one audit-marked log",
+      "passed": true,
+      "observed": {
+        "wn": 1,
+        "_proposal": true,
+        "source": "attendanceProposal",
+        "policyVersion": "cycle-v1-2026-06-18",
+        "saveCalls": 1
+      },
+      "timestamp": "2026-06-18T13:58:13.691Z",
+      "status": "passed"
+    },
+    {
+      "name": "duplicate proposal confirmation does not write",
+      "passed": true,
+      "observed": {
+        "logs": 1,
+        "saveCalls": 1
+      },
+      "timestamp": "2026-06-18T13:58:13.691Z",
+      "status": "passed"
+    },
+    {
+      "name": "canonical status policy excludes absence and includes cancellation",
+      "passed": true,
+      "observed": {
+        "actualLessons": 2,
+        "totalLessons": 2,
+        "absenceBillable": false,
+        "cancellationBillable": true
+      },
+      "timestamp": "2026-06-18T13:58:13.691Z",
+      "status": "passed"
+    },
+    {
+      "name": "offset changes total and cycle range through canonical service",
+      "passed": true,
+      "observed": {
+        "totalLessons": 5,
+        "cycleNum": 2,
+        "cycleStart": 5,
+        "cycleEnd": 8
+      },
+      "timestamp": "2026-06-18T13:58:13.691Z",
+      "status": "passed"
+    },
+    {
+      "name": "payment save includes cycle metadata and current status is paid",
+      "passed": true,
+      "observed": {
+        "cycleNum": 2,
+        "cycleStart": 5,
+        "cycleEnd": 8,
+        "cycleSize": 4,
+        "policyVersion": "cycle-v1-2026-06-18",
+        "paidAll": true,
+        "due": false
+      },
+      "timestamp": "2026-06-18T13:58:13.691Z",
+      "status": "passed"
+    },
+    {
+      "name": "dashboard and payment HTML consume canonical unpaid state",
+      "passed": true,
+      "observed": {
+        "dashboardHasUnpaidText": true,
+        "paymentHasCurrentRange": true,
+        "paymentHasPaidBadge": true
+      },
+      "timestamp": "2026-06-18T13:58:13.691Z",
+      "status": "passed"
+    }
+  ],
+  "screenshotObservation": {
+    "proposalPanelVisible": true,
+    "textExcerpt": "확인 필요한 미기록 수업 / 2건 / 표시 항목 출석 확정 / 표시 항목 결석 / Synthetic Student 2026-06-10 10:00 / 출석 확정 / 결석 / Synthetic Student 2026-06-17 10:00 / 출석 확정 / 결석"
+  },
+  "actions": [
+    {
+      "type": "open",
+      "target": "file:///C:/Users/Administrator/Desktop/vocal-studio/index.html?g003=1",
+      "result": "loaded Vocal Studio runtime",
+      "timestamp": "2026-06-18T13:58:13.691Z",
+      "selector": "window"
+    },
+    {
+      "type": "evaluate",
+      "target": "index.html runtime",
+      "result": "injected synthetic student/log/payment state, stubbed saveAll, and ran proposal plus billing assertions",
+      "timestamp": "2026-06-18T13:58:13.691Z",
+      "selector": "window"
+    },
+    {
+      "type": "screenshot",
+      "target": "#content Today proposal panel",
+      "path": "tmp/ultragoal-g003/g003-proposal-panel.png",
+      "result": "captured non-uniform UI showing proposal panel and confirmation controls",
+      "timestamp": "2026-06-18T13:58:13.691Z",
+      "selector": "body #content"
+    },
+    {
+      "type": "cleanup",
+      "target": "index.html runtime",
+      "result": "restored original in-page arrays/functions and re-rendered",
+      "timestamp": "2026-06-18T13:58:13.691Z",
+      "selector": "window"
+    }
+  ]
+}

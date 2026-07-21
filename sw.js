@@ -4,7 +4,7 @@
  *  - 정적 자원      : Cache-first  + 백그라운드 갱신  (성능)
  *  - Firestore/Firebase : 항상 네트워크 (실시간 데이터)
  */
-const VERSION = 'vs-v1-2026-06-17';
+const VERSION = 'vs-v2-2026-06-20-schedule-count-visibility';
 const CORE = [
   './',
   './index.html',

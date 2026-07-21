@@ -1,0 +1,62 @@
+{
+  "objective": "Complete the durable ultragoal plan in .gjc/ultragoal/goals.json, including later accepted/appended stories, under the original brief constraints; use .gjc/ultragoal/ledger.jsonl as the audit trail.",
+  "auditedAt": "2026-06-18T14:50:05.633Z",
+  "deliverables": [
+    {
+      "id": "G001",
+      "required": "Phase 0 inventory/baseline evidence and review.",
+      "status": "complete",
+      "evidence": [".gjc/ultragoal/goals.json status=complete", ".gjc/ultragoal/ledger.jsonl goal_checkpointed complete", "tmp/ultragoal-g001/* evidence artifacts"]
+    },
+    {
+      "id": "G002",
+      "required": "Emergency safety release with live rules deploy and unauthorized-denial verification.",
+      "status": "blocked",
+      "satisfiedLocally": true,
+      "missingLiveEvidence": ["Firebase rules deploy", "live unauthorized-denial verification", "authorized admin load/save verification"],
+      "currentBlocker": "npx firebase-tools projects:list --json fails: Failed to authenticate, have you run firebase login?"
+    },
+    {
+      "id": "G003",
+      "required": "Attendance proposal workflow and canonical payment cycle service.",
+      "status": "complete",
+      "evidence": [".gjc/ultragoal/goals.json status=complete", ".gjc/ultragoal/ledger.jsonl goal_checkpointed complete", "tmp/ultragoal-g003 quality/evidence artifacts"]
+    },
+    {
+      "id": "G004",
+      "required": "Split Firestore migration with live split writes and dual-read verification.",
+      "status": "blocked",
+      "satisfiedLocally": true,
+      "missingLiveEvidence": ["authenticated split write", "live dual-read count/checksum verification"],
+      "currentBlocker": "Firebase admin authentication and G002 rules deploy remain unavailable."
+    },
+    {
+      "id": "G005",
+      "required": "Durable Firebase Storage-backed media persistence and cross-device verification.",
+      "status": "blocked",
+      "satisfiedLocally": true,
+      "missingLiveEvidence": ["Firebase Storage upload", "cross-device media load verification"],
+      "currentBlocker": "Firebase admin authentication and deployed Storage rules remain unavailable."
+    },
+    {
+      "id": "G006",
+      "required": "Schedule engine v2 and first-class group lessons.",
+      "status": "complete",
+      "evidence": [".gjc/ultragoal/goals.json status=complete", ".gjc/ultragoal/ledger.jsonl goal_checkpointed complete", "tmp/ultragoal-g006 quality/evidence artifacts"]
+    },
+    {
+      "id": "G007",
+      "required": "Runtime source cleanup, operations docs, regression gates, and final QA evidence.",
+      "status": "complete",
+      "evidence": [".gjc/ultragoal/goals.json status=complete", ".gjc/ultragoal/ledger.jsonl goal_checkpointed complete", "node scripts/regression-gates.mjs ok=true", "public phone regex search no matches", "git diff --check warnings only"]
+    }
+  ],
+  "currentChecks": {
+    "gjcUltragoalStatus": "blocked; complete=4 blocked=3 active=0 pending=0",
+    "regressionGates": "node scripts/regression-gates.mjs passed at 2026-06-18T14:50:05.633Z with invariantCount=31",
+    "publicPhoneScan": "No matches found",
+    "diffCheck": "Passed with LF-to-CRLF warnings only",
+    "firebaseAuth": "Failed to authenticate, have you run firebase login?"
+  },
+  "completionDecision": "Do not call goal complete. Outstanding concrete deliverables require Firebase admin login/deploy/live verification that only the user can unblock on this workstation."
+}

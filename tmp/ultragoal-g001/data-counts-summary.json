@@ -1,0 +1,39 @@
+{
+  "capturedAt": "2026-06-18T12:56:35.045Z",
+  "hash": "2c211eb390fbd2f458afc3acef15b4551c876a3ad256896926b270ff2c9f5c6c",
+  "summary": {
+    "local": {
+      "students": 48,
+      "activeStudents": 14,
+      "consults": 17,
+      "openConsults": 1,
+      "inquiries": 185,
+      "logs": 13,
+      "payments": 11,
+      "weekOverrideWeeks": 14,
+      "groups": 1,
+      "currentWeek": "2026-W25"
+    },
+    "remote": {
+      "available": true,
+      "students": 48,
+      "consults": 17,
+      "inquiries": 185,
+      "logs": 13,
+      "payments": 11,
+      "weekOverrideWeeks": 14,
+      "keys": [
+        "consults",
+        "inquiries",
+        "logs",
+        "payments",
+        "students",
+        "updatedAt",
+        "weekOvr"
+      ],
+      "updatedAtType": "[object Object]"
+    },
+    "pageErrors": [],
+    "syncStatus": ""
+  }
+}

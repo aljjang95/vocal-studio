@@ -1,0 +1,67 @@
+{
+  "goalId": "G004",
+  "title": "Split Firestore migration with freeze and media manifest",
+  "status": "implementation-verified-local-blocked-for-live-write",
+  "checkedAt": "2026-06-18T14:15:58.369Z",
+  "changedFiles": [
+    "index.html",
+    "firestore.rules"
+  ],
+  "deliverables": [
+    {
+      "requirement": "Split collection model with deterministic ids and schema metadata.",
+      "evidence": "index.html defines SPLIT_SCHEMA_VERSION/SPLIT_MIGRATION_POLICY_VERSION, _splitDocId(), _splitMeta(), buildSplitMigrationPlan(), and produces students/logs/payments/consults/inquiries/scheduleOverrides/attendanceProposals/auditEvents/media docs with schemaVersion, policyVersion, revision, deletedAt, updatedBy, migratedFrom, legacyHash, and migrationRunId."
+    },
+    {
+      "requirement": "Migration path with maintenance/freeze or live-hash checkpoint and drift abort.",
+      "evidence": "beginSplitMigrationFreeze() records current legacy hash; writeSplitMigrationPlan() requires active freeze unless explicitly overridden and aborts when current legacy hash differs from plan. Browser check verified freeze, drift abort, and admin-auth gate."
+    },
+    {
+      "requirement": "Dry-run reports, idempotent writes, and dual-read verification.",
+      "evidence": "buildSplitMigrationPlan() returns counts/checksums/warnings/errors/verifications; writeSplitMigrationPlan() uses deterministic document ids and set(...,{merge:true}); verifySplitMigrationPlan() compares split counts with legacy arrays. Browser check verified deterministic ids/checksums and count verification."
+    },
+    {
+      "requirement": "Media manifest and placeholder quarantine so [saved] is never success.",
+      "evidence": "_splitCollectMedia() creates media manifest docs with status/recoveryRequired/quarantineReason; _splitCloneNoMedia() strips [saved] to empty/[recoveryRequired]. Browser check verified 3 placeholder media entries became recoveryRequired and split docs did not preserve [saved] as migrated media success."
+    },
+    {
+      "requirement": "Rules surface supports split model.",
+      "evidence": "firestore.rules now allows admin-only /studios/{studioId}/{document=**} in addition to legacy /studio/{docId}."
+    }
+  ],
+  "checks": [
+    {
+      "name": "inline script parse",
+      "command": "node extraction/new Function over every inline script in index.html",
+      "status": "passed",
+      "result": "7 scripts parsed successfully; main script 8145 lines."
+    },
+    {
+      "name": "G004 browser synthetic migration check",
+      "command": "Chromium file:// index.html?g004=3 with synthetic legacy arrays",
+      "status": "passed",
+      "result": {
+        "deterministicIdsAndChecksums": true,
+        "splitCollectionCoverage": true,
+        "placeholderQuarantine": true,
+        "splitDocsDoNotTreatSavedAsSuccess": true,
+        "dualReadCountVerification": true,
+        "liveHashDriftAbort": true,
+        "freezeAndAdminGate": true
+      }
+    },
+    {
+      "name": "diff whitespace check",
+      "command": "git diff --check -- index.html firestore.rules",
+      "status": "passed",
+      "result": "No whitespace errors; command emitted only a line-ending warning for firestore.rules."
+    }
+  ],
+  "knownConstraints": [
+    "Live split writes were not executed because Firebase admin authentication is unavailable in this environment; writeSplitMigrationPlan() correctly returned admin-auth-required under freeze.",
+    "G002 remains blocked on Firebase CLI authentication for rules deployment/live unauthorized-denial verification."
+  ],
+  "artifactRefs": [
+    "tmp/ultragoal-g004/browser-automation-transcript.json"
+  ]
+}

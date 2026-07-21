@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "goalId": "G016",
+  "title": "Displayed missing-attendance batch removal fix",
+  "timestamp": "2026-06-19T09:00:17.056042+00:00",
+  "userReport": "User reported that checking/clicking 표시 항목 for 확인 필요한 미기록 수업 still did not make displayed items disappear, possibly due hardcoded behavior.",
+  "changes": [
+    "Changed resolved proposal suppression to hide confirmed/batch-confirmed/manual-save keys immediately instead of requiring an additional matching-log check.",
+    "Added _applyAttendanceProposalBatch so displayed proposal keys are marked resolved for every listed item during batch processing.",
+    "Made 표시 항목 출석 확정 one-tap apply instead of opening a second confirmation dialog that could make the click appear ineffective.",
+    "Kept 결석 batch behind confirmation, but it uses the same forced displayed-item resolution path.",
+    "Bumped service worker cache version to vs-v2-2026-06-19-proposal-batch-fix and updated regression gates."
+  ],
+  "verification": {
+    "regressionGates": {
+      "command": "node scripts/regression-gates.mjs",
+      "ok": true,
+      "inlineScripts": 7,
+      "invariantCount": 51,
+      "indexSha256": "3ce7b2b8135ae6413a6be442f7989a410dae26b2f89fc34c02318b38a029b093"
+    },
+    "diffCheck": {
+      "command": "git diff --check -- index.html sw.js scripts/regression-gates.mjs",
+      "ok": true,
+      "note": "Only sw.js LF-to-CRLF warning observed."
+    },
+    "localBrowser": {
+      "url": "file:///C:/Users/Administrator/Desktop/vocal-studio/index.html?batchfix=1",
+      "scenario": "Synthetic fixed student with two displayed missing-attendance proposals; call confirmAttendanceProposalBatch(출석).",
+      "beforeCount": 2,
+      "afterCount": 0,
+      "stillVisible": 0,
+      "logsCreated": 2,
+      "saveCount": 1,
+      "ok": true
+    },
+    "firebaseDeploy": {
+      "command": "npx firebase-tools deploy --only hosting --project hlbvocalstudio-72481 --json",
+      "ok": true,
+      "hostingVersion": "projects/131827810958/sites/hlbvocalstudio-72481/versions/14d5174bce5ce678"
+    },
+    "vercelDeploy": {
+      "command": "npx vercel deploy --prod --yes --scope aljjang95s-projects",
+      "ok": true,
+      "deploymentId": "dpl_CVRtSMgfbC9nvmR8rLCHtDD4Tyf9",
+      "productionAlias": "https://vocal-studio-tan.vercel.app"
+    },
+    "deployedServiceWorkers": {
+      "firebase": "vs-v2-2026-06-19-proposal-batch-fix",
+      "vercel": "vs-v2-2026-06-19-proposal-batch-fix",
+      "ok": true
+    },
+    "vercelBrowser": {
+      "url": "https://vocal-studio-tan.vercel.app/?batchfix=20260619",
+      "sourceHasBatchFix": true,
+      "beforeCount": 2,
+      "afterCount": 0,
+      "stillVisible": 0,
+      "logsCreated": 2,
+      "saveCount": 1,
+      "ok": true
+    }
+  },
+  "hashes": {
+    "indexSha256": "3ce7b2b8135ae6413a6be442f7989a410dae26b2f89fc34c02318b38a029b093",
+    "swSha256": "5ad5ebfc2d10b1910e65009f609582a22bebcaeacf27c6ed729ad471b3909b5a"
+  },
+  "residualBlockers": [
+    "Actual server data on Vercel still requires user admin Google login on the Vercel domain.",
+    "G004/G005 live split-write and Storage upload receipts still require a logged-in admin browser to run 관리자 검증 → 라이브 G004/G005 검증 and provide/copy the JSON receipt."
+  ]
+}

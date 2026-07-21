@@ -1,0 +1,65 @@
+{
+  "goalId": "G005",
+  "title": "Durable media persistence and recovery manager",
+  "status": "implementation-verified-local-blocked-for-live-storage",
+  "checkedAt": "2026-06-18T14:21:05.435Z",
+  "changedFiles": [
+    "index.html"
+  ],
+  "deliverables": [
+    {
+      "requirement": "Move required media durability toward Firebase Storage-backed records, with IndexedDB as queue/cache.",
+      "evidence": "index.html defines MEDIA_POLICY_VERSION, prepareMediaEntryForDurability(), queueMediaForStorage(), processMediaDurabilityQueue(), storage paths under studios/{studioId}/media, and Storage putString upload handling. New audio/video/consent media entry paths now call prepareMediaEntryForDurability()."
+    },
+    {
+      "requirement": "Retry/quota/error surfacing and degraded state.",
+      "evidence": "processMediaDurabilityQueue() returns structured blocked/partial/uploaded states, tracks attempts/lastError for retry, and returns storage-auth-required when Firebase admin auth/storage is unavailable. Browser check verified this blocked degraded state."
+    },
+    {
+      "requirement": "Unified load/recovery path for photos/audio/video/consent recordings.",
+      "evidence": "window.vsMediaRecovery.resolve() resolves storageUrl, IndexedDB _mediaKey, or inline data. scanMediaRecovery() scans student/consult photo, audios, videos, and consentRec entries."
+    },
+    {
+      "requirement": "Orphan scan and recoveryRequired state.",
+      "evidence": "scanMediaRecovery() reports summary totals, queuedOrCached, recoveryRequired, unknown, and orphan queue items. markRecoveryRequiredFromScan() annotates unresolved media entries with recoveryRequired/storageStatus/mediaPolicyVersion. Browser check verified unresolved [saved] consent media was annotated."
+    },
+    {
+      "requirement": "Snapshot list/diff, selective restore/export/import tools.",
+      "evidence": "createMediaRecoverySnapshot(), listMediaRecoverySnapshots(), diffMediaRecoverySnapshots(), exportMediaRecoverySnapshot(), importMediaRecoverySnapshotText(), and markRecoveryRequiredFromScan() were added under window.vsMediaRecovery. Browser check verified snapshot diff detected recoveryRequired -> queued status change."
+    }
+  ],
+  "checks": [
+    {
+      "name": "inline script parse",
+      "command": "node extraction/new Function over every inline script in index.html",
+      "status": "passed",
+      "result": "7 scripts parsed successfully; main script 8327 lines."
+    },
+    {
+      "name": "G005 browser synthetic media recovery check",
+      "command": "Chromium file:// index.html?g005=1 with synthetic student/consult media",
+      "status": "passed",
+      "result": {
+        "prepareQueuesMediaAndMarksMetadata": true,
+        "scannerReportsQueuedAndRecoveryRequired": true,
+        "snapshotDiffDetectsRecoveryChange": true,
+        "markRecoveryRequiredAnnotatesEntries": true,
+        "queueProcessingBlocksWithoutAdminStorageAuth": true,
+        "queueItemRemovalWorks": true
+      }
+    },
+    {
+      "name": "diff whitespace check",
+      "command": "git diff --check -- index.html firestore.rules",
+      "status": "passed",
+      "result": "No whitespace errors; command emitted only a line-ending warning for firestore.rules."
+    }
+  ],
+  "knownConstraints": [
+    "Live Firebase Storage upload, cross-device media reload, and deployed Storage rules verification could not be completed because Firebase admin authentication/deploy remains unavailable on this workstation.",
+    "Legacy photo localStorage fallback remains for backwards compatibility; new audio/video/consent entries are queued through the media durability manager."
+  ],
+  "artifactRefs": [
+    "tmp/ultragoal-g005/browser-automation-transcript.json"
+  ]
+}

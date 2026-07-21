@@ -1,0 +1,40 @@
+{
+  "checkedAt": "2026-06-19T06:46:43.543872+00:00",
+  "story": "Emergency follow-up: user still saw mobile day/week tab overlap; hard-separate mobile schedule status/actions from top tabs and force SW cache refresh.",
+  "filesChanged": [
+    "index.html",
+    "sw.js",
+    "scripts/regression-gates.mjs"
+  ],
+  "hostingVersion": "projects/131827810958/sites/hlbvocalstudio-72481/versions/2546356aec3b1a81",
+  "swVersion": "vs-v2-2026-06-19-mobile-overlap-fix",
+  "indexSha256": "14e4476af7fe3605bac870985473d63bf1fddeb9926d5a444d883a111feacbba",
+  "changes": [
+    "Removed sticky positioning from mobile 일별/주간 view switch to prevent underlying text from sliding under it.",
+    "Removed top-of-week 수강중/미배정/배정 controls from immediately below 일별/주간.",
+    "Moved week-view 배정/미배정/수정/수강중 controls into a bottom fixed action rail above the mobile tab bar.",
+    "Kept day-view summary below the date header and moved 변동 배정 into the separated summary row.",
+    "Bumped service worker cache version so mobile browsers stop serving the earlier layout."
+  ],
+  "verification": {
+    "regressionGate": {
+      "command": "node scripts/regression-gates.mjs",
+      "ok": true,
+      "invariantCount": 45
+    },
+    "diffCheck": {
+      "command": "git diff --check -- index.html sw.js scripts/regression-gates.mjs",
+      "ok": true,
+      "note": "sw.js LF/CRLF warning only"
+    },
+    "deployedSwRead": "https://hlbvocalstudio-72481.web.app/sw.js shows vs-v2-2026-06-19-mobile-overlap-fix",
+    "deployedBrowser360x740": {
+      "tabBottom": 112.4375,
+      "firstStatusTop": 620,
+      "gapPx": 507.5625,
+      "nearTopStatusControls": 0,
+      "ok": true
+    }
+  },
+  "userAction": "On a previously opened mobile browser, refresh once. If it still shows old layout, close the tab and reopen the app so the new service worker activates."
+}

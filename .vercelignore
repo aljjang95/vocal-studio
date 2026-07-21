@@ -1,0 +1,14 @@
+.git
+.gjc
+.firebase
+.vercel
+tmp
+scripts
+docs
+js
+*.rules
+firebase.json
+gjc-session-*.html
+vocal-studio.html
+vocal-studi.html
+.claude-edit-count.lock

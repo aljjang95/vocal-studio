@@ -1,0 +1,64 @@
+{
+  "goalId": "G003",
+  "title": "Attendance proposal workflow and unified payment cycle service",
+  "status": "implementation-verified-local",
+  "checkedAt": "2026-06-18T13:58:13.691Z",
+  "changedFiles": [
+    "index.html"
+  ],
+  "deliverables": [
+    {
+      "requirement": "Former automatic attendance remains no-write and missing attendance is proposed explicitly.",
+      "evidence": "index.html autoFillPastAttendance() returns 0; browser check verified proposal generation and render leave logs.length=0 and saveCalls=0."
+    },
+    {
+      "requirement": "Per-item and bulk proposal confirmation write only after explicit confirmation.",
+      "evidence": "buildAttendanceProposalPanel contains per-item 출석/결석 buttons and displayed-item bulk buttons; browser check confirmed one audit-marked log on confirmation and duplicate confirmation skipped."
+    },
+    {
+      "requirement": "Proposal confirmations carry audit/policy fields.",
+      "evidence": "Synthetic confirmed log had _proposal=true, source='attendanceProposal', proposalDate/proposalTime, confirmedAt, and policyVersion='cycle-v1-2026-06-18'."
+    },
+    {
+      "requirement": "One canonical cycle/payment service drives active runtime surfaces.",
+      "evidence": "index.html defines getCycleInfo(), cycleInfoForTotal(), lessonNumberForLog(), renumberLessonLogs(), paymentsForCycle(), getPaymentStatus(); dashboard, schedule, payment, profile/timeline and alert callsites use the service."
+    },
+    {
+      "requirement": "Billing policy handles counted statuses, offsets, edits/deletes, and payments consistently.",
+      "evidence": "Browser check verified 결석 excluded, 취소 included, offset moved totalLessons=5 into cycle 2 range 5~8, payment records saved with cycleNum/cycleStart/cycleEnd/cycleSize/policyVersion/lessonIds, and getPaymentStatus marked current cycle paid."
+    }
+  ],
+  "checks": [
+    {
+      "name": "HTML inline script parse",
+      "command": "node script extraction with new Function over every inline script in index.html",
+      "status": "passed",
+      "result": "7 scripts parsed successfully; main inline script 7890 lines."
+    },
+    {
+      "name": "G003 browser synthetic behavior check",
+      "command": "Chromium file:///C:/Users/Administrator/Desktop/vocal-studio/index.html?g003=1; injected synthetic student/log/payment data with saveAll stub",
+      "status": "passed",
+      "result": {
+        "proposalGenerationReturnsScheduledMissingLessons": true,
+        "proposalRenderNoWrite": true,
+        "perItemAndBulkActionsPresent": true,
+        "proposalConfirmationWritesAuditMarkedLog": true,
+        "duplicateConfirmationSkipped": true,
+        "canonicalStatusPolicy": "absence excluded, cancellation included",
+        "offsetCycle": "totalLessons=5 cycleNum=2 cycleStart=5 cycleEnd=8",
+        "paymentMetadataAndStatus": "cycle metadata present; paidAll=true; due=false",
+        "dashboardAndPaymentSurfacesRenderCanonicalState": true
+      }
+    },
+    {
+      "name": "Whitespace diff check",
+      "command": "git diff --check -- index.html",
+      "status": "passed",
+      "result": "no output"
+    }
+  ],
+  "knownConstraints": [
+    "G002 remains blocked on Firebase CLI authentication for live rules deployment; G003 verification is local/browser behavioral verification against index.html runtime."
+  ]
+}

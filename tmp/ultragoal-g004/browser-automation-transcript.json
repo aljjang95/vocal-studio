@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "kind": "browserAutomationTranscript",
+  "tool": "browser.open/browser.run",
+  "url": "file:///C:/Users/Administrator/Desktop/vocal-studio/index.html?g004=3",
+  "checkedAt": "2026-06-18T14:15:58.369Z",
+  "setup": "Synthetic in-page data only: one student, one proposal log, one payment, one consult with consent placeholder, one inquiry, and one week override. Original arrays were restored after assertions.",
+  "actions": [
+    { "timestamp": "2026-06-18T14:15:58.369Z", "type": "open", "selector": "window", "target": "file:///C:/Users/Administrator/Desktop/vocal-studio/index.html?g004=3", "result": "loaded Vocal Studio runtime" },
+    { "timestamp": "2026-06-18T14:15:58.369Z", "type": "evaluate", "selector": "window", "target": "index.html runtime", "result": "injected synthetic legacy state and ran buildSplitMigrationPlan/beginSplitMigrationFreeze/writeSplitMigrationPlan assertions" },
+    { "timestamp": "2026-06-18T14:15:58.369Z", "type": "cleanup", "selector": "window", "target": "index.html runtime", "result": "restored original arrays and cleared local migration freeze flag" }
+  ],
+  "assertions": [
+    { "timestamp": "2026-06-18T14:15:58.369Z", "name": "deterministic dry-run ids/checksums", "status": "passed", "passed": true, "observed": { "studentId": "student_e70a9da8_student-s1-010-0000-0000-split-stude", "studentChecksum": "3bce1859" } },
+    { "timestamp": "2026-06-18T14:15:58.369Z", "name": "split collection coverage", "status": "passed", "passed": true, "observed": { "students": 1, "logs": 1, "payments": 1, "consults": 1, "inquiries": 1, "scheduleOverrides": 1, "attendanceProposals": 1, "auditEvents": 1, "media": 3 } },
+    { "timestamp": "2026-06-18T14:15:58.369Z", "name": "placeholder quarantine count", "status": "passed", "passed": true, "observed": { "total": 3, "recoveryRequired": 3, "storageResolved": 0 } },
+    { "timestamp": "2026-06-18T14:15:58.369Z", "name": "split docs do not retain [saved] as media success", "status": "passed", "passed": true, "observed": { "studentPhoto": "", "audioData": "[recoveryRequired]", "consentData": "[recoveryRequired]" } },
+    { "timestamp": "2026-06-18T14:15:58.369Z", "name": "dual-read count verification", "status": "passed", "passed": true, "observed": { "verificationOk": true } },
+    { "timestamp": "2026-06-18T14:15:58.369Z", "name": "live hash drift aborts", "status": "passed", "passed": true, "observed": { "status": "abort", "code": "legacy-hash-drift" } },
+    { "timestamp": "2026-06-18T14:15:58.369Z", "name": "freeze and admin gate", "status": "passed", "passed": true, "observed": { "freezeStatus": "frozen", "writeStatus": "blocked", "code": "admin-auth-required" } }
+  ]
+}

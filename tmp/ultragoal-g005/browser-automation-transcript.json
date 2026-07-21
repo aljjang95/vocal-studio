@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "kind": "browserAutomationTranscript",
+  "tool": "browser.open/browser.run",
+  "url": "file:///C:/Users/Administrator/Desktop/vocal-studio/index.html?g005=1",
+  "checkedAt": "2026-06-18T14:21:05.435Z",
+  "setup": "Synthetic in-page student/consult media only. Original arrays/functions were restored and media queue/snapshot localStorage keys were cleared after assertions.",
+  "actions": [
+    { "timestamp": "2026-06-18T14:21:05.435Z", "type": "open", "selector": "window", "target": "file:///C:/Users/Administrator/Desktop/vocal-studio/index.html?g005=1", "result": "loaded Vocal Studio runtime" },
+    { "timestamp": "2026-06-18T14:21:05.435Z", "type": "evaluate", "selector": "window", "target": "index.html runtime", "result": "exercised media durability queue, recovery scan, snapshots/diff, recovery marking, admin-gated queue processing, and delete queue cleanup" },
+    { "timestamp": "2026-06-18T14:21:05.435Z", "type": "cleanup", "selector": "window", "target": "localStorage/runtime arrays", "result": "restored originals and removed vsC_media_queue/vsC_media_snapshots" }
+  ],
+  "assertions": [
+    { "timestamp": "2026-06-18T14:21:05.435Z", "name": "prepare queues media and marks metadata", "status": "passed", "passed": true, "observed": { "storageStatus": "queued", "storagePath": "studios/default/media/student/s1/audios/m1.webm", "policyVersion": "media-v1-2026-06-18", "queueLength": 1 } },
+    { "timestamp": "2026-06-18T14:21:05.435Z", "name": "scanner reports queued cache and recoveryRequired placeholder", "status": "passed", "passed": true, "observed": { "queuedOrCached": 1, "recoveryRequired": 1 } },
+    { "timestamp": "2026-06-18T14:21:05.435Z", "name": "snapshot list and diff detect recovery changes", "status": "passed", "passed": true, "observed": { "snapshotCount": 2, "diff": "consult consentRec recoveryRequired -> queued" } },
+    { "timestamp": "2026-06-18T14:21:05.435Z", "name": "markRecoveryRequired annotates unresolved entries", "status": "passed", "passed": true, "observed": { "recoveryRequired": true, "storageStatus": "recoveryRequired" } },
+    { "timestamp": "2026-06-18T14:21:05.435Z", "name": "queue processing blocks cleanly without admin storage auth", "status": "passed", "passed": true, "observed": { "status": "blocked", "code": "storage-auth-required" } },
+    { "timestamp": "2026-06-18T14:21:05.435Z", "name": "queue item removal works for delete path", "status": "passed", "passed": true, "observed": { "queueLength": 0 } }
+  ]
+}

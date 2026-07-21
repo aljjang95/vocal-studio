@@ -188,48 +188,8 @@ var KR_HOLIDAYS = {
 };
 
 /* ───────────────────────────────────────────
-   39명 기본 레슨생 데이터 (직접 내장)
+   공개 기본 레슨생 데이터 (PII 제거)
    ─────────────────────────────────────────── */
 
 /** @type {Student[]} */
-var _DEFAULT_STUDENTS = [
-  {"id":"61e2v571328b","name":"김기범","age":"1997","ph":"010-4062-8664","gd":"여성","cls":"pro","status":"휴강","schedType":"fixed","days":["금"],"times":{"금":"13:00"},"st":"2022-05-27","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성 고정"},
-  {"id":"6th9rmk9ubtj","name":"최시현","age":"2015","ph":"010-9115-5364","gd":"여성","cls":"pro","status":"휴강","schedType":"fixed","days":["토"],"times":{"토":"12:00"},"st":"2025-01-07","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성 고정"},
-  {"id":"0yymg3e29to8","name":"박시형","age":"1984","ph":"010-6848-9145","gd":"여성","cls":"pro","status":"휴강","schedType":"fixed","days":[],"times":{},"st":"2025-03-08","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성 고정"},
-  {"id":"4234zln4ta34","name":"박도연","age":"1985","ph":"010-4774-1299","gd":"여성","cls":"pro","status":"휴강","schedType":"fixed","days":["목"],"times":{"목":"15:00"},"st":"2025-03-06","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성 고정"},
-  {"id":"m45o76hkm6ku","name":"한영호","age":"1986","ph":"010-6342-8623","gd":"여성","cls":"pro","status":"휴강","schedType":"flex","days":[],"times":{},"st":"2025-03-18","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성"},
-  {"id":"bf0pyry7wb6q","name":"구자홍","age":"1993","ph":"010-8915-9594","gd":"여성","cls":"pro","status":"휴강","schedType":"flex","days":[],"times":{},"st":"2025-05-30","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성"},
-  {"id":"ufmuxhfive5s","name":"안수현","age":"1989","ph":"010-6713-5317","gd":"여성","cls":"pro","status":"휴강","schedType":"fixed","days":[],"times":{},"st":"2025-06-18","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성 고정"},
-  {"id":"thojlxjackr2","name":"박준기","age":"1997","ph":"010-3209-7809","gd":"여성","cls":"pro","status":"휴강","schedType":"flex","days":[],"times":{},"st":"2025-07-02","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성"},
-  {"id":"j0ncwai9l8q4","name":"서주원","age":"1998","ph":"010-3443-1489","gd":"여성","cls":"pro","status":"휴강","schedType":"flex","days":[],"times":{},"st":"","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성"},
-  {"id":"dy5uc4e5yxmi","name":"서희","age":"2012","ph":"010-8517-5871","gd":"여성","cls":"pro","status":"휴강","schedType":"fixed","days":["토"],"times":{"토":"16:00"},"st":"2025-07-12","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성 고정"},
-  {"id":"hzgb3ykz6fpo","name":"하동찬","age":"2000","ph":"010-9143-1081","gd":"여성","cls":"pro","status":"휴강","schedType":"flex","days":[],"times":{},"st":"2025-07-17","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성"},
-  {"id":"fokwcfdpt2q3","name":"최희성","age":"2004","ph":"010-8287-8909","gd":"여성","cls":"pro","status":"휴강","schedType":"fixed","days":["수"],"times":{"수":"17:00"},"st":"2025-07-19","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성 고정"},
-  {"id":"5kko01fc2e97","name":"정수영","age":"1995","ph":"010-6431-5048","gd":"여성","cls":"pro","status":"휴강","schedType":"fixed","days":[],"times":{},"st":"2025-07-24","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성 고정"},
-  {"id":"t7zq5xxonglu","name":"김중훈","age":"1995","ph":"010-7466-3671","gd":"여성","cls":"pro","status":"휴강","schedType":"fixed","days":[],"times":{},"st":"2025-07-29","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성 고정"},
-  {"id":"0fbzeacfnvz5","name":"이영복","age":"1994","ph":"010-3242-2181","gd":"여성","cls":"hob","status":"휴강","schedType":"fixed","days":[],"times":{},"st":"2025-08-02","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"축가 고정"},
-  {"id":"nk5q3quvyvpm","name":"장유리","age":"2000","ph":"010-2468-3916","gd":"여성","cls":"pro","status":"휴강","schedType":"flex","days":[],"times":{},"st":"2025-08-09","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성"},
-  {"id":"6619fhmnedj3","name":"김영서","age":"1997","ph":"010-4379-5254","gd":"여성","cls":"pro","status":"휴강","schedType":"fixed","days":[],"times":{},"st":"2025-08-27","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성 고정"},
-  {"id":"rp0xyfoaffad","name":"강민서","age":"1994","ph":"010-7644-4438","gd":"여성","cls":"pro","status":"휴강","schedType":"fixed","days":[],"times":{},"st":"2025-08-27","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성 고정"},
-  {"id":"kit4vqt2mm4q","name":"최승원","age":"2010","ph":"010-6263-0614","gd":"여성","cls":"pro","status":"휴강","schedType":"fixed","days":[],"times":{},"st":"2025-09-27","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성 고정"},
-  {"id":"s6s3bev7affl","name":"김다혜","age":"2014","ph":"010-8970-2811","gd":"여성","cls":"pro","status":"휴강","schedType":"flex","days":[],"times":{},"st":"2025-09-13","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":""},
-  {"id":"a1ormshknkcv","name":"정재원","age":"1988","ph":"010-2231-2591","gd":"여성","cls":"hob","status":"휴강","schedType":"flex","days":[],"times":{},"st":"2025-10-03","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"축가"},
-  {"id":"eymrquim8uno","name":"김정수","age":"2002","ph":"010-4833-7394","gd":"여성","cls":"pro","status":"휴강","schedType":"flex","days":[],"times":{},"st":"2025-10-23","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성"},
-  {"id":"2ue4tbt85lgj","name":"손은선","age":"2005","ph":"010-6755-3009","gd":"여성","cls":"pro","status":"휴강","schedType":"flex","days":[],"times":{},"st":"2025-11-05","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성"},
-  {"id":"737d4y07c0xz","name":"박정민","age":"1999","ph":"010-3804-4064","gd":"여성","cls":"pro","status":"휴강","schedType":"flex","days":[],"times":{},"st":"2025-11-04","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성"},
-  {"id":"qxlehfm4bmtv","name":"채윤호","age":"2012","ph":"010-5439-9317","gd":"여성","cls":"pro","status":"휴강","schedType":"fixed","days":["토"],"times":{"토":"14:00"},"st":"2025-11-22","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성 고정"},
-  {"id":"3ztjzrhc47a1","name":"이동윤","age":"2003","ph":"010-5501-1371","gd":"여성","cls":"hob","status":"휴강","schedType":"fixed","days":[],"times":{},"st":"2025-12-31","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"취미 고정"},
-  {"id":"auk7khfi9njp","name":"김민수","age":"2000","ph":"010-2428-5362","gd":"여성","cls":"pro","status":"휴강","schedType":"fixed","days":[],"times":{},"st":"2025-12-15","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"음성 고정"},
-  {"id":"6f965kpwl8kw","name":"전성만","age":"1976","ph":"010-9260-5757","gd":"여성","cls":"pro","status":"휴강","schedType":"flex","days":[],"times":{},"st":"2025-12-26","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성"},
-  {"id":"pw55yrl64qv6","name":"정승연","age":"1997","ph":"010-4480-1605","gd":"여성","cls":"hob","status":"휴강","schedType":"fixed","days":[],"times":{},"st":"2026-01-09","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"취미 고정"},
-  {"id":"8ilx8p28x48h","name":"김민석","age":"2009","ph":"010-8423-0207","gd":"여성","cls":"pro","status":"휴강","schedType":"fixed","days":[],"times":{},"st":"2026-01-03","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성 고정"},
-  {"id":"298gpqwm5z1g","name":"김성민","age":"1976","ph":"010-9400-9300","gd":"여성","cls":"pro","status":"휴강","schedType":"fixed","days":["수"],"times":{"수":"20:00"},"st":"2026-01-08","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성 고정"},
-  {"id":"isfk42ix2ffw","name":"김민재","age":"2016","ph":"010-3394-0301","gd":"여성","cls":"hob","status":"휴강","schedType":"fixed","days":["토"],"times":{"토":"17:00"},"st":"2026-01-17","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"취미 고정"},
-  {"id":"77rtfl54126h","name":"한성빈","age":"1997","ph":"010-7658-2422","gd":"여성","cls":"hob","status":"휴강","schedType":"flex","days":[],"times":{},"st":"2026-01-20","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"축가"},
-  {"id":"fvurawewry4m","name":"이세미","age":"2010","ph":"010-2354-8184","gd":"여성","cls":"pro","status":"휴강","schedType":"fixed","days":[],"times":{},"st":"2026-01-26","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성 고정"},
-  {"id":"v2r7h8r15d6w","name":"한지민","age":"2007","ph":"010-4542-7734","gd":"여성","cls":"pro","status":"휴강","schedType":"flex","days":[],"times":{},"st":"2026-02-05","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성"},
-  {"id":"imfbwpdg12lz","name":"손주환","age":"1999","ph":"010-2946-5077","gd":"여성","cls":"pro","status":"휴강","schedType":"flex","days":["목"],"times":{"목":"17:00"},"st":"","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":""},
-  {"id":"brvnokwp5ock","name":"정두현","age":"1997","ph":"010-6318-7351","gd":"여성","cls":"pro","status":"휴강","schedType":"flex","days":[],"times":{},"st":"2026-02-27","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성"},
-  {"id":"zplnhb6rtwek","name":"이천희","age":"1976","ph":"010-5571-0822","gd":"여성","cls":"pro","status":"휴강","schedType":"fixed","days":[],"times":{},"st":"2026-02-25","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"발성 고정"},
-  {"id":"kmvehxt5zv8l","name":"강신영","age":"1990","ph":"010-9111-9053","gd":"여성","cls":"hob","status":"휴강","schedType":"fixed","days":["목"],"times":{"목":"14:00"},"st":"2026-03-05","freq":1,"deferrals":0,"maxDeferrals":2,"createdAt":0,"memo":"취미 고정"}
-];
+var _DEFAULT_STUDENTS = [];

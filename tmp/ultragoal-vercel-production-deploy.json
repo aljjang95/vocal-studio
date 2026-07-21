@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "goalId": "G014",
+  "title": "Vercel production deploy alignment",
+  "timestamp": "2026-06-19T08:06:36.566409+00:00",
+  "userReport": "User identified they were likely viewing a Vercel app, not Firebase Hosting, and suspected GitHub/Vercel auto deployment had not updated the mobile app.",
+  "diagnosis": {
+    "localVercelConfigBefore": "No vercel.json or .vercel config was present before this fix.",
+    "githubWorkflows": "No .github/workflows directory exists locally or on GitHub main; there was no GitHub Actions deployment workflow to refresh Vercel.",
+    "vercelWhoami": "aljjang95",
+    "vercelProjectsBefore": "Vercel CLI reported no projects under aljjang95s-projects before scoped deploy.",
+    "conclusion": "Firebase deploys were current, but an existing/expected Vercel mobile URL would not have received these local fixes until a Vercel deployment was run."
+  },
+  "changes": [
+    "Added vercel.json for static hosting rewrites and no-store headers for index.html and sw.js.",
+    "Added .vercelignore so Vercel uploads only deployable runtime assets and excludes .gjc/tmp/scripts/docs/js/rules artifacts.",
+    "Ran a scoped Vercel production deployment under aljjang95s-projects.",
+    "Vercel linked/created project aljjang95s-projects/vocal-studio and connected GitHub repository https://github.com/aljjang95/vocal-studio.",
+    "Production alias is https://vocal-studio-tan.vercel.app."
+  ],
+  "verification": {
+    "vercelDeploy": {
+      "command": "npx vercel deploy --prod --yes --scope aljjang95s-projects",
+      "ok": true,
+      "deploymentId": "dpl_ypfdVcjWqQANyEVzSZLKzwdqDsDY",
+      "deploymentUrl": "https://vocal-studio-8n4s2x6hh-aljjang95s-projects.vercel.app",
+      "productionAlias": "https://vocal-studio-tan.vercel.app",
+      "readyState": "READY",
+      "inspectorUrl": "https://vercel.com/aljjang95s-projects/vocal-studio/ypfdVcjWqQANyEVzSZLKzwdqDsDY"
+    },
+    "vercelServiceWorker": {
+      "url": "https://vocal-studio-tan.vercel.app/sw.js?attendancefix=20260619",
+      "version": "vs-v2-2026-06-19-attendance-resolve-fix",
+      "ok": true
+    },
+    "vercelMobileBrowser": {
+      "url": "https://vocal-studio-tan.vercel.app/?vercel=20260619",
+      "viewport": "360x740",
+      "sourceHasAttendanceFix": true,
+      "sourceHasNoLabel": true,
+      "dayTabBottom": 107,
+      "weekTabBottom": 107,
+      "placementButtonTop": 630,
+      "visibleBadLabels": 0,
+      "screenshot": "tmp/vercel-mobile-proof.png",
+      "ok": true
+    }
+  },
+  "hashes": {
+    "indexSha256": "6ea16b49754f49151c4f5771b6be9e3f33759852e4f88290f6a6cd1a1652ba76",
+    "swSha256": "bfcf39bf78b65a4b31a841a2a3765ad4240946654d5d6b1ce4bfa1b264a3ea16",
+    "vercelJsonSha256": "46c358872dff051faf2e3a9b68215211a165426a37c5cd9c30adcb433749aefd",
+    "vercelIgnoreSha256": "8e1b8a80949dc6e35510ec5d746807b321baa4e3d08bd804839925028d65bd8d"
+  },
+  "residualBlockers": [
+    "G004/G005 live split-write and Storage upload receipts still require a logged-in admin browser to run 관리자 검증 → 라이브 G004/G005 검증 and provide/copy the JSON receipt.",
+    "Future Vercel Git integration deployments require these local repository changes to be committed and pushed; commit/push was not performed because explicit push approval was not given."
+  ]
+}

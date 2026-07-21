@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "storyId": "G018",
+  "title": "Student full life-history timeline",
+  "createdAt": "2026-06-19T13:02:46.413614+00:00",
+  "objective": "Resolve the student single-view request by showing every lesson record as a comfortable full life-history timeline, not a short recent/previous-week snippet, while preserving quick edit access and deploying the update.",
+  "changes": [
+    {
+      "file": "index.html",
+      "summary": "Added getStudentLogs() sorted helper for consistent per-student record order."
+    },
+    {
+      "file": "index.html",
+      "summary": "Added buildStudentLifeTimeline() for the profile 레슨 기록 tab with all records grouped chronologically by month from first lesson to latest."
+    },
+    {
+      "file": "index.html",
+      "summary": "Changed today-card previous-record drawer from recent 5 capped records to previous records 전체 N건 with a taller scroll area."
+    },
+    {
+      "file": "index.html",
+      "summary": "Added life-history CSS for month headers, timeline line/dots, status colors, and readable record cards."
+    },
+    {
+      "file": "sw.js",
+      "summary": "Bumped service worker cache to vs-v2-2026-06-19-student-life-timeline."
+    },
+    {
+      "file": "scripts/regression-gates.mjs",
+      "summary": "Added invariants guarding full life timeline copy, uncapped previous-record copy, and new service worker version."
+    }
+  ],
+  "verification": {
+    "regressionGates": {
+      "command": "node scripts/regression-gates.mjs",
+      "ok": true,
+      "inlineScripts": 7,
+      "invariantCount": 58,
+      "indexSha256": "d20b091401b912149fdb0807a5630eab44a2ebd7f4a8404b9b8e250f3a16dbdf"
+    },
+    "localBrowserScenario": {
+      "viewport": "390x844",
+      "syntheticRecords": 8,
+      "profileHero": "성장 일대기 · 전체 8건",
+      "profileLifeItemCount": 8,
+      "chronology": {
+        "firstItemDate": "2026-01-02",
+        "lastItemDate": "2026-05-01"
+      },
+      "monthGroups": [
+        "2026년 1월 2건",
+        "2026년 2월 2건",
+        "2026년 3월 2건",
+        "2026년 4월 1건",
+        "2026년 5월 1건"
+      ],
+      "todayPreviousCopy": "이전 기록 전체 8건"
+    },
+    "deployedVercelScenario": {
+      "url": "https://vocal-studio-tan.vercel.app/?life=20260619b",
+      "hasLifeFunction": true,
+      "profileHero": "성장 일대기 · 전체 8건",
+      "profileLifeItemCount": 8,
+      "chronology": {
+        "firstItemDate": "2026-01-02",
+        "lastItemDate": "2026-05-01"
+      },
+      "todayPreviousCopy": "이전 기록 전체 8건"
+    },
+    "serviceWorkerVersion": "vs-v2-2026-06-19-student-life-timeline"
+  },
+  "deployments": {
+    "firebaseHostingVersion": "projects/131827810958/sites/hlbvocalstudio-72481/versions/891271671b3c0c7e",
+    "vercelProductionAlias": "https://vocal-studio-tan.vercel.app",
+    "vercelDeploymentId": "dpl_DiQujRBxNKtqwqxWauqkLyypxHbS",
+    "vercelDeploymentUrl": "https://vocal-studio-4mhjovpld-aljjang95s-projects.vercel.app"
+  },
+  "hashes": {
+    "indexSha256": "d20b091401b912149fdb0807a5630eab44a2ebd7f4a8404b9b8e250f3a16dbdf",
+    "swSha256": "9b8ddb380477bc1761816373fe26fb7462d8547f77c13a0ed567091380e251ad",
+    "regressionGatesSha256": "02402bf926879a9935d53b178925a10f81acc86be524320f4974e76950b66eb3"
+  },
+  "remainingAggregateBlockers": [
+    {
+      "goalId": "G004",
+      "status": "blocked",
+      "blocker": "Live split Firestore write/dual-read receipt still requires an authenticated admin browser session."
+    },
+    {
+      "goalId": "G005",
+      "status": "blocked",
+      "blocker": "Live Storage upload/cross-device media verification still requires an authenticated admin browser session."
+    }
+  ]
+}

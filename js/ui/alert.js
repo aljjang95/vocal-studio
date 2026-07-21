@@ -3,6 +3,7 @@
  */
 function showTodayAlert(){
   var now=new Date(),todayStr=toDS(now);
+  if(page==='schedule')return;
   /* 오늘 이미 닫았으면 표시 안 함 */
   try{
     var dismissed=localStorage.getItem('vsC_alertDismissed');
@@ -65,4 +66,4 @@ function showTodayAlert(){
 /* Firebase 로드 후 또는 3초 후 알림 표시 */
 setTimeout(function(){
   if(students.length>0)showTodayAlert();
-},3000);
+},3000);

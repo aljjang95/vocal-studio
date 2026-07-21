@@ -1,0 +1,55 @@
+{
+  "tab": "g006",
+  "url": "file:///C:/Users/Administrator/Desktop/vocal-studio/index.html",
+  "viewport": { "width": 1280, "height": 900 },
+  "result": "pass",
+  "primaryChecks": [
+    "group fixed slot present",
+    "group slot has shared-slot metadata",
+    "group slot has normalized members",
+    "overbook conflict audited",
+    "group consult slot present",
+    "group consult members preserved",
+    "conflict decision blocks overbook",
+    "group attendance save succeeds",
+    "attendance metadata is per member",
+    "attendance keeps primary payer",
+    "one-off override conflict is audited",
+    "reset snapshot captures before-state and audit",
+    "pc schedule renders group and consult",
+    "mobile schedule renders without crash"
+  ],
+  "mappingAndOverrideChecks": [
+    "consult-to-student group mapping preserves group type",
+    "consult-to-student mapping preserves both members",
+    "consult-to-student mapping preserves primary payer",
+    "cancel override remains in schedule metadata",
+    "makeup override keeps source metadata",
+    "cancelled slot is excluded from conflict audit"
+  ],
+  "engineCounts": { "slots": 3, "conflicts": 1 },
+  "saveAllCalledByAttendanceHelper": 1,
+  "sampleLog": {
+    "sid": "g1",
+    "sn": "Anna / Bella",
+    "date": "2026-06-16",
+    "scheduleEngineVersion": "schedule-v2-2026-06-18",
+    "groupId": "grp_g1",
+    "primaryPayerId": "g1-payer",
+    "sharedSlot": true,
+    "attendanceByMember": {
+      "010-1000": { "name": "Anna", "att": "출석", "note": "" },
+      "010-2000": { "name": "Bella", "att": "결석", "note": "감기" }
+    }
+  },
+  "mappedConsultToStudent": {
+    "lessonType": "group",
+    "primaryPayerId": "010-6000",
+    "sharedSlot": true,
+    "memberNames": ["Lead", "Partner"]
+  },
+  "overrideSlotSummary": [
+    { "id": "cancel-a", "absent": true, "overrideType": "cancel" },
+    { "id": "makeup-b", "absent": false, "overrideType": "makeup", "makeupOf": "2026-06-10" }
+  ]
+}

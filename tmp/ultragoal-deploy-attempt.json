@@ -1,0 +1,21 @@
+{
+  "attemptedAt": "2026-06-18T14:55:18.823Z",
+  "requestedByUser": "배포하세요.",
+  "predeploy": {
+    "command": "node scripts/regression-gates.mjs",
+    "result": "pass",
+    "inlineScripts": 7,
+    "invariantCount": 31,
+    "indexSha256": "b5cc93f49c43ce9dc45df8200a10b95297b80dc6a7e20ee16182fa3ac44e59aa"
+  },
+  "deploy": {
+    "command": "npx firebase-tools deploy --only hosting,firestore:rules,storage --project hlbvocalstudio-72481 --json",
+    "result": "failed",
+    "error": "Failed to authenticate, have you run firebase login?"
+  },
+  "loginAttempt": {
+    "command": "npx firebase-tools login --no-localhost",
+    "result": "blocked by interactive human authentication prompt; non-interactive piped run failed with Cannot run login in non-interactive mode. See login:ci to generate a token for use in non-interactive environments."
+  },
+  "nextRequiredHumanAction": "Authenticate Firebase CLI on this workstation with npx firebase-tools login, or provide a Firebase CI token/service-account auth accepted by firebase-tools, then rerun deploy."
+}

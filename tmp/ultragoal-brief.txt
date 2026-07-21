@@ -1,0 +1,23 @@
+Approved plan: .gjc/plans/ralplan/2026-06-18-1053-60bb/pending-approval.md
+Global constraints: preserve current customer data, avoid regressions, verify each gate, treat index.html as authoritative runtime until modules are explicitly loaded. Do not silently weaken the approved safety gates. Phase 1 is indivisible for release purposes: public-static-asset PII removal, authorized access/rules, service-worker cache purge, and automatic-attendance no-write kill switch must ship together only after verification.
+
+@goal: Phase 0 safety inventory and execution baseline
+Establish the runtime/source-of-truth policy and baseline evidence needed before product changes: inventory all public static assets, identify PII-bearing static surfaces, identify automatic attendance mutation paths, inspect Firebase/Storage rule surfaces, record current data counts and backup/export evidence, and prepare focused verification commands or browser checks that will prove the first release gates.
+
+@goal: Phase 1 emergency safety release
+Implement the first approved executable slice without breaking current operation: remove private PII from every deployed public static asset, replace anonymous broad data access with an authorized/admin access model and rules compatible with the app, add Storage rules/deploy config where missing, purge old service-worker caches/versioning, and install the no-write automatic-attendance kill switch so load/refresh/navigation/Today/schedule render create zero attendance or payment writes. Verify unauthorized denial, authorized load path or safe local-dev path, PII scan, cache version, and no-write render behavior.
+
+@goal: Attendance proposal workflow and unified payment cycle service
+Replace former automatic attendance behavior with explicit missing-attendance proposals and confirmation. Introduce one canonical cycle/payment calculation service for active runtime surfaces, align lesson logs, dashboard, payment cards, profile/timeline, alerts, offsets, edits/deletes, and add focused tests/verification for billing correctness.
+
+@goal: Split Firestore migration with freeze and media manifest
+Design and implement the split collection model and migration path with maintenance/freeze or live-hash checkpoint, deterministic ids, schema metadata, audit events, dry-run reports, idempotent writes, dual-read verification, media manifest, and placeholder quarantine so [saved] media is never treated as successful migrated media.
+
+@goal: Durable media persistence and recovery manager
+Move required media durability to Firebase Storage-backed records, use IndexedDB only as queue/cache, add retry/quota/error surfacing, unified load path for photos/audio/video/consent recordings, orphan scan, recoveryRequired state, snapshot list/diff, selective restore/export/import, and verification across reload/cross-device or explicit degraded state.
+
+@goal: Schedule engine v2 and first-class group lessons
+Unify fixed, flex, consult, makeup/cancel, one-off overrides, conflicts, resets, conversion mapping, and group lessons under a schedule engine. Add first-class group enrollment/member/primary-payer/shared-slot/per-member-attendance semantics and verify PC/mobile schedule behavior, conflict blocking/overbook audit, safe reset, and consult-to-student conversion mapping.
+
+@goal: Runtime source cleanup and regression hardening
+Choose and enforce the final runtime source structure, delete or wire stale modules, document auth/migration/recovery/release procedures, add regression tests/manual gates for every invariant, and complete final architect/QA review evidence for the A-to-Z upgrade.

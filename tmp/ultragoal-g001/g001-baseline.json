@@ -1,0 +1,187 @@
+{
+  "goalId": "G001",
+  "title": "Phase 0 safety inventory and execution baseline",
+  "capturedAt": "2026-06-18T12:57:30.000Z",
+  "runtimePolicy": {
+    "authoritativeRuntime": "index.html",
+    "staleOrReferenceSurfaces": [
+      "vocal-studio.html",
+      "vocal-studi.html",
+      "js/**/*.js"
+    ],
+    "releaseConstraint": "G002 safety release is indivisible: static PII removal, auth/rules lock, service-worker cache purge, and automatic-attendance no-write kill switch must be verified together before deployment."
+  },
+  "publicStaticAssetInventory": {
+    "html": ["index.html", "vocal-studio.html", "vocal-studi.html"],
+    "serviceWorker": ["sw.js"],
+    "manifest": ["manifest.json"],
+    "firebaseConfig": ["firebase.json", "firestore.rules"],
+    "javascript": [
+      "js/app.js",
+      "js/types.js",
+      "js/effects.js",
+      "js/core/cycle.js",
+      "js/core/schedule.js",
+      "js/core/search.js",
+      "js/core/stats.js",
+      "js/core/utils.js",
+      "js/infra/camera.js",
+      "js/infra/firebase.js",
+      "js/infra/holidays.js",
+      "js/infra/media-db.js",
+      "js/store/persist.js",
+      "js/store/state.js",
+      "js/store/undo.js",
+      "js/ui/alert.js",
+      "js/ui/consult.js",
+      "js/ui/dashboard.js",
+      "js/ui/logs.js",
+      "js/ui/payment.js",
+      "js/ui/profile.js",
+      "js/ui/reset.js",
+      "js/ui/router.js",
+      "js/ui/schedule.js",
+      "js/ui/shared/avatar.js",
+      "js/ui/shared/modal.js",
+      "js/ui/sidebar.js",
+      "js/ui/sms.js",
+      "js/ui/students.js",
+      "js/ui/timeline.js",
+      "js/ui/today.js"
+    ],
+    "css": ["css/base.css", "css/components.css", "css/mobile.css", "css/theme.css"],
+    "icons": ["icon-192.png", "icon-512.png", "icons/icon-192.png", "icons/icon-512.png"]
+  },
+  "piiStaticSurfaces": [
+    {
+      "file": "index.html",
+      "lines": ["3050", "3185", "3192", "3597", "3763"],
+      "finding": "_DEFAULT_STUDENTS embeds real student names, phone numbers, ages, schedules, and memos and is merged into localStorage/Firestore."
+    },
+    {
+      "file": "index.html",
+      "lines": ["5742"],
+      "finding": "_injectInitialInquiries initData embeds real inquiry phone numbers."
+    },
+    {
+      "file": "index.html",
+      "lines": ["8545", "8574", "8575", "8846", "10010", "10052", "10053"],
+      "finding": "Printable evaluation/SMS templates include real owner phone and bank-account numbers; keep only if intentionally public business contact/payment data, otherwise move to private config."
+    },
+    {
+      "file": "vocal-studio.html",
+      "lines": ["3008", "5151", "7738", "7767", "7768", "8035", "9075", "9117", "9118"],
+      "finding": "Stale monolithic copy contains the same embedded student/inquiry PII and owner payment/contact numbers."
+    },
+    {
+      "file": "vocal-studi.html",
+      "lines": ["3319", "3348", "3349", "4023", "4065", "4066"],
+      "finding": "Older HTML copy contains owner contact/payment numbers and must not remain deployed/cached unintentionally."
+    },
+    {
+      "file": "js/store/state.js",
+      "lines": ["9", "97"],
+      "finding": "Modular reference state embeds _DEFAULT_STUDENTS PII and SMS payment template values."
+    },
+    {
+      "file": "js/types.js",
+      "lines": ["195", "196", "217"],
+      "finding": "Type/reference module embeds the default student dataset with names and phones."
+    },
+    {
+      "file": "js/ui/consult.js",
+      "lines": ["189", "1175", "1217", "1218"],
+      "finding": "Reference consult module embeds inquiry phone seed data and owner payment/contact values."
+    },
+    {
+      "file": "js/ui/profile.js",
+      "lines": ["284", "313", "314"],
+      "finding": "Reference profile module embeds owner payment/contact values."
+    },
+    {
+      "file": "js/ui/sms.js",
+      "lines": ["111"],
+      "finding": "Reference SMS module embeds payment account/phone template values."
+    }
+  ],
+  "automaticAttendanceMutationPath": {
+    "entrypoint": "index.html buildTodaySchedule() at lines 4634-4636",
+    "mutator": "index.html autoFillPastAttendance() at lines 4554-4620",
+    "writeBehavior": [
+      "Runs when Today schedule is built.",
+      "Uses localStorage key vsC_lastAutoFill to run once per day.",
+      "Backfills up to the previous 30 days on first run, then since lastFill.",
+      "Skips today/future dates, off-days/holidays, and dates with existing student log entries.",
+      "For each active student slot without a log, unshifts logs entry with att='출석', note='(자동)', _auto=true.",
+      "Calls saveAll() when added > 0, so localStorage and Firestore can be mutated by a render/navigation path."
+    ],
+    "secondaryRoutingSurface": "js/ui/router.js references buildTodaySchedule(), but authoritative runtime is current index.html.",
+    "g002Requirement": "Install a no-write kill switch so loading, refreshing, navigating, Today render, and schedule render create zero attendance/payment writes."
+  },
+  "firebaseAndRulesSurface": {
+    "runtimeAuth": "index.html initFirebase() lines 3547-3559 calls firebase.auth().signInAnonymously() and starts Firestore listener even after auth failure.",
+    "runtimeDoc": "index.html _startFirestoreListener() lines 3571-3628 listens to studio/data and merges remote/local data.",
+    "firestoreRules": "firestore.rules lines 4-5 allow read, write on /studio/{docId} when request.auth != null.",
+    "firebaseJson": "firebase.json only points to firestore.rules; no hosting headers/rewrites and no storage rules config are present.",
+    "storageRules": "No storage.rules file or storage config found in the inventory; Firebase Storage URLs may exist in data but rule surface is not versioned here.",
+    "risk": "Anonymous auth plus broad authenticated read/write gives any signed-in/anonymous user access to the shared legacy data document."
+  },
+  "dataCountsAndBackupEvidence": {
+    "browserBaselineFile": "tmp/ultragoal-g001/data-counts-summary.json",
+    "legacyDocHashFile": "tmp/ultragoal-g001/legacy-doc-hash.json",
+    "legacyDocHashSha256": "eab6e96f419976b4795fd2445609ae997f6ed142e3303f2774bf30c0e2268faf",
+    "legacyDocByteLength": 207200,
+    "localCounts": {
+      "students": 48,
+      "activeStudents": 14,
+      "consults": 17,
+      "openConsults": 1,
+      "inquiries": 185,
+      "logs": 13,
+      "payments": 11,
+      "weekOverrideWeeks": 14,
+      "groups": 1,
+      "currentWeek": "2026-W25"
+    },
+    "remoteCounts": {
+      "students": 48,
+      "consults": 17,
+      "inquiries": 185,
+      "logs": 13,
+      "payments": 11,
+      "weekOverrideWeeks": 14
+    },
+    "existingRecoveryArtifacts": [
+      ".gjc/recovery/2026-06-18/firestore-current-before-restore.json",
+      ".gjc/recovery/2026-06-18/localstorage-recovered-snapshot.json",
+      ".gjc/recovery/2026-06-18/restore-summary.json"
+    ],
+    "note": "Evidence files written for G001 contain hashes/counts, not raw customer data. Existing recovery artifacts may contain private data and must remain non-public operational evidence."
+  },
+  "g002VerificationGates": [
+    {
+      "gate": "PII scan",
+      "command": "Use search on index.html, vocal-studio.html, vocal-studi.html, js/**/*.js, sw.js for _DEFAULT_STUDENTS, initData, known private phone/account markers, and Korean phone regex; expected result is no private student/inquiry PII in public static assets."
+    },
+    {
+      "gate": "Unauthorized denial",
+      "check": "With no authorized admin session, Firestore reads/writes to legacy or split data paths must fail under deployed rules; anonymous broad access must not succeed."
+    },
+    {
+      "gate": "Authorized load or safe local-dev path",
+      "check": "An approved admin/session path loads current counts without dropping/rewriting data, or local-dev fails closed without destructive bootstrap."
+    },
+    {
+      "gate": "No-write render behavior",
+      "browserScenario": "Record counts/hash, clear or spoof vsC_lastAutoFill if needed in an isolated copy, load app, navigate Today and schedule, wait for sync, confirm logs/payments/weekOvr counts and legacy document hash do not change from render-only actions."
+    },
+    {
+      "gate": "Service worker cache purge/version",
+      "check": "sw.js VERSION changes for safety release, activation deletes old caches, and cached stale HTML with PII is not served after reload/update."
+    },
+    {
+      "gate": "Storage/rules config",
+      "check": "firebase.json references Firestore and Storage rules where Storage is used; storage.rules denies unauthorized reads/writes while preserving authorized media load/upload path."
+    }
+  ]
+}
