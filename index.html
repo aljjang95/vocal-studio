@@ -5178,8 +5178,18 @@ var page='today',wkOfs=0;
 var _ciDraftTimer=null;
 var _consultTab='consult';
 var PT={dashboard:'대시보드',consult:'신규 상담',students:'레슨생 관리',logs:'레슨 기록',payment:'입금 관리',today:'오늘 스케줄',schedule:'주간 스케줄',timeline:'진도 타임라인'};
+/* 상담 수정용 상단 고정바 정리 — 생성만 하고 제거하는 곳이 없어
+   다른 화면으로 이동해도 화면 최상단에 남고, 재진입할 때마다 겹겹이 쌓였다.
+   본문에 준 상단 여백(60px)도 함께 되돌린다. */
+function _removeConsultFixedBar(){
+  try{
+    document.querySelectorAll('#ci-fixed-save').forEach(function(el){el.remove();});
+    var cont=ge('content'); if(cont&&cont.style.paddingTop==='60px') cont.style.paddingTop='';
+  }catch(e){}
+}
 function go(p){
   page=p;wkOfs=0;
+  _removeConsultFixedBar();
   // 스케줄 설정 버튼 표시/숨김
   setTimeout(function(){
     var cfgBtn=ge('vs-sched-cfg-btn');
@@ -7178,8 +7188,11 @@ function buildMobileWeekView(mon,sched,todayStr,isThis,flexS,unassignedFlex,acti
   });
   o+='</div>';
 
-  /* 시간 그리드 — 1fr 균등분배로 12행 꽉 채움 */
-  o+='<div class="mwv" style="flex:1;min-height:0;display:grid;grid-template-columns:20px repeat(7,1fr);grid-template-rows:repeat('+HRS_LBL.length+',1fr);overflow-y:auto;overflow-x:hidden">';
+  /* 시간 그리드 — 행 높이는 minmax(46px,auto).
+     1fr 균등분배로 12행을 꽉 채우면 보기엔 좋지만, 같은 시간대에 2명 이상이면
+     셀 내용(블록당 약 30px)이 행 높이를 넘어 overflow:hidden에 잘려
+     두 번째 레슨생이 화면에서 통째로 사라졌다. 안 보이는 것보다 스크롤이 낫다. */
+  o+='<div class="mwv" style="flex:1;min-height:0;display:grid;grid-template-columns:20px repeat(7,1fr);grid-template-rows:repeat('+HRS_LBL.length+',minmax(46px,auto));overflow-y:auto;overflow-x:hidden">';
 
   var nowH2=now.getHours(),nowMin2=now.getMinutes();
   var nowTotalMin2=nowH2*60+nowMin2;
@@ -11532,6 +11545,7 @@ function showConsultForm(cid){
         if(evalBtn)evalBtn.style.display='none';
         /* 모바일: 상단 고정 저장 버튼 */
         if(typeof isMobile==='function'&&isMobile()){
+          _removeConsultFixedBar(); /* 중복 생성 방지 — 재진입 시 계속 쌓이던 문제 */
           var fixedBar=document.createElement('div');
           fixedBar.id='ci-fixed-save';
           fixedBar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(16,16,26,.97);backdrop-filter:blur(12px);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(200,169,110,.25);';
