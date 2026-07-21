@@ -7160,7 +7160,9 @@ function buildMobileWeekView(mon,sched,todayStr,isThis,flexS,unassignedFlex,acti
   var schedH=bucketSchedByHour(sched);
   var now=new Date();
   var o='';
-  o+='<div class="mwv-wrap" style="display:flex;flex-direction:column;height:calc(100vh - 132px - env(safe-area-inset-bottom,0px) - env(safe-area-inset-top,0px));min-height:0">';
+  /* 높이 계산에서 하단 탭바(62px)가 빠져 있어 그리드가 탭바 아래로 58px 내려가
+     마지막 시간대가 가려졌다(실측). 탭바 몫을 명시적으로 뺀다. */
+  o+='<div class="mwv-wrap" style="display:flex;flex-direction:column;height:calc(100vh - 132px - 62px - env(safe-area-inset-bottom,0px) - env(safe-area-inset-top,0px));min-height:0">';
   o+='<div style="display:flex;align-items:center;padding:5px 8px;flex-shrink:0;gap:5px;min-height:34px;border-bottom:1px solid var(--b);background:var(--s1)">';
   o+='<span style="font-size:11px;font-weight:800;color:var(--a);flex-shrink:0">'+(function(m){var s=m.getMonth()+1,e=addDays(m,6).getMonth()+1;return s===e?s+'월':s+'-'+e+'월';})(mon)+'</span>';
   o+='<span style="flex:1;font-size:10.5px;color:var(--tm);text-align:right">주간 시간표</span>';
