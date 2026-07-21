@@ -3170,6 +3170,35 @@ function _rowIdentityKeys(x,prefix,idx){
   if(!keys.length)keys.push(prefix+':'+(x.date||'')+'|'+(x.time||'')+'|'+idx);
   return keys;
 }
+/* 원격에는 존재하지 않는 것이 정상인 '기기 로컬 전용' 참조 필드.
+   사진/녹음 실체는 localStorage·IndexedDB에 있고 이 키가 그 위치를 가리킨다. */
+var DEVICE_LOCAL_FIELDS=['_photoKey','_mediaKey'];
+function _carryDeviceLocalFields(target,src){
+  if(!target||!src)return target;
+  DEVICE_LOCAL_FIELDS.forEach(function(k){ if(!target[k]&&src[k])target[k]=src[k]; });
+  return target;
+}
+/* 이미 참조가 끊긴 행 자가복구 —
+   사진 백업 키는 'vsC_ph_<행 id>' 규칙이라 id로 되찾을 수 있다.
+   사진도 없고 참조도 없는 행에 한해 연결만 복원한다(덮어쓰지 않는다). */
+function _relinkOrphanPhotos(){
+  var relinked=0;
+  try{
+    var byId={};
+    for(var i=0;i<localStorage.length;i++){
+      var k=localStorage.key(i);
+      if(k&&k.indexOf('vsC_ph_')===0)byId[k.slice(7)]=k;
+    }
+    [students,consults].forEach(function(list){
+      (Array.isArray(list)?list:[]).forEach(function(x){
+        if(!x||!x.id)return;
+        if(x.photo||x._photoKey)return;
+        if(byId[x.id]){x._photoKey=byId[x.id];relinked++;}
+      });
+    });
+  }catch(e){}
+  return relinked;
+}
 function _mergeByIdentity(remote,local,prefix,preferLocal){
   var out=[];
   var seen={},keyToIdx={};
@@ -3196,6 +3225,12 @@ function _mergeByIdentity(remote,local,prefix,preferLocal){
       var after='';
       try{after=JSON.stringify(_stableForSig(x));}catch(e2){}
       if(before!==after){out[idx]=x;mark(x,idx);replaced++;}
+    }
+    else{
+      /* 원격 우선으로 로컬 행을 버릴 때도 '기기 로컬 전용' 참조는 살려둔다.
+         _photoKey/_mediaKey는 원격에 없는 것이 정상인데, 원격 행이 그대로 이기면
+         로컬에 남아있는 사진·녹음을 가리키는 참조가 끊겨 화면에서 사라진다(실제 사고). */
+      _carryDeviceLocalFields(out[idx],x);
     }
   });
   return {list:out,added:added,replaced:replaced};
@@ -4245,6 +4280,13 @@ function _startFirestoreListener(){
     try{var _mPayments=_mergeByIdentity(d.payments||[],payments||[],'payment',_preferLocal);payments=_mPayments.list;_needPushBack=_needPushBack||_mPayments.added>0||_mPayments.replaced>0;_safeSetLS('vsC_p',JSON.stringify(payments));}catch(e){}
     try{var _mInq=_mergeByIdentity(d.inquiries||[],inquiries||[],'inquiry',_preferLocal);inquiries=_mInq.list;_needPushBack=_needPushBack||_mInq.added>0||_mInq.replaced>0;_safeSetLS('vsC_iq',JSON.stringify(inquiries));}catch(e){}
     _fbReady=true;
+    /* 병합 결과에 사진 참조가 끊긴 행이 있으면 로컬 백업으로 다시 연결하고 즉시 보존 */
+    var _relinked=_relinkOrphanPhotos();
+    if(_relinked>0){
+      try{_safeSetLS('vsC_s',JSON.stringify(students));}catch(e){}
+      try{_safeSetLS('vsC_c',JSON.stringify(consults));}catch(e){}
+      console.warn('사진 참조 복구:',_relinked,'건');
+    }
     _injectInitialInquiries(); /* 문의자 초기 데이터 주입 */
     var _afterSig=_dataSignature();
     var _changed=_afterSig!==_beforeSig;
@@ -4532,6 +4574,8 @@ document.addEventListener('DOMContentLoaded',function(){
   }
   applyMobileClass();
   window.addEventListener('resize', applyMobileClass);
+  /* 동기화 이전에도 끊긴 사진 참조를 먼저 복구해 첫 화면부터 사진이 보이게 한다 */
+  try{if(_relinkOrphanPhotos()>0)saveAll();}catch(e){}
   initFirebase();
   initMobileTabBar();
 });
