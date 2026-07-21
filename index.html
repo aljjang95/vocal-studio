@@ -3122,7 +3122,13 @@ function _rowIdentityKeys(x,prefix,idx){
   var phone=x.phone||x.ph;
   if(prefix==='student'||prefix==='consult'||prefix==='inquiry'){
     if(phone)keys.push('phone:'+phone);
-    if(x.name)keys.push('name:'+x.name);
+    /* 이름은 최후수단 식별자로만 쓴다.
+       id나 전화번호가 있는 행에까지 'name:'을 붙이면 동명이인 또는
+       같은 사람의 서로 다른 기록(임시저장본 + 실제 상담본)이 한 명으로 뭉개져
+       병합 시 뒤쪽 행이 통째로 삭제된다(실제 데이터 소실 사고 발생).
+       중복은 나중에 지울 수 있지만 삭제된 기록은 되살릴 수 없으므로
+       애매하면 '남기는 쪽'으로 판단한다. */
+    if(x.name&&!x.id&&!phone)keys.push('name:'+x.name);
     if(x.sn)keys.push('sn:'+x.sn);
   }else if(prefix==='log'){
     keys.push('log:'+((x.sid||'')+'|'+(x.date||'')+'|'+(x.wn||'')+'|'+(x.att||'')));
