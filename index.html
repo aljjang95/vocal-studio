@@ -750,8 +750,12 @@ body.is-mobile .content{padding:14px 14px!important;min-width:0!important;max-wi
 /* 상단바 — 제목/버튼/동기화표시가 뒤엉켜 2줄로 깨지던 문제.
    한 줄 고정 + 제목만 축소(말줄임), 동기화표시는 줄을 차지하지 않도록 우하단에 띄운다. */
 body.is-mobile .topbar{
-  position:relative!important;height:auto!important;min-height:54px!important;
-  padding:7px 10px 12px 54px!important;
+  position:relative!important;height:auto!important;
+  /* 노치/상태바 영역(safe-area-top)을 반드시 포함해야 한다.
+     축약형 padding으로 덮으면 미디어쿼리의 safe-area padding-top이 사라져
+     상단바 내용과 고정 버튼이 상태바 밑으로 파고든다. */
+  min-height:calc(env(safe-area-inset-top,0px) + 54px)!important;
+  padding:calc(env(safe-area-inset-top,0px) + 7px) 10px 12px 54px!important;
   flex-wrap:nowrap!important;gap:6px!important;align-items:flex-start!important;overflow:hidden!important;
 }
 body.is-mobile .pt{
@@ -825,6 +829,12 @@ body.is-mobile input[type=search],body.is-mobile input[type=time],
 body.is-mobile input:not([type]),body.is-mobile select,body.is-mobile textarea{font-size:16px!important;}
 /* 고정 뷰전환 버튼 터치 타깃이 27px로 작아 누르기 어렵던 문제 (권장 최소 32px) */
 body.is-mobile #viewToggleBtn{min-height:32px!important;display:inline-flex!important;align-items:center!important;}
+/* 전역 video{object-fit:cover}가 남아 재생 영상의 위아래가 잘리던 문제 — 재생 영역은 원본비 유지 */
+.ba-item-body video,.tab-content video{object-fit:contain!important;height:auto!important;max-height:60vh!important;background:#000;}
+@media(max-width:768px){.ba-item-body video,.tab-content video{max-height:52vh!important;}}
+/* 변동 배정 모달의 요일/시간 select — 긴 옵션(‘10:00 ⚠️ 김민서,박서준’)의 최소폭 때문에
+   행이 줄어들지 못해 넘치던 문제 */
+body.is-mobile #flexWeekBody select{min-width:0!important;width:100%!important;max-width:100%!important;}
 /* JS(is-mobile 부여)가 늦거나 실패해도 좁은 화면에서 가로스크롤은 막는다 */
 @media(max-width:768px){
   .main{min-width:0;max-width:100vw;}
@@ -9560,7 +9570,7 @@ function printBeforeSheet(did,mode){
     '.sign-lbl{font-size:8.5px;color:#555;}'+
     '@media print{@page{size:A4;margin:5mm 8mm;}body{padding:0;}button{display:none!important;}}';
 
-  w.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>레슨 평가지</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>'+css+'</style></head><body>');
+  w.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>레슨 평가지</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>'+css+'</style></head><body>');
   w.document.write('<h1>HLB보컬스튜디오</h1>');
   w.document.write('<div class="studioname">원장 &nbsp;·&nbsp; ☎ [스튜디오 연락처]</div>');
   w.document.write('<div class="sub">수강생: <strong>'+esc(data.name)+'</strong>&nbsp;&nbsp;|&nbsp;&nbsp;레슨 유의사항 &amp; 트레이너 초기 평가&nbsp;&nbsp;|&nbsp;&nbsp;'+ds+'</div>');
@@ -10737,7 +10747,7 @@ function evalHTML(ds){
     +'.sign-box{text-align:center;flex:1;}.sign-line{border-bottom:1.5px solid #333;height:36px;margin-bottom:4px;}.sign-lbl{font-size:10.5px;color:#555;}'
     +'@page{margin:14mm 16mm;}'
     +'@media print{.no-print{display:none!important;}}';
-  return '<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>보컬 평가지</title><style>'+css+'</style></head><body>'
+  return '<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>보컬 평가지</title><style>'+css+'</style></head><body>'
     +'<h1>Vocal Studio 보컬 평가지</h1><div class="sub">접수일: '+ds+'</div>'
     +'<div class="sec"><div class="sec-t">기본 정보</div><div class="info-grid">'
     +'<div class="if"><div class="if-l">성함</div><div class="if-v"></div></div>'
@@ -11081,7 +11091,7 @@ function printEvalSheet(cid){
     '.sign-lbl{font-size:8.5px;color:#555;}'+
     '@media print{@page{size:A4;margin:5mm 8mm;}body{padding:0;}button{display:none!important;}}';
 
-  w.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>레슨 평가지</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>'+css+'</style></head><body>');
+  w.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>레슨 평가지</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>'+css+'</style></head><body>');
   w.document.write('<h1>HLB보컬스튜디오</h1>');
   w.document.write('<div class="studioname">원장 &nbsp;·&nbsp; ☎ [스튜디오 연락처]</div>');
   w.document.write('<div class="sub">수강생: <strong>'+esc(c.name)+'</strong>&nbsp;&nbsp;|&nbsp;&nbsp;레슨 유의사항 &amp; 트레이너 초기 평가&nbsp;&nbsp;|&nbsp;&nbsp;'+ds+'</div>');
