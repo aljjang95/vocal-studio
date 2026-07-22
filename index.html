@@ -7330,8 +7330,11 @@ function buildMobileSchedule(){
     o+='<div style="height:5px;display:flex;align-items:center;justify-content:center;gap:2px">';
     if(slotCnt>0){
       var maxDots=Math.min(slotCnt,4);
+      /* 도트는 날짜 원 '아래' 흰 배경 위에 찍힌다. 선택된 요일이라고 흰색 도트를 쓰면
+         (원만 진하고 도트 영역은 흰 배경이라) 흰 위에 흰이 되어 안 보였다.
+         선택 여부와 무관하게 항상 accent 색으로 찍는다. */
       for(var di=0;di<maxDots;di++){
-        o+='<div style="width:4px;height:4px;border-radius:50%;background:'+(isSel?'rgba(255,255,255,.7)':'var(--season-accent,var(--a))')+'"></div>';
+        o+='<div style="width:4px;height:4px;border-radius:50%;background:var(--season-accent,var(--a))"></div>';
       }
     }
     o+='</div>';
