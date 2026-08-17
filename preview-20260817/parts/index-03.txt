@@ -1,0 +1,52 @@
+tton" aria-expanded="false"><span>고음에서 목이 조이는 문제도 다루나요?</span><i aria-hidden="true"></i></button></h3>
+            <div class="accordion-panel" hidden><p>후두·혀뿌리·턱·성구전환 네 축을 나눠 확인해 어느 구간에서 힘이 과하게 개입하는지 찾습니다.</p></div>
+          </div>
+          <div class="accordion-item">
+            <h3><button type="button" aria-expanded="false"><span>축가나 오디션처럼 일정이 정해진 레슨도 가능한가요?</span><i aria-hidden="true"></i></button></h3>
+            <div class="accordion-panel" hidden><p>목표 날짜와 곡을 기준으로 진단, 발성, 곡 적용, 실전 점검 순서의 집중 계획을 구성합니다.</p></div>
+          </div>
+          <div class="accordion-item">
+            <h3><button type="button" aria-expanded="false"><span>상담할 때 무엇을 보내면 되나요?</span><i aria-hidden="true"></i></button></h3>
+            <div class="accordion-panel" hidden><p>현재 고민, 목표 곡, 가능한 일정을 알려주세요. 보유한 녹음이 있다면 함께 보내도 좋습니다.</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="final-cta" aria-labelledby="cta-title">
+      <div class="final-wave" aria-hidden="true">
+        <svg viewBox="0 0 1440 360" preserveAspectRatio="none"><path d="M-10 210 C170 20 310 350 500 150 S820 40 1000 220 S1290 300 1460 80"/><path d="M-10 245 C170 85 320 310 510 190 S820 95 1010 250 S1290 260 1460 135"/></svg>
+      </div>
+      <div class="shell final-cta-inner reveal">
+        <p class="section-number section-number-light">YOUR NEXT NOTE</p>
+        <h2 id="cta-title">잘 부르는 법보다,<br><em>막히는 이유부터 찾겠습니다.</em></h2>
+        <p>현재 고민과 목표 곡을 남겨주세요.<br>상담 내용을 기준으로 시작점을 안내합니다.</p>
+        <a class="button button-gold button-large" href="https://pf.kakao.com/_xfXwGb" target="_blank" rel="noopener">HLB에 상담 남기기 <span aria-hidden="true">↗</span></a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="#top" aria-label="HLB보컬스튜디오 홈">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="brand-copy"><strong>HLB</strong><small>VOCAL STUDIO</small></span>
+        </a>
+        <p>High · Low · Balance<br>한 사람의 소리에 집중하는 서산 1:1 보컬 코칭.</p>
+      </div>
+      <div><small>ADDRESS</small><p>충남 서산시<br>석남1로 33-8 1호</p></div>
+      <div><small>CONTACT</small><p><a href="tel:050713158903">0507-1315-8903</a><br>월–토 10:00–21:00</p></div>
+      <div><small>CHANNEL</small><p><a href="https://www.youtube.com/channel/UCrCcqB3_7IgFuHqxLXyb5ug" target="_blank" rel="noopener">YouTube ↗</a><br><a href="https://blog.naver.com/heartytn" target="_blank" rel="noopener">Naver Blog ↗</a></p></div>
+    </div>
+    <div class="shell footer-bottom"><span>© <span data-year></span> HLB VOCAL STUDIO</span><span>SEO · AEO · MOBILE READY</span></div>
+  </footer>
+
+  <div class="mobile-cta" aria-label="빠른 상담">
+    <a href="tel:050713158903"><span aria-hidden="true">☎</span> 전화</a>
+    <a href="https://pf.kakao.com/_xfXwGb" target="_blank" rel="noopener"><span aria-hidden="true">●</span> 카카오 상담</a>
+  </div>
+
+  <script src="script.js" defer></script>
+</body>
+</html>

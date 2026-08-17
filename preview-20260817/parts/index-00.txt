@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>HLB보컬스튜디오 | 서산 1:1 보컬레슨·발성교정</title>
+  <meta name="description" content="서산 HLB보컬스튜디오. 후두·혀뿌리·턱·성구전환 4축 진단을 바탕으로 취미 보컬, 발성·고음 교정, 축가·입시·오디션을 1:1로 코칭합니다.">
+  <meta name="theme-color" content="#0b0908">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="canonical" href="https://aljjang95.github.io/vocal-studio/preview-20260817/">
+  <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTYiIGZpbGw9IiMwYjA5MDgiLz4KICA8cGF0aCBkPSJNMTYgMTV2MzRNNDggMTV2MzRNMTYgMzJoMzIiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2Q5YTY2ZSIgc3Ryb2tlLXdpZHRoPSI1IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNMjUgMTV2MzRNMzkgMTV2MzQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2YwY2Y5ZiIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIuNTUiLz4KPC9zdmc+Cg==" type="image/svg+xml">
+  <link rel="preload" href="assets/hero-microphone.webp" as="image" type="image/webp" fetchpriority="high">
+
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="ko_KR">
+  <meta property="og:title" content="HLB보컬스튜디오 | 더 크게가 아니라, 더 정확하게">
+  <meta property="og:description" content="목소리가 막히는 이유를 4축으로 나눠 찾고, 실제 노래까지 연결하는 서산 1:1 보컬 코칭.">
+  <meta property="og:url" content="https://aljjang95.github.io/vocal-studio/preview-20260817/">
+  <meta property="og:image" content="https://aljjang95.github.io/vocal-studio/preview-20260817/assets/hero-microphone.webp">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="stylesheet" href="styles.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": ["MusicSchool", "LocalBusiness"],
+    "name": "HLB보컬스튜디오",
+    "alternateName": "HLB VOCAL STUDIO",
+    "description": "서산 1:1 보컬레슨 및 발성교정 스튜디오",
+    "url": "https://aljjang95.github.io/vocal-studio/preview-20260817/",
+    "telephone": "+82-507-1315-8903",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "석남1로 33-8 1호",
+      "addressLocality": "서산시",
+      "addressRegion": "충청남도",
+      "addressCountry": "KR"
+    },
+    "openingHoursSpecification": [
+      {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+        "opens": "10:00",
+        "closes": "21:00"
+      }
+    ],
+    "sameAs": [
+      "https://www.youtube.com/channel/UCrCcqB3_7IgFuHqxLXyb5ug",
+      "https://blog.naver.com/heartytn"
+    ]
+  }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 바로가기</a>
+
+  <header class="site-header" data-header>
+    <div class="header-inner shell">
+      <a class="brand" href="#top" aria-label="HLB보컬스튜디오 홈">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="brand-copy"><strong>HLB</strong><small>VOCAL STUDIO</small></span>
+      </a>
+
+      <nav class="desktop-nav" aria-label="주요 메뉴">
+        <a href="#diagnosis">4축 진단</a>
+        <a href="#method">레슨 과정</a>
+        <a href="#programs">프로그램</a>
+        <a href="#studio">공간 안내</a>
+        <a href="#contents">콘텐츠</a>
+      </nav>
+
+      <a class="button button-small button-gold header-cta" href="https://pf.kakao.com/_xfXwGb" target="_blank" rel="noopener">상담 시작 <span aria-hidden="true">↗</span></a>
+
+      <button class="menu-button" type="button" aria-label="메뉴 열기" aria-expanded="false" aria-controls="mobile-menu" data-menu-button>
+        <span></span><span></span>
+      </button>
+    </div>
+
+    <div class="mobile-menu" id="mobile-menu" data-mobile-menu hidden>
+      <nav aria-label="모바일 메뉴">
+        <a href="#diagnosis">4축 진단</a>
+        <a href="#method">레슨 과정</a>
+        <a href="#programs">프로그램</a>
+        <a href="#studio">공간 안내</a>
+        <a href="#contents">콘텐츠</a>
+        <a class="button button-gold" href="https://pf.kakao.com/_xfXwGb" target="_blank" rel="noopener">카카오로 상담하기 <span aria-hidden="true">↗</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top" aria-labelledby="hero-title">
+      <div class="hero-noise" aria-hidden="true"></div>
+      <div class="hero-orbit hero-orbit-one" aria-hidden="true"></div>
+      <div class="hero-orbit hero-orbit-two" aria-hidden="true"></div>
+
+      <div class="shell hero-grid">
+        <div class="hero-copy reveal is-visible">
+          <p class="eyebrow"><span></span> SEOSAN · 1:1 VOCAL LESSON</p>
+          <h1 id="hero-title"><span>더 크게가 아니라,</span><br><em>더 정확하게.</em></h1>
+          <p class="hero-lead">“목에 힘을 빼세요”라는 말에서 끝내지 않습니다.<br>막히는 원인을 나누고, 다시 노래 안에서 연결합니다.</p>
+
+          <div class="hero-actions">
+            <a class="button button-gold" href="https://pf.kakao.com/_xfXwGb" target="_blank" rel="noopener">내 목소리 진단 문의 <span aria-hidden="true">↗</span></a>
+            <a class="button button-ghost" href="#diagnosis">진단 방식 보기 <span aria-hidden="true">↓</span></a>
+          </div>
+
+          <div class="hero-note" aria-label="HLB 코칭 핵심">
+            <span class="hero-note-line"></span>
+            <p><strong>HIGH · LOW · BALANCE</strong><br>고음과 저음 사이, 무너지지 않는 균형을 설계합니다.</p>
+          </div>
+        </div>
+
+        <div class="hero-visual reveal is-visible" aria-label="전문 보컬 레코딩 마이크 이미지">
+          <div class="hero-image-wrap" data-parallax>
+            <img src="assets/hero-microphone.webp" alt="조명이 켜진 프라이빗 보컬 스튜디오의 콘덴서 마이크" width="1512" height="1170" fetchpriority="high">
+            <div class="hero-image-vignette" aria-hidden="true"></div>
+            <div class="sound-ribbon" aria-hidden="true">
+              <svg viewBox="0 0 800 180" role="presentation">
+                <path d="M0 100 C85 10 140 170 230 78 S390 32 470 104 S620 160 800 42" pathLength="1"></path>
+                <path d="M0 112 C95 38 155 148 245 92 S400 58 490 116 S650 132 800 66" pathLength="1"></path>
+              </svg>
+            </div>
+            <div class="hero-stamp" aria-hidden="true">
+              <span>HLB</span><small>VOICE<br>DIAGNOSIS</small>
+            </div>
+          </div>
+        </div>
+     
