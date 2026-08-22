@@ -3079,6 +3079,43 @@ div.mwv .lb { font-size: 7px !important; padding: 0 !important; min-height: 0 !i
 
 <script>
 
+function getOptimalAudioMimeType() {
+  if (typeof MediaRecorder === 'undefined') return '';
+  var types = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/mp4;codecs=mp4a.40.2',
+    'audio/mp4',
+    'audio/aac',
+    'audio/ogg;codecs=opus'
+  ];
+  for (var i = 0; i < types.length; i++) {
+    if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(types[i])) {
+      return types[i];
+    }
+  }
+  return '';
+}
+
+
+
+function normalizeVocalAge(rawAge) {
+  if (!rawAge) return '';
+  var raw = String(rawAge).trim();
+  if (!raw) return '';
+  var n = parseInt(raw, 10);
+  if (isNaN(n) || n <= 0) return raw;
+  var currentYear = new Date().getFullYear();
+  if (n >= 1900 && n <= currentYear) {
+    return '만 ' + (currentYear - n) + '세';
+  } else if (n > 0 && n < 120) {
+    return '만 ' + n + '세';
+  }
+  return raw;
+}
+
+
+
 /* 레슨생 사진 헬퍼 */
 function getStudentPhoto(s){
   if(!s)return '';
@@ -5350,11 +5387,26 @@ function markTodayStatus(sid,h,wk,status){
   var isAbsent=status==='absent';
   vsConfirm({
     msg:esc(s.name)+' '+(isAbsent?'결석 처리':'당일 취소'),
-    sub:isAbsent?'레슨 기록에 결석으로 저장됩니다.':'이번 주 스케줄에서 슬롯이 제거됩니다.',
+    sub:isAbsent?'오늘 스케줄에서 학생이 제외되고 결석으로 기록됩니다.':'이번 주 스케줄에서 슬롯이 제거됩니다.',
     okLabel:isAbsent?'결석 처리':'취소 처리',
     danger:true,
     onOk:function(){
       if(isAbsent){
+        /* 1. weekOvr에 absent: true 처리하여 오늘 및 주간 스케줄에서 즉시 사라지게 함 */
+        if(!weekOvr[wk])weekOvr[wk]={};
+        var todayDay=JSDOW[new Date().getDay()];
+        var base=(weekOvr[wk][sid]&&weekOvr[wk][sid].length>0)
+          ?weekOvr[wk][sid].slice()
+          :(s.days||[]).map(function(d){return{day:d,time:(s.times&&s.times[d])||'10:00',absent:false};});
+        var exactIdx=base.findIndex(function(sl){return sl.day===todayDay&&sl.time===h;});
+        if(exactIdx>=0){
+          base[exactIdx].absent=true;
+        } else {
+          base.push({day:todayDay,time:h,absent:true});
+        }
+        weekOvr[wk][sid]=base;
+
+        /* 2. logs에 결석 기록 추가 */
         var todayStr=toDS(new Date());
         var existing=logs.find(function(l){return l.sid===sid&&l.date===todayStr;});
         var wn=lessonNumberForLog(sid,todayStr,'결석',existing&&existing.id);
@@ -5364,7 +5416,9 @@ function markTodayStatus(sid,h,wk,status){
         if(!s.deferrals)s.deferrals=0;
         s.deferrals++;
         renumberLessonLogs(sid);syncStudentPaymentCycles(sid);
-        saveAll();toast(esc(s.name)+' 결석 처리 (연기 차감) 😴');render();
+        saveAll();toast(esc(s.name)+' 결석 처리 (오늘 스케줄에서 제외됨) 😴');
+        renderSidebarToday();
+        render();
       } else {
         /* 당일취소 = 레슨 회차 차감 → logs에 '취소' 기록 */
         if(!weekOvr[wk])weekOvr[wk]={};
@@ -5587,12 +5641,15 @@ function buildTodaySchedule(){
   var todayStr=toDS(now);
   var nowMins=now.getHours()*60+now.getMinutes();
 
-  /* 오늘 전체 슬롯 수집 */
+  /* 오늘 전체 슬롯 수집 — 결석/취소된 학생은 즉시 제외 */
   var allSlots=[];
+  var todayLogs=(logs||[]).filter(function(l){return l.date===todayStr;});
   Object.keys(sched).forEach(function(key){
     var p=key.split('_');if(p[0]!==todayDay)return;
     (sched[key]||[]).forEach(function(x){
-      if(!x.absent) allSlots.push({s:x.s,h:x.time||p[1],type:x.type});
+      var log=todayLogs.find(function(l){return (l.sid===x.s.id||l.sId===x.s.id);});
+      var isLoggedAbsent=log && (log.att==='결석'||log.att==='취소');
+      if(!x.absent && !isLoggedAbsent) allSlots.push({s:x.s,h:x.time||p[1],type:x.type});
     });
   });
 
@@ -6805,8 +6862,7 @@ function parsePhoneNumbers(text){
   var raw=text.replace(/[,\t\n\r]+/g,' ').split(' ');
   var nums=[];
   raw.forEach(function(s){
-    var cleaned=s.replace(/[^0-9]/g,'');
-    if(cleaned.length>=10&&cleaned.length<=11){
+    var cleaned=s.replace(/[^0-9]/g,''); if(cleaned.length>=9 && cleaned.length<=12){
       /* 포맷: 010-XXXX-XXXX */
       var fmt=cleaned.length===11?
         cleaned.slice(0,3)+'-'+cleaned.slice(3,7)+'-'+cleaned.slice(7):
@@ -12040,6 +12096,22 @@ if('serviceWorker' in navigator){
     }).catch(function(){ /* SW 등록 실패는 치명적 아님 — 일반 페이지로 계속 동작 */ });
   });
 }
+
+
+// Auto-refresh today schedule at midnight (00:00)
+(function initMidnightWatchdog() {
+  var _lastDateStr = new Date().toDateString();
+  setInterval(function() {
+    var currentDateStr = new Date().toDateString();
+    if (currentDateStr !== _lastDateStr) {
+      _lastDateStr = currentDateStr;
+      console.log('Midnight reached, auto-refreshing today timetable...');
+      if (typeof render === 'function') render();
+      if (typeof updateSidebarToday === 'function') updateSidebarToday();
+    }
+  }, 30000);
+})();
+
 </script>
 <button id="viewToggleBtn" onclick="toggleViewMode()" title="PC/모바일 화면 전환">🖥 PC</button>
 </body></html>
