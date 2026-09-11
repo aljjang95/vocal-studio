@@ -1,0 +1,45 @@
+{
+  "schema": "vocal-studio.bounded-sync-patch/v1",
+  "baseCommit": "607409a149bce61644a7c288bf6fb0c52179fcc0",
+  "target": "index.html",
+  "expectedGitBlob": "2ebeecb25662ceeaa64ca296a13ca90e14150114",
+  "status": "review-required",
+  "scope": "Listener/retry/render/reset hardening only; deletion/concurrent-write protocol remains unresolved.",
+  "patches": [
+    {
+      "id": "server-confirmed-snapshots",
+      "old": "  _fbUnsub=docRef.onSnapshot(function(snap){\n    if(!snap.exists){",
+      "new": "  _fbUnsub=docRef.onSnapshot({includeMetadataChanges:true},function(snap){\n    /* Local write echoes and cache-only results are not server confirmation. */\n    if(snap.metadata&&snap.metadata.hasPendingWrites){\n      _showSyncStatus('🔄 서버 저장 확인 중...');\n      return;\n    }\n    if(snap.metadata&&snap.metadata.fromCache){\n      _showSyncStatus('⚠️ 캐시 표시 중 · 서버 확인 대기');\n      return;\n    }\n    if(!snap.exists){"
+    },
+    {
+      "id": "remote-application-finally-open",
+      "old": "    _fbApplyingRemote=true;\n    try{\n      var _mStudents=",
+      "new": "    _fbApplyingRemote=true;\n    try{ /* Always release the remote-application guard. */\n    try{\n      var _mStudents="
+    },
+    {
+      "id": "confirmed-remote-change-renders",
+      "old": "      if(typeof render==='function'&&_skipRenderCount<=0){\n        render();\n      }",
+      "new": "      if(typeof render==='function'){\n        render();\n      }"
+    },
+    {
+      "id": "listener-error-releases-state",
+      "old": "    _fbApplyingRemote=false;\n    if(_needPushBack){\n      setTimeout(function(){try{if(_fbReady&&!_fbApplyingRemote)_pushToFirestore(docRef);}catch(e){}},900);\n    }\n  },function(err){\n    console.error('Firestore 리스너 오류',err);\n    _showSyncStatus('⚠️ 오프라인');\n    _fbApplyingRemote=false;\n  });",
+      "new": "    if(_needPushBack){\n      setTimeout(function(){try{if(_fbReady&&!_fbApplyingRemote)_pushToFirestore(docRef);}catch(e){}},900);\n    }\n    }catch(applyError){\n      console.error('Firestore 변경 반영 오류',applyError);\n      _showSyncStatus('⚠️ 동기화 반영 실패 · 다시 확인 필요');\n    }finally{\n      _fbApplyingRemote=false;\n    }\n  },function(err){\n    console.error('Firestore 리스너 오류',err);\n    _fbReady=false;\n    var previousUnsub=_fbUnsub;\n    _fbUnsub=null;\n    if(previousUnsub){try{previousUnsub();}catch(e){}}\n    _showSyncStatus('⚠️ 연결 종료 · 재연결 필요');\n    _fbApplyingRemote=false;\n  });"
+    },
+    {
+      "id": "retry-and-acknowledgment",
+      "old": "  if(sig&&sig===_lastFirestorePushSig&&Date.now()-_lastFirestorePushAt<2500){\n    return Promise.resolve();\n  }\n  _lastFirestorePushSig=sig;\n  _lastFirestorePushAt=Date.now();\n  _writeRecoverySnapshot('before-firestore-push');\n  return docRef.set(payload).then(function(){_showSyncStatus('✅ 동기화됨');})\n    .catch(function(e){console.error('Firestore 저장 오류',e);_showSyncStatus('⚠️ 저장 실패');});",
+      "new": "  if(sig&&sig===_lastFirestorePushSig&&Date.now()-_lastFirestorePushAt<2500&&!_pushToFirestore._pending){\n    return Promise.resolve({ok:true,skipped:true});\n  }\n  var attempt=(_pushToFirestore._attempt||0)+1;\n  _pushToFirestore._attempt=attempt;\n  _pushToFirestore._pending=(_pushToFirestore._pending||0)+1;\n  _writeRecoverySnapshot('before-firestore-push');\n  /* Capture the payload now; do not read mutable global data after an async turn. */\n  var write;\n  try{write=docRef.set(payload);}catch(e){write=Promise.reject(e);}\n  return Promise.resolve(write).then(function(){\n    if(attempt===_pushToFirestore._attempt){\n      _lastFirestorePushSig=sig;\n      _lastFirestorePushAt=Date.now();\n      _showSyncStatus('✅ 동기화됨');\n    }\n    return {ok:true};\n  },function(e){\n    console.error('Firestore 저장 오류',e);\n    if(attempt===_pushToFirestore._attempt){\n      _lastFirestorePushSig='';\n      _lastFirestorePushAt=0;\n      _showSyncStatus('⚠️ 저장 실패 · 로컬 데이터 유지');\n    }\n    return {ok:false};\n  }).then(function(result){\n    _pushToFirestore._pending--;\n    return result;\n  });"
+    },
+    {
+      "id": "single-reset-writer",
+      "old": "      saveAll();\n      try{if(typeof _splitMigrationFrozen!=='function'||!_splitMigrationFrozen()){var _db3=_fs();_db3.collection('studio').doc('data').set({weekOvr:weekOvr},{merge:true});}}catch(e){}",
+      "new": "      saveAll(); /* Use the same authenticated save path exactly once. */"
+    },
+    {
+      "id": "event-driven-listener-reconnect",
+      "old": "/* 앱 시작 시 Firebase 초기화 */\n\n/* 모바일 사이드바 위치 강제 고정 */",
+      "new": "/* 앱 시작 시 Firebase 초기화 */\n/* A failed listener is terminal. Retry only on foreground/network events. */\nfunction _resumeFirestoreListener(){\n  if(document.visibilityState==='hidden'||navigator.onLine===false)return;\n  if(!hasAdminSession()||_fbUnsub)return;\n  try{_startFirestoreListener();}catch(e){\n    console.error('Firestore 재연결 오류',e);\n    _showSyncStatus('⚠️ 재연결 실패');\n  }\n}\nwindow.addEventListener('online',_resumeFirestoreListener);\ndocument.addEventListener('visibilitychange',_resumeFirestoreListener);\n\n/* 모바일 사이드바 위치 강제 고정 */"
+    }
+  ]
+}
