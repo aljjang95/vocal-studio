@@ -4,10 +4,11 @@
  *  - 정적 자원      : Cache-first  + 백그라운드 갱신  (성능)
  *  - Firestore/Firebase : 항상 네트워크 (실시간 데이터)
  */
-const VERSION = 'vs-v2-2026-06-20-schedule-count-visibility';
+const VERSION = 'vs-v2-2026-09-15-transaction-sync-r1';
 const CORE = [
   './',
   './index.html',
+  './vs-sync.js?v=20260915-r1',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
@@ -24,7 +25,7 @@ self.addEventListener('install', function(e){
 self.addEventListener('activate', function(e){
   e.waitUntil(
     caches.keys().then(function(keys){
-      return Promise.all(keys.filter(function(k){return k!==VERSION;}).map(function(k){return caches.delete(k);}));
+      return Promise.all(keys.filter(function(k){return k!==VERSION&&k.indexOf('vs-v2-')===0;}).map(function(k){return caches.delete(k);}));
     }).then(function(){ return self.clients.claim(); })
   );
 });
