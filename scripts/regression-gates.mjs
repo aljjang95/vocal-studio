@@ -80,7 +80,7 @@ has(index, "var _todayPrivacy='all'", 'today schedule default shows full count')
 has(index, "if(page==='schedule')return;", 'today alert does not cover schedule grid');
 assert(!/function ciSetFreq\([\s\S]*?v===2/.test(index), 'ciSetFreq must not reference undefined v');
 
-has(sw, "const VERSION = 'vs-v2-2026-06-20-schedule-count-visibility'", 'service worker schedule count visibility cache version');
+has(sw, "const VERSION = 'vs-v2-2026-09-15-transaction-sync-r1'", 'service worker schedule count visibility cache version');
 has(index, 'topSyncStatus', 'visible top sync status');
 for (const procedure of [
   'Firebase auth and rules release gate',

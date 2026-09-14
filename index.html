@@ -11,6 +11,7 @@
   <!-- FullCalendar -->
   <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+  <script src="./vs-sync.js?v=20260915-r1"></script>
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -174,7 +175,7 @@ body::after{
 }
 
 /* ── MAIN ── */
-.main{margin-left:252px;flex:1;display:flex;flex-direction:column;position:relative;z-index:1;}
+.main{margin-left:252px;flex:1;min-width:0;display:flex;flex-direction:column;position:relative;z-index:1;}
 body.is-mobile .main{margin-left:0!important;padding-bottom:calc(62px + env(safe-area-inset-bottom,20px))!important;}
 
 /* ── TOPBAR ── */
@@ -191,6 +192,10 @@ body.is-mobile .main{margin-left:0!important;padding-bottom:calc(62px + env(safe
 }
 .pt{font-family:"Cormorant Garamond",serif;font-size:22px;font-weight:600;font-style:italic;letter-spacing:.02em;white-space:nowrap;flex-shrink:0;}
 .ta{display:flex;gap:7px;align-items:center;}
+@media(min-width:769px){
+  .topbar{height:auto;min-height:56px;flex-wrap:wrap;gap:8px;padding-top:8px;padding-bottom:8px;}
+  .topbar .ta{flex:1 1 500px;min-width:0;flex-wrap:wrap;justify-content:flex-end;}
+}
 .content{padding:18px 22px;flex:1;}
 
 /* ── BUTTONS ── */
@@ -4245,9 +4250,10 @@ function hasAdminSession(){
 }
 function _disableFirestoreSync(msg){
   _fbReady=false;
-  try{if(_fbUnsub){_fbUnsub();_fbUnsub=null;}}catch(e){}
-  _showSyncStatus(msg||'🔒 관리자 인증 필요 · 로컬 모드');
+  if(typeof _vsSync!=='undefined'&&_vsSync)_vsSync.disconnect();
+  _showSyncStatus(msg||'관리자 인증 필요 · 로컬 모드');
 }
+
 function signInAdmin(){
   if(typeof firebase==='undefined'||!firebase.auth)return Promise.reject(new Error('firebase auth unavailable'));
   var provider=new firebase.auth.GoogleAuthProvider();
@@ -4380,80 +4386,8 @@ function _fs(){
   return db;
 }
 function _startFirestoreListener(){
-  if(_fbUnsub)return;
-  if(!_isFirebaseAdminUser(firebase.auth().currentUser)){
-    _disableFirestoreSync('🔒 관리자 인증 필요 · 로컬 모드');
-    return;
-  }
-  var db=_fs();
-  var docRef=db.collection('studio').doc('data');
-  try{window._fbDocRef=docRef;}catch(e){}
-
-  /* 실시간 리스너 — Firestore 변경 시 즉시 반영 */
-  _fbUnsub=docRef.onSnapshot(function(snap){
-    if(!snap.exists){
-      /* 원격 문서가 없을 때 기본 39명/빈 상태가 서버를 덮지 않도록 실제 로컬 데이터가 있을 때만 부트스트랩 */
-      if(_hasBootstrapDataForFirestore()) _pushToFirestore(docRef);
-      else _showSyncStatus('⚠️ 원격 데이터 없음');
-      return;
-    }
-    var d=snap.data();
-    var _beforeSig=_dataSignature();
-    var _preferLocal=Date.now()<_localProtectUntil;
-    var _needPushBack=false;
-    _writeRecoverySnapshot('before-remote');
-    /* 원격 변경사항을 메모리 + localStorage에 반영하되, 로컬에만 있던 신규 상담/스케줄은 보존 */
-    _fbApplyingRemote=true;
-    try{
-      var _mStudents=_mergeByIdentity(d.students||[],students||[],'student',_preferLocal); _needPushBack=_needPushBack||_mStudents.added>0||_mStudents.replaced>0;
-      var _fbStudents=_mStudents.list;
-      /* 기본 39명 중 Firebase/로컬 병합 결과에 없는 사람 병합 */
-      var _fbNames=_fbStudents.map(function(s){return s.name;});
-      var _fbPhs=_fbStudents.map(function(s){return s.ph;});
-      _DEFAULT_STUDENTS.forEach(function(s){
-        if(_fbNames.indexOf(s.name)>=0||(_fbPhs.indexOf(s.ph)>=0&&s.ph)) return;
-        _fbStudents.push(s);
-        _fbNames.push(s.name);
-        _fbPhs.push(s.ph);
-      });
-      students=_fbStudents;
-      _safeSetLS('vsC_s',JSON.stringify(students));
-    }catch(e){}
-    try{var _mLogs=_mergeByIdentity(d.logs||[],logs||[],'log',_preferLocal);logs=_mLogs.list;_needPushBack=_needPushBack||_mLogs.added>0||_mLogs.replaced>0;_safeSetLS('vsC_l',JSON.stringify(logs));}catch(e){}
-    try{var _mergedWO=_mergeWeekOvr(d.weekOvr||{},weekOvr||{},_preferLocal);if(JSON.stringify(_mergedWO)!==JSON.stringify(d.weekOvr||{}))_needPushBack=true;weekOvr=_mergedWO;_safeSetLS('vsC_wo',JSON.stringify(weekOvr));}catch(e){}
-    try{var _mConsults=_mergeByIdentity(d.consults||[],consults||[],'consult',_preferLocal);consults=_mConsults.list;_needPushBack=_needPushBack||_mConsults.added>0||_mConsults.replaced>0;_safeSetLS('vsC_c',JSON.stringify(consults));}catch(e){}
-    try{var _mPayments=_mergeByIdentity(d.payments||[],payments||[],'payment',_preferLocal);payments=_mPayments.list;_needPushBack=_needPushBack||_mPayments.added>0||_mPayments.replaced>0;_safeSetLS('vsC_p',JSON.stringify(payments));}catch(e){}
-    try{var _mInq=_mergeByIdentity(d.inquiries||[],inquiries||[],'inquiry',_preferLocal);inquiries=_mInq.list;_needPushBack=_needPushBack||_mInq.added>0||_mInq.replaced>0;_safeSetLS('vsC_iq',JSON.stringify(inquiries));}catch(e){}
-    _fbReady=true;
-    /* 병합 결과에 사진 참조가 끊긴 행이 있으면 로컬 백업으로 다시 연결하고 즉시 보존 */
-    var _relinked=_relinkOrphanPhotos();
-    if(_relinked>0){
-      try{_safeSetLS('vsC_s',JSON.stringify(students));}catch(e){}
-      try{_safeSetLS('vsC_c',JSON.stringify(consults));}catch(e){}
-      console.warn('사진 참조 복구:',_relinked,'건');
-    }
-    _injectInitialInquiries(); /* 문의자 초기 데이터 주입 */
-    var _afterSig=_dataSignature();
-    var _changed=_afterSig!==_beforeSig;
-    if(_changed)_writeRecoverySnapshot('after-remote-merge');
-    /* UI 갱신 — 원격 echo가 현재 상태와 같으면 다시 그리지 않아 깜빡임 방지 */
-    if(_changed){
-      renderSidebarToday();
-      if(typeof render==='function'&&_skipRenderCount<=0){
-        render();
-      }
-    }
-    if(_skipRenderCount>0) _skipRenderCount--;
-    _showSyncStatus(_needPushBack?'✅ 동기화됨 · 로컬 보호':'✅ 동기화됨');
-    _fbApplyingRemote=false;
-    if(_needPushBack){
-      setTimeout(function(){try{if(_fbReady&&!_fbApplyingRemote)_pushToFirestore(docRef);}catch(e){}},900);
-    }
-  },function(err){
-    console.error('Firestore 리스너 오류',err);
-    _showSyncStatus('⚠️ 오프라인');
-    _fbApplyingRemote=false;
-  });
+  if(_vsSync)_vsSync.connect();
+  else _showSyncStatus('동기화 모듈 확인 필요 · 서버 연결 중지');
 }
 
 /* ── 사진 웹용 압축 (canvas 리사이즈 + JPEG) ──
@@ -4586,55 +4520,16 @@ function _hasBootstrapDataForFirestore(){
   }catch(e){return false;}
 }
 function _pushToFirestore(docRef){
-  if(!_isFirebaseAdminUser(firebase.auth().currentUser)){
-    _showSyncStatus('🔒 관리자 인증 필요 · 로컬 저장됨');
-    return Promise.resolve();
-  }
-  if(_splitMigrationFrozen()){
-    _showSyncStatus('🧊 마이그레이션 동결 · 원격 저장 보류');
-    return Promise.resolve();
-  }
-  var db=_fs();
-  docRef=docRef||db.collection('studio').doc('data');
-  try{window._fbDocRef=docRef;}catch(e){}
-  _backupOrphanPhotos(students);
-  _backupOrphanPhotos(consults);
-  var payload={
-    students:_stripMediaForSync(students),
-    logs:logs,
-    weekOvr:weekOvr,
-    consults:_stripMediaForSync(consults),
-    payments:payments,
-    inquiries:inquiries,
-    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-  };
-  var sig='';
-  try{sig=JSON.stringify(_stableForSig(Object.assign({},payload,{updatedAt:'server'})));}catch(e){}
-  if(sig&&sig===_lastFirestorePushSig&&Date.now()-_lastFirestorePushAt<2500){
-    return Promise.resolve();
-  }
-  _lastFirestorePushSig=sig;
-  _lastFirestorePushAt=Date.now();
-  _writeRecoverySnapshot('before-firestore-push');
-  return docRef.set(payload).then(function(){_showSyncStatus('✅ 동기화됨');})
-    .catch(function(e){console.error('Firestore 저장 오류',e);_showSyncStatus('⚠️ 저장 실패');});
+  return _vsSync?_vsSync.save():Promise.resolve(false);
 }
 
 function _showSyncStatus(msg){
-  var el=document.getElementById('syncStatus');
-  var top=document.getElementById('topSyncStatus');
-  if(el){
-    el.textContent=msg;
-    clearTimeout(el._t);
-    if(msg.indexOf('✅ 동기화됨')===0) el._t=setTimeout(function(){el.textContent='';},3000);
-  }
-  if(top){
-    top.textContent=msg;
-    top.style.display=msg?'block':'none';
-    top.style.color=msg.indexOf('✅')===0?'var(--g)':(msg.indexOf('⚠️')===0||msg.indexOf('🔒')===0?'var(--r)':'var(--tm)');
-    clearTimeout(top._t);
-    if(msg.indexOf('✅ 동기화됨')===0) top._t=setTimeout(function(){top.style.display='none';top.textContent='';},3000);
-  }
+  ['syncStatus','topSyncStatus'].forEach(function(id){
+    var el=document.getElementById(id);if(!el)return;
+    clearTimeout(el._t);el.textContent=msg;el.style.display=msg?'block':'none';
+    el.style.setProperty('font-size','12px','important');el.style.setProperty('white-space','normal','important');el.style.overflowWrap='anywhere';el.style.setProperty('line-height','1.5','important');
+    el.setAttribute('role','status');el.setAttribute('aria-live','polite');
+  });
 }
 
 /* saveAll 오버라이드 — localStorage + Firestore 동시 저장 */
@@ -4646,28 +4541,101 @@ function _warnLocalOnlySync(msg){
      작은 상태뱃지만으로는 "다른 기기에 동기화 안 됨"이 묻히기 쉽다 — 반드시 토스트로도 알린다. */
   setTimeout(function(){toast(msg,'⚠️');},900);
 }
+/* Active runtime adapter: all writes pass through the versioned transaction controller. */
+var _vsSyncLabels={
+  'auth-required':'관리자 로그인 필요 · 이 기기에만 저장됩니다',
+  'local-only':'서버 확인 전 · 변경은 이 기기에 보관됩니다',
+  saving:'서버 저장 확인 중',pending:'미동기화 변경 보관 중',synced:'동기화됨',
+  recovery:'동기화됨 · 이전 기기 보관본 있음',deferred:'입력·저장 응답 확인 후 다른 기기 변경을 반영합니다',
+  unconfirmed:'연결 확인 중 · 기기 보관 상태',offline:'연결 끊김 · 변경 보관',
+  'missing-remote':'서버 자료 없음 · 자동 덮어쓰기 중지',
+  'invalid-remote':'서버 자료 형식 확인 필요 · 변경 보관',
+  'legacy-conflict':'이전 버전 변경 감지 · 자동 저장 중지',
+  conflict:'동시 수정 충돌 · 변경 보관 · 확인 필요',
+  'storage-error':'기기 저장 공간 확인 필요 · 서버 전송 중지',
+  'apply-error':'화면 반영 확인 필요 · 보관본 유지',
+  'write-error':'서버 저장 실패 · 변경 보관 · 다시 확인해 주세요',
+  frozen:'마이그레이션 동결 · 서버 저장 보류'
+};
+function _vsEditing(){
+  var el=document.activeElement;
+  return !!document.querySelector('.ov.open')||!!(el&&el.matches('input,textarea,select,[contenteditable="true"]'));
+}
+function _vsCarryRows(rows,previous){
+  var found=new Map();
+  (previous||[]).forEach(function(row){if(!row||row.id==null)return;var key=typeof row.id+':'+row.id;found.set(key,found.has(key)?null:row);});
+  return rows.map(function(row){
+    if(!row||typeof row!=='object')return row;
+    return VSSync.retainLocal(Object.assign({},row),found.get(typeof row.id+':'+row.id));
+  });
+}
+var _vsSync=null;
+try{if(typeof VSSync!=='undefined')_vsSync=VSSync.create({
+  namespace:firebaseConfig.projectId+'/studio/data',store:sessionStorage,backupStore:localStorage,
+  instanceId:typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():undefined,
+  forkInstance:!!(performance.getEntriesByType&&performance.getEntriesByType('navigation')[0]&&performance.getEntriesByType('navigation')[0].type==='navigate'),
+  owner:function(){return hasAdminSession()?firebase.auth().currentUser.uid:null;},
+  database:_fs,timestamp:function(){return firebase.firestore.FieldValue.serverTimestamp();},
+  frozen:_splitMigrationFrozen,editing:_vsEditing,later:function(fn){setTimeout(fn,0);},
+  ready:function(value){_fbReady=value;},doc:function(ref){window._fbDocRef=ref;},
+  getData:function(){return {students:students,logs:logs,weekOvr:weekOvr,consults:consults,payments:payments,inquiries:inquiries};},
+  setData:function(data){
+    _fbApplyingRemote=true;
+    try{
+      students=_vsCarryRows(data.students,students);logs=_vsCarryRows(data.logs,logs);
+      consults=_vsCarryRows(data.consults,consults);payments=_vsCarryRows(data.payments,payments);
+      inquiries=_vsCarryRows(data.inquiries,inquiries);weekOvr=data.weekOvr;
+      _saveAllOrig();
+    }finally{_fbApplyingRemote=false;}
+  },
+  render:function(){
+    _fbApplyingRemote=true;
+    try{renderSidebarToday();if(typeof render==='function')render();}finally{_fbApplyingRemote=false;}
+  },
+  status:function(mode,count){_showSyncStatus((_vsSyncLabels[mode]||mode)+(count?' ('+count+'건)':''));_vsSyncActions(mode);}
+});}catch(error){_showSyncStatus('동기화 저장소 확인 필요 · 서버 전송 중지');}
 saveAll=function(){
   _saveAllOrig();
-  _localProtectUntil=Date.now()+8000;
-  if(_splitMigrationFrozen()){
-    _warnLocalOnlySync('🧊 마이그레이션 동결 · 로컬 저장만 됨 · 다른 기기 미동기화');
-    return;
-  }
-  /* 원격 초기 로드가 끝난 뒤의 사용자 저장만 Firestore로 보낸다.
-     로드 중 자동 저장/기본 데이터 주입이 기존 서버 데이터를 덮어쓰는 사고를 막는다. */
-  if(typeof firebase!=='undefined'&&firebase.apps&&firebase.apps.length){
-    if(!hasAdminSession()){
-      _warnLocalOnlySync('🔒 관리자 로그인 필요 · 로컬에만 저장됨 · 다른 기기 미동기화');
-      return;
-    }
-    if(!_fbReady||_fbApplyingRemote){_showSyncStatus('⏸️ 동기화 대기');return;}
-    var db=_fs();
-    _showSyncStatus('🔄 저장 중...');
-    _pushToFirestore(db.collection('studio').doc('data'));
-  }else{
-    _warnLocalOnlySync('⚠️ Firebase 미연결 · 로컬에만 저장됨');
-  }
+  if(_fbApplyingRemote)return;
+  if(_vsSync)_vsSync.save();else _showSyncStatus('동기화 모듈 확인 필요 · 로컬 저장만 됨');
 };
+function _vsSyncActions(mode){
+  var top=ge('topSyncStatus');if(!top)return;
+  var panel=ge('vsSyncPanel');
+  if(!panel){
+    var header=top.closest('.topbar');
+    if(header){
+      panel=document.createElement('div');panel.id='vsSyncPanel';
+      panel.style.cssText='min-width:0;padding:8px 14px;background:var(--s1);border-bottom:1px solid var(--b)';
+      header.insertAdjacentElement('afterend',panel);panel.appendChild(top);
+      [['position','static'],['max-width','100%'],['width','auto'],['font-size','12px'],['line-height','1.5'],['white-space','normal'],['overflow','visible'],['pointer-events','auto']].forEach(function(pair){top.style.setProperty(pair[0],pair[1],'important');});
+    }
+  }
+  var bar=ge('vsSyncActions');
+  if(!bar){
+    bar=document.createElement('div');bar.id='vsSyncActions';bar.style.cssText='display:flex;flex-wrap:wrap;gap:6px;width:100%;min-width:0';
+    [['vsSyncRetry','다시 확인',function(){if(_vsSync)_vsSync.retry();}],
+     ['vsSyncExport','기기 보관본',function(){
+       if(!_vsSync)return;var blob=new Blob([JSON.stringify(_vsSync.exportData(),null,2)],{type:'application/json'});
+       var url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='vocal-studio-local-recovery.json';
+       document.body.appendChild(link);link.click();link.remove();setTimeout(function(){URL.revokeObjectURL(url);},1000);
+     }],
+     ['vsSyncUseServer','서버 기준 사용',function(){
+       if(_vsSync&&confirm('미동기화 변경을 기기 보관본에 남기고, 마지막으로 확인한 서버 자료를 사용합니다. 계속할까요?'))_vsSync.useServer();
+     }]].forEach(function(item){
+       var button=document.createElement('button');button.id=item[0];button.type='button';button.className='btn bg2 bsm';
+       button.textContent=item[1];button.style.cssText='min-height:44px!important;min-width:44px!important;white-space:normal!important';button.onclick=item[2];bar.appendChild(button);
+     });
+    top.parentNode.insertBefore(bar,top.nextSibling);
+  }
+  bar.style.display=mode==='synced'?'none':'flex';
+  ge('vsSyncUseServer').hidden=['conflict','legacy-conflict','recovery'].indexOf(mode)<0;
+}
+function _vsDrainSoon(){setTimeout(function(){if(_vsSync)_vsSync.drain();},0);}
+document.addEventListener('focusout',_vsDrainSoon);
+document.addEventListener('click',_vsDrainSoon);
+window.addEventListener('online',function(){if(_vsSync)_vsSync.retry();});
+
 
 /* 앱 시작 시 Firebase 초기화 */
 
