@@ -1,2 +1,9 @@
 .vercel
+/node_modules/
+/dist/
+/.wrangler/
+/scripts/__pycache__/
 /tmp/sync-qa/
+/tmp/cf-*/
+/tmp/cf-evidence/
+/tmp/qa-media.bin

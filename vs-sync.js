@@ -165,7 +165,10 @@
     this.owner=owner;this.key='vsC_sync_v1:'+encodeURIComponent(this.a.namespace+':'+owner);
     var epoch=this.epoch,self=this;
     try{
-      var startup=normalize(this.a.getData());
+      var hydrated=this.a.hydrated?!!this.a.hydrated():true;
+      var durable=(!hydrated&&this.a.resumeData)?this.a.resumeData(owner):null;
+      var resumeFromDurable=!!durable;
+      var startup=normalize(resumeFromDurable?durable:(hydrated?this.a.getData():{}));
       var raw=this.a.store.getItem(this.key);
       if(raw){
         var saved=JSON.parse(raw);
@@ -173,15 +176,22 @@
         saved.base=normalize(saved.base);saved.local=normalize(saved.local);
         if(!Number.isSafeInteger(saved.revision)||saved.revision<0)throw Error('invalid-journal-revision');
         if(!Array.isArray(saved.recovery))throw Error('invalid-recovery');
-        if(!equal(startup,saved.local)){
+        if(resumeFromDurable&&!equal(startup,saved.local)){
+          if(!saved.recovery.some(function(data){return equal(data,saved.local);}))saved.recovery.push(clone(saved.local));
+          saved.local=startup;saved.resumeConflict=true;
+          if(!this.persist(saved))return;
+        }else if(!equal(startup,saved.local)){
           if(!saved.recovery.some(function(data){return equal(data,startup);}))saved.recovery.push(startup);
           if(saved.ack||diff(saved.base,saved.local).length)saved.resumeConflict=true;
           if(!this.persist(saved))return;
         }
         this.state=saved;if(saved.ack&&!saved.resumeConflict)this.finishAck();
-        if(!this.unbound&&!this.blocked&&!saved.resumeConflict)this.display();
+        if(!this.unbound&&!this.blocked&&(!saved.resumeConflict||resumeFromDurable))this.display();
+      }else if(resumeFromDurable){
+        try{this.a.setData(clone(startup));this.a.render();}
+        catch(error){this.blocked=true;this.hold='apply';this.status('apply-error');return;}
       }
-      this.initialLocal=normalize(this.a.getData());
+      this.initialLocal=startup;
       this.doc=this.a.database().collection('studio').doc('data');
       if(this.a.doc)this.a.doc(this.doc);
       var unsubscribe=this.doc.onSnapshot({includeMetadataChanges:true},function(snapshot){

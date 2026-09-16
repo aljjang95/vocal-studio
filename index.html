@@ -8,15 +8,9 @@
   <meta name="apple-mobile-web-app-title" content="보컬스튜디오">
   <meta name="theme-color" content="#1a1a2e">
   <link rel="manifest" href="manifest.json">
-  <!-- FullCalendar -->
-  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
-  <script src="./vs-sync.js?v=20260915-r1"></script>
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+  <script src="./vs-sync.js?v=20260915-cf1"></script>
+  <script src="./cf-transport.js?v=20260915-cf1"></script>
+  <script src="./cf-migration.js?v=20260915-cf1"></script>
 <title>Vocal Studio</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600;1,700&family=Noto+Sans+KR:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Noto+Serif+KR:wght@300;400;500;600;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 <style>
@@ -3422,12 +3416,7 @@ var SPLIT_MIGRATION_POLICY_VERSION='split-v1-2026-06-18';
 function _splitStudioId(){
   try{return localStorage.getItem('vsC_studioId')||'default';}catch(e){return 'default';}
 }
-function _splitAdminId(){
-  try{
-    var u=(typeof firebase!=='undefined'&&firebase.auth&&firebase.auth().currentUser)||null;
-    return (u&&u.uid)||'local-admin';
-  }catch(e){return 'local-admin';}
-}
+function _splitAdminId(){return hasAdminSession()?_cfSession.principal:'local-admin';}
 function _splitHash(input){
   input=String(input||'');
   var h=2166136261;
@@ -3627,24 +3616,7 @@ function endSplitMigrationFreeze(){
   return{ok:true,status:'unfrozen'};
 }
 async function writeSplitMigrationPlan(plan,options){
-  options=options||{};
-  plan=plan||buildSplitMigrationPlan(options);
-  if(plan.status==='abort')return{ok:false,status:'abort',errors:plan.errors,plan:plan};
-  var currentHash=_splitHash(_dataSignature());
-  if(currentHash!==plan.legacyHash)return{ok:false,status:'abort',errors:[{code:'legacy-hash-drift',expected:plan.legacyHash,actual:currentHash}],plan:plan};
-  if(!options.allowWithoutFreeze&&!_splitMigrationFrozen())return{ok:false,status:'blocked',errors:[{code:'freeze-required',message:'Start migration freeze before split writes.'}],plan:plan};
-  if(typeof firebase==='undefined'||!firebase.firestore||!_isFirebaseAdminUser(firebase.auth().currentUser))return{ok:false,status:'blocked',errors:[{code:'admin-auth-required',message:'Firebase admin authentication required for split writes.'}],plan:plan};
-  var db=_fs();
-  var root=db.collection('studios').doc(plan.studioId);
-  await root.set({schemaVersion:SPLIT_SCHEMA_VERSION,policyVersion:SPLIT_MIGRATION_POLICY_VERSION,legacyHash:plan.legacyHash,migrationRunId:plan.migrationRunId,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:_splitAdminId()},{merge:true});
-  for(var cname of Object.keys(plan.collections)){
-    var docs=plan.collections[cname]||[];
-    for(var i=0;i<docs.length;i++){
-      var doc=docs[i];
-      await root.collection(cname).doc(doc.id).set(doc,{merge:true});
-    }
-  }
-  return{ok:true,status:'written',plan:plan};
+  return{ok:false,status:'retired',errors:[{code:'firebase-split-write-retired',message:'Legacy split migration writes are disabled in the Cloudflare unified runtime.'}],plan:plan||buildSplitMigrationPlan(options||{})};
 }
 function runSplitMigrationDryRun(options){
   var plan=buildSplitMigrationPlan(options||{});
@@ -3767,6 +3739,15 @@ function mediaDelete(key){
 }
 /* MEDIA DURABILITY / RECOVERY MANAGER — Storage is durable, IndexedDB is queue/cache only */
 var MEDIA_POLICY_VERSION='media-v1-2026-06-18';
+var MEDIA_MAX_BYTES=20*1024*1024;
+function _mediaDataBytes(data){
+  if(typeof data!=='string'||data.indexOf('data:')!==0)return 0;
+  var comma=data.indexOf(',');if(comma<0)return 0;
+  var body=data.slice(comma+1);
+  if(data.slice(0,comma).indexOf(';base64')<0){try{return new TextEncoder().encode(decodeURIComponent(body)).length;}catch(e){return body.length;}}
+  var pad=body.endsWith('==')?2:(body.endsWith('=')?1:0);
+  return Math.max(0,Math.floor(body.length*3/4)-pad);
+}
 function _mediaQueueRead(){
   try{return JSON.parse(localStorage.getItem('vsC_media_queue')||'[]')||[];}catch(e){return [];}
 }
@@ -3785,12 +3766,18 @@ function _mediaOwnerType(mode){return mode==='consult'?'consult':'student';}
 function prepareMediaEntryForDurability(entry,ownerType,ownerId,field,data,contentType){
   entry=entry||{};
   var key=entry._mediaKey||('vsM_'+(entry.id||uid()));
+  var raw=data||entry.data||'';
   entry._mediaKey=key;
   entry.storagePath=entry.storagePath||_mediaStoragePath(ownerType,ownerId,field,entry.id||key,contentType||'');
+  entry.mediaPolicyVersion=MEDIA_POLICY_VERSION;
+  mediaSave(key,raw);
+  if(_mediaDataBytes(raw)>MEDIA_MAX_BYTES){
+    entry.storageStatus='oversize-blocked';entry.recoveryRequired=true;entry.lastError='media-size-invalid';
+    setTimeout(function(){try{toast('⚠️ 20MB 초과 미디어는 서버 동기화되지 않습니다. 파일을 줄여 다시 등록해 주세요.','⚠️');}catch(e){}},0);
+    return entry;
+  }
   entry.storageStatus=entry.storageStatus||'queued';
   entry.recoveryRequired=false;
-  entry.mediaPolicyVersion=MEDIA_POLICY_VERSION;
-  mediaSave(key,data||entry.data||'');
   queueMediaForStorage({id:entry.id||key,ownerType:ownerType,ownerId:ownerId,field:field,entryId:entry.id||'',localKey:key,storagePath:entry.storagePath,contentType:contentType||'',status:'queued',attempts:0,policyVersion:MEDIA_POLICY_VERSION,updatedAt:new Date().toISOString()});
   return entry;
 }
@@ -3809,10 +3796,8 @@ function _mediaLoadPromise(key){
   return new Promise(function(resolve){mediaLoad(key,function(data){resolve(data||null);});});
 }
 function _mediaPutString(data,path,contentType){
-  if(typeof firebase==='undefined'||typeof firebase.storage!=='function')return Promise.reject(new Error('storage SDK 미로드'));
-  if(!_isFirebaseAdminUser(firebase.auth().currentUser))return Promise.reject(new Error('admin auth required'));
-  var ref=firebase.storage().ref(path);
-  return ref.putString(data,'data_url',{contentType:contentType||'application/octet-stream'}).then(function(){return ref.getDownloadURL();});
+  if(typeof VCFTransport==='undefined'||!hasAdminSession())return Promise.reject(new Error('cloudflare-session-required'));
+  return VCFTransport.uploadDataUrl(data,path,contentType||'application/octet-stream');
 }
 function _findMediaOwner(ownerType,ownerId){
   var list=ownerType==='consult'?consults:students;
@@ -3838,10 +3823,10 @@ function _applyMediaUploaded(rec,url){
 }
 async function processMediaDurabilityQueue(limit){
   var q=_mediaQueueRead();
-  var pending=q.filter(function(x){return x.status!=='uploaded'&&x.status!=='deleted';}).slice(0,limit||5);
+  var pending=q.filter(function(x){return x.status==='queued'||x.status==='retry';}).slice(0,limit||5);
   if(!pending.length)return{ok:true,status:'empty',processed:0,queued:q.length};
-  if(typeof firebase==='undefined'||!firebase.storage||!_isFirebaseAdminUser(firebase.auth().currentUser)){
-    return{ok:false,status:'blocked',code:'storage-auth-required',processed:0,queued:pending.length};
+  if(typeof VCFTransport==='undefined'||!hasAdminSession()){
+    return{ok:false,status:'blocked',code:'cloudflare-session-required',processed:0,queued:pending.length};
   }
   var processed=0,failed=[];
   for(var i=0;i<pending.length;i++){
@@ -3854,7 +3839,13 @@ async function processMediaDurabilityQueue(limit){
       _applyMediaUploaded(rec,url);
       processed++;
     }catch(e){
-      rec.status='retry';rec.attempts=(rec.attempts||0)+1;rec.lastError=(e&&e.message)||String(e);rec.updatedAt=new Date().toISOString();failed.push({localKey:rec.localKey,error:rec.lastError});
+      rec.lastError=(e&&e.message)||String(e);rec.attempts=(rec.attempts||0)+1;rec.updatedAt=new Date().toISOString();
+      rec.status=rec.lastError==='media-size-invalid'?'oversize-blocked':'retry';
+      if(rec.status==='oversize-blocked'){
+        var owner=_findMediaOwner(rec.ownerType,rec.ownerId),entry=_findMediaEntry(owner,rec.field,rec.entryId);
+        if(entry){entry.storageStatus='oversize-blocked';entry.recoveryRequired=true;entry.lastError=rec.lastError;}
+      }
+      failed.push({localKey:rec.localKey,error:rec.lastError,status:rec.status});
     }
   }
   var next=_mediaQueueRead().map(function(x){
@@ -3863,7 +3854,7 @@ async function processMediaDurabilityQueue(limit){
   });
   _mediaQueueWrite(next);
   if(processed)try{saveAll();}catch(e){}
-  return{ok:failed.length===0,status:failed.length?'partial':'uploaded',processed:processed,failed:failed,queued:next.filter(function(x){return x.status!=='uploaded'&&x.status!=='deleted';}).length};
+  return{ok:failed.length===0,status:failed.length?'partial':'uploaded',processed:processed,failed:failed,queued:next.filter(function(x){return x.status==='queued'||x.status==='retry';}).length};
 }
 function _mediaEntryStatus(ownerType,ownerId,field,entry,index){
   entry=entry||{};
@@ -3873,7 +3864,8 @@ function _mediaEntryStatus(ownerType,ownerId,field,entry,index){
   var status='ok';
   var recoveryRequired=false;
   var reason='';
-  if(storageUrl)status='storage';
+  if(entry.storageStatus==='oversize-blocked'){status='oversizeBlocked';recoveryRequired=true;reason='media-size-invalid';}
+  else if(storageUrl)status='storage';
   else if(localKey)status='queuedOrCached';
   else if(String(data)==='[saved]'||String(data)==='[recoveryRequired]'||!data){status='recoveryRequired';recoveryRequired=true;reason='missing-storage-and-local-cache';}
   else if(/^data:/.test(String(data||''))){status='queued';recoveryRequired=false;reason='inline-data-needs-storage';}
@@ -3958,46 +3950,15 @@ function _adminVerificationSaveProbeMedia(key,content){
   return new Promise(function(resolve){mediaSave(key,content,function(ok){resolve(!!ok);});});
 }
 async function runAdminVerificationProbe(live){
-  var user=(typeof firebase!=='undefined'&&firebase.auth&&firebase.auth().currentUser)||null;
-  var receipt={schemaVersion:1,kind:'admin-live-verification',mode:live?'live':'dry-run',checkedAt:new Date().toISOString(),url:location.href,admin:{uid:user&&user.uid||'',email:user&&user.email||'',emailVerified:!!(user&&user.emailVerified),authorized:_isFirebaseAdminUser(user)},split:null,media:null,ok:false,errors:[]};
-  if(!receipt.admin.authorized){
-    receipt.errors.push({code:'admin-auth-required',message:'관리자 로그인 후 실행하세요.'});
-    return receipt;
-  }
+  var receipt={schemaVersion:2,kind:'cloudflare-admin-verification',mode:live?'live-blocked':'read-only',checkedAt:new Date().toISOString(),url:location.href,admin:{principal:hasAdminSession()?_cfSession.principal:'',email:hasAdminSession()?_cfSession.email:'',authorized:hasAdminSession()},media:null,readback:null,ok:false,errors:[]};
+  if(!receipt.admin.authorized){receipt.errors.push({code:'access-required',message:'Cloudflare Access 인증이 필요합니다.'});return receipt;}
+  if(live)receipt.errors.push({code:'protected-live-probe-retired',message:'브라우저의 레거시 live write probe는 Cloudflare unified runtime에서 비활성화되었습니다.'});
   try{
-    var expected=_splitHash(_dataSignature());
-    var freeze=live?beginSplitMigrationFreeze(expected):{ok:true,status:'dry-run-only',legacyHash:expected};
-    var plan=buildSplitMigrationPlan({expectedLegacyHash:expected,migrationRunId:'verify_'+expected+'_'+_splitHash(Date.now())});
-    receipt.split={freeze:freeze,dryRun:_adminVerificationSummarizePlan(plan),write:null};
-    if(live){
-      try{
-        var writeRes=await writeSplitMigrationPlan(plan,{allowWithoutFreeze:false});
-        receipt.split.write={ok:!!(writeRes&&writeRes.ok),status:writeRes&&writeRes.status,counts:writeRes&&writeRes.plan&&writeRes.plan.counts,errors:writeRes&&writeRes.errors||[]};
-      }catch(e){
-        receipt.split.write={ok:false,error:_adminVerificationError(e)};
-      }finally{
-        try{endSplitMigrationFreeze();}catch(e){}
-      }
-    }
-  }catch(e){
-    receipt.errors.push(Object.assign({code:'split-probe-failed'},_adminVerificationError(e)));
-    try{endSplitMigrationFreeze();}catch(e2){}
-  }
-  try{
-    if(live){
-      var key='vsVerify_'+Date.now();
-      var mediaOk=await _adminVerificationSaveProbeMedia(key,'data:text/plain;base64,'+btoa('vocal-studio-admin-verification '+new Date().toISOString()));
-      if(mediaOk){
-        queueMediaForStorage({localKey:key,storagePath:'studios/'+_splitStudioId()+'/media/verification/'+key+'.txt',ownerType:'verification',ownerId:'admin',field:'probe',entryId:key,contentType:'text/plain',status:'queued'});
-      }
-    }
     var beforeQ=_mediaQueueRead();
-    var processed=await processMediaDurabilityQueue(3);
-    receipt.media={queuedBefore:beforeQ.filter(function(x){return x.status!=='uploaded'&&x.status!=='deleted';}).length,result:processed,scan:scanMediaRecovery()};
-  }catch(e){
-    receipt.errors.push(Object.assign({code:'media-probe-failed'},_adminVerificationError(e)));
-  }
-  receipt.ok=receipt.admin.authorized&&(!receipt.split||!receipt.split.write||receipt.split.write.ok!==false)&&(!receipt.media||receipt.media.result.ok!==false);
+    receipt.media={queued:beforeQ.filter(function(x){return x.status!=='uploaded'&&x.status!=='deleted';}).length,scan:scanMediaRecovery()};
+    if(typeof VCFMigration!=='undefined')receipt.readback=await VCFMigration.privateExport().catch(function(e){return{error:(e&&e.message)||String(e)};});
+  }catch(e){receipt.errors.push(Object.assign({code:'read-only-probe-failed'},_adminVerificationError(e)));}
+  receipt.ok=receipt.admin.authorized&&!live&&receipt.errors.length===0;
   try{localStorage.setItem('vsC_adminVerificationReceipt',JSON.stringify(receipt));}catch(e){}
   return receipt;
 }
@@ -4133,37 +4094,9 @@ var KR_HOLIDAYS = {
 var _holidayLoaded = {};
 
 function loadHolidaysFromGoogle(year, cb){
-  if(_holidayLoaded[year]){if(cb)cb();return;}
-  /* 구글 캘린더 공개 한국 공휴일 - API 키 불필요 */
-  var calId='ko.south_korea%23holiday%40group.v.calendar.google.com';
-  var timeMin=encodeURIComponent(year+'-01-01T00:00:00Z');
-  var timeMax=encodeURIComponent(year+'-12-31T23:59:59Z');
-  var url='https://www.googleapis.com/calendar/v3/calendars/'+calId+'/events'
-    +'?key=AIzaSyBNlYH01_9Hc5S1J9vuFmu2nUqBZJNAXxs'
-    +'&timeMin='+timeMin+'&timeMax='+timeMax
-    +'&singleEvents=true&maxResults=50';
-  fetch(url)
-    .then(function(r){return r.json();})
-    .then(function(data){
-      var items=data&&data.items;
-      if(items&&items.length){
-        items.forEach(function(item){
-          var ds=item.start&&(item.start.date||item.start.dateTime);
-          if(!ds) return;
-          var key=ds.slice(0,10);
-          /* 내장 한국어 라벨이 있으면 보존, 없을 때만 구글 summary로 채움 */
-          if(typeof KR_HOLIDAYS[key]==='string') return;
-          KR_HOLIDAYS[key]=item.summary||'공휴일';
-        });
-      }
-      _holidayLoaded[year]=true;
-      if(cb)cb();
-    })
-    .catch(function(e){
-      console.warn('구글 캘린더 공휴일 로드 실패, 내장 데이터 사용:',e);
-      _holidayLoaded[year]=true;
-      if(cb)cb();
-    });
+  /* Cloudflare unified runtime: 법정 공휴일은 내장 화이트리스트만 사용한다. */
+  _holidayLoaded[year]=true;
+  if(cb)cb();
 }
 
 function loadHolidaysForView(cb){
@@ -4213,27 +4146,11 @@ function getOffLabel(dateStr){
 
 var _fbReady=false, _fbSyncing=false, _fbUnsub=null, _skipRenderCount=0, _fbApplyingRemote=false, _lastFirestorePushSig='', _lastFirestorePushAt=0, _localProtectUntil=0;
 
-var firebaseConfig={
-  apiKey:"AIzaSyBhVoh01SUIjL9syfQcxh7CR0_Nl0gTUCY",
-  authDomain:"hlbvocalstudio-72481.firebaseapp.com",
-  projectId:"hlbvocalstudio-72481",
-  storageBucket:"hlbvocalstudio-72481.firebasestorage.app",
-  messagingSenderId:"131827810958",
-  appId:"1:131827810958:web:0794a34a29dc2070ee7fdf"
-};
-var VS_ADMIN_UIDS=['hhGHaSfiKYReJ9njvhGH0x3yB8E2','toUXxzS4OqYqD4n0F65YTtQeZ1s2'];
-var VS_ADMIN_EMAILS=['aljjang95@gmail.com'];
-var _fbAuthReady=false;
-
-function _isFirebaseAdminUser(user){
-  if(!user)return false;
-  var uid=user.uid||'';
-  var email=(user.email||'').toLowerCase();
-  if(VS_ADMIN_UIDS.indexOf(uid)>=0)return true;
-  return !!email&&VS_ADMIN_EMAILS.map(function(x){return String(x).toLowerCase();}).indexOf(email)>=0;
-}
-function _updateAdminAuthControls(user){
-  var isAdmin=_isFirebaseAdminUser(user);
+var _cfSession=null,_cfAppHydrated=false;
+function _isFirebaseAdminUser(){return false;}
+function hasAdminSession(){return !!(_cfSession&&_cfSession.ok&&_cfSession.principal);}
+function _updateAdminAuthControls(){
+  var isAdmin=hasAdminSession();
   [
     {login:ge('adminLoginBtn'),logout:ge('adminLogoutBtn')},
     {login:ge('topAdminLoginBtn'),logout:ge('topAdminLogoutBtn')}
@@ -4242,35 +4159,26 @@ function _updateAdminAuthControls(user){
     pair.login.style.display=isAdmin?'none':'inline-flex';
     pair.logout.style.display=isAdmin?'inline-flex':'none';
   });
-  var verifyBtn=ge('topAdminVerifyBtn');
-  if(verifyBtn)verifyBtn.style.display=isAdmin?'inline-flex':'none';
+  var verifyBtn=ge('topAdminVerifyBtn');if(verifyBtn)verifyBtn.style.display='none';
 }
-function hasAdminSession(){
-  try{return typeof firebase!=='undefined'&&firebase.auth&&_isFirebaseAdminUser(firebase.auth().currentUser);}catch(e){return false;}
+function _cfLocalOwnerKey(){return 'vsC_cf_owner_v1';}
+function _cfBindLocalOwner(){
+  if(!hasAdminSession())return false;
+  try{localStorage.setItem(_cfLocalOwnerKey(),_cfSession.principal);return true;}catch(e){return false;}
 }
-function _disableFirestoreSync(msg){
-  _fbReady=false;
+function _cfLoadLocalResume(owner){
+  try{
+    if(localStorage.getItem(_cfLocalOwnerKey())!==owner)return null;
+    return{students:JSON.parse(localStorage.getItem('vsC_s')||'[]'),logs:JSON.parse(localStorage.getItem('vsC_l')||'[]'),weekOvr:JSON.parse(localStorage.getItem('vsC_wo')||'{}'),consults:JSON.parse(localStorage.getItem('vsC_c')||'[]'),payments:JSON.parse(localStorage.getItem('vsC_p')||'[]'),inquiries:JSON.parse(localStorage.getItem('vsC_iq')||'[]')};
+  }catch(e){return null;}
+}
+function _disableCloudflareSync(msg){
+  _fbReady=false;_cfSession=null;
   if(typeof _vsSync!=='undefined'&&_vsSync)_vsSync.disconnect();
-  _showSyncStatus(msg||'관리자 인증 필요 · 로컬 모드');
+  _showSyncStatus(msg||'Cloudflare Access 세션 확인 필요');
 }
-
-function signInAdmin(){
-  if(typeof firebase==='undefined'||!firebase.auth)return Promise.reject(new Error('firebase auth unavailable'));
-  var provider=new firebase.auth.GoogleAuthProvider();
-  return firebase.auth().signInWithPopup(provider).catch(function(e){
-    console.error('관리자 로그인 실패',e);
-    var code=e&&e.code;
-    var msg=code==='auth/unauthorized-domain'
-      ?'⚠️ 현재 도메인이 Firebase 로그인 허용 목록에 없습니다'
-      :'⚠️ 관리자 로그인 실패';
-    _showSyncStatus(msg);
-    throw e;
-  });
-}
-function signOutAdmin(){
-  if(typeof firebase==='undefined'||!firebase.auth)return Promise.resolve();
-  return firebase.auth().signOut().then(function(){_disableFirestoreSync('🔒 로그아웃됨 · 로컬 모드');});
-}
+function signInAdmin(){location.reload();return Promise.resolve();}
+function signOutAdmin(){location.assign('/cdn-cgi/access/logout');return Promise.resolve();}
 
 
 function toggleSunCollapse(){
@@ -4356,39 +4264,20 @@ function removeCustomHoliday(ds){
   saveCfg();renderHolidayList();render();
   toast('휴무일 삭제: '+ds+' ✓');
 }
-function initFirebase(){
-  if(typeof firebase==='undefined'){
-    setTimeout(initFirebase,500);return;
+function initCloudflare(){
+  if(typeof VCFTransport==='undefined'){
+    _disableCloudflareSync('Cloudflare transport 확인 필요');return;
   }
-  if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-  firebase.auth().onAuthStateChanged(function(user){
-    _fbAuthReady=true;
-    _updateAdminAuthControls(user);
-    if(_isFirebaseAdminUser(user)){
-      _showSyncStatus('🔐 관리자 인증됨');
-      _startFirestoreListener();
-    }else{
-      _disableFirestoreSync(user?'🔒 권한 없는 계정 · 로컬 모드':'🔒 관리자 인증 필요 · 로컬 모드');
-    }
-  },function(e){
-    console.error('관리자 인증 확인 실패',e);
-    _disableFirestoreSync('⚠️ 인증 확인 실패 · 로컬 모드');
+  VCFTransport.session().then(function(session){
+    _cfSession=session;_updateAdminAuthControls();
+    _showSyncStatus('🔐 Cloudflare Access 인증됨');
+    if(_vsSync)_vsSync.connect();else _showSyncStatus('동기화 모듈 확인 필요 · 서버 연결 중지');
+  }).catch(function(e){
+    console.error('Cloudflare Access 세션 확인 실패',e);
+    _disableCloudflareSync('⚠️ Access 세션 확인 실패');
   });
 }
-/* Firestore 인스턴스 — undefined 필드 자동 무시(첫 작업 전 1회 settings). */
-var _fsSettingsApplied=false;
-function _fs(){
-  var db=firebase.firestore();
-  if(!_fsSettingsApplied){
-    _fsSettingsApplied=true;
-    try{db.settings({ignoreUndefinedProperties:true});}catch(e){}
-  }
-  return db;
-}
-function _startFirestoreListener(){
-  if(_vsSync)_vsSync.connect();
-  else _showSyncStatus('동기화 모듈 확인 필요 · 서버 연결 중지');
-}
+function _cfDatabase(){return VCFTransport.database();}
 
 /* ── 사진 웹용 압축 (canvas 리사이즈 + JPEG) ──
    업로드 전 호출. 큰 원본을 maxDim 이하 / JPEG quality로 줄여 용량을 1/5~1/10로. */
@@ -4411,32 +4300,10 @@ function compressImage(base64, maxDim, quality){
     }catch(e){res(base64);}
   });
 }
-/* ── Firebase Storage 업로드 → 다운로드 URL ──
-   사진을 Storage에 올리고 URL만 DB에 저장(Firestore 1MB 압박 제거 + 크로스기기 표시). */
-function uploadPhoto(base64, path){
-  if(typeof firebase==='undefined'||typeof firebase.storage!=='function')
-    return Promise.reject(new Error('storage SDK 미로드'));
-  var waitAuth=function(){
-    return new Promise(function(resolve,reject){
-      try{
-        if(!firebase.auth){reject(new Error('auth unavailable'));return;}
-        var auth=firebase.auth();
-        if(_isFirebaseAdminUser(auth.currentUser)){resolve(auth.currentUser);return;}
-        var done=false,unsub=null;
-        var cleanup=function(timer){try{if(unsub)unsub();}catch(e){}clearTimeout(timer);};
-        var timer=setTimeout(function(){if(done)return;done=true;cleanup(timer);reject(new Error('admin auth required'));},7000);
-        unsub=auth.onAuthStateChanged(function(user){
-          if(done||!_isFirebaseAdminUser(user))return;
-          done=true;cleanup(timer);resolve(user);
-        });
-      }catch(e){reject(e);}
-    });
-  };
-  var up=waitAuth().then(function(){
-    var ref=firebase.storage().ref(path);
-    return ref.putString(base64,'data_url',{contentType:'image/jpeg'}).then(function(){return ref.getDownloadURL();});
-  });
-  /* Storage 미활성/네트워크 지연 시 putString이 무한 대기 → 타임아웃으로 폴백 보장 */
+/* Cloudflare private R2 업로드 — 앱은 same-origin Worker API만 호출한다. */
+function uploadPhoto(base64,path){
+  if(typeof VCFTransport==='undefined'||!hasAdminSession())return Promise.reject(new Error('cloudflare-session-required'));
+  var up=VCFTransport.uploadDataUrl(base64,path,'image/jpeg');
   var to=new Promise(function(_,rej){setTimeout(function(){rej(new Error('upload timeout'));},15000);});
   return Promise.race([up,to]);
 }
@@ -4571,13 +4438,14 @@ function _vsCarryRows(rows,previous){
 }
 var _vsSync=null;
 try{if(typeof VSSync!=='undefined')_vsSync=VSSync.create({
-  namespace:firebaseConfig.projectId+'/studio/data',store:sessionStorage,backupStore:localStorage,
+  namespace:'vocal-studio',store:sessionStorage,backupStore:localStorage,
   instanceId:typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():undefined,
   forkInstance:!!(performance.getEntriesByType&&performance.getEntriesByType('navigation')[0]&&performance.getEntriesByType('navigation')[0].type==='navigate'),
-  owner:function(){return hasAdminSession()?firebase.auth().currentUser.uid:null;},
-  database:_fs,timestamp:function(){return firebase.firestore.FieldValue.serverTimestamp();},
-  frozen:_splitMigrationFrozen,editing:_vsEditing,later:function(fn){setTimeout(fn,0);},
+  owner:function(){return hasAdminSession()?_cfSession.principal:null;},
+  database:_cfDatabase,timestamp:function(){return new Date().toISOString();},
+  frozen:function(){return false;},editing:_vsEditing,later:function(fn){setTimeout(fn,0);},
   ready:function(value){_fbReady=value;},doc:function(ref){window._fbDocRef=ref;},
+  hydrated:function(){return _cfAppHydrated;},resumeData:function(owner){return _cfLoadLocalResume(owner);},
   getData:function(){return {students:students,logs:logs,weekOvr:weekOvr,consults:consults,payments:payments,inquiries:inquiries};},
   setData:function(data){
     _fbApplyingRemote=true;
@@ -4585,7 +4453,8 @@ try{if(typeof VSSync!=='undefined')_vsSync=VSSync.create({
       students=_vsCarryRows(data.students,students);logs=_vsCarryRows(data.logs,logs);
       consults=_vsCarryRows(data.consults,consults);payments=_vsCarryRows(data.payments,payments);
       inquiries=_vsCarryRows(data.inquiries,inquiries);weekOvr=data.weekOvr;
-      _saveAllOrig();
+      _cfAppHydrated=true;_cfBindLocalOwner();_saveAllOrig();
+      setTimeout(_cfDrainMedia,0);
     }finally{_fbApplyingRemote=false;}
   },
   render:function(){
@@ -4595,10 +4464,22 @@ try{if(typeof VSSync!=='undefined')_vsSync=VSSync.create({
   status:function(mode,count){_showSyncStatus((_vsSyncLabels[mode]||mode)+(count?' ('+count+'건)':''));_vsSyncActions(mode);}
 });}catch(error){_showSyncStatus('동기화 저장소 확인 필요 · 서버 전송 중지');}
 saveAll=function(){
+  if(hasAdminSession())_cfBindLocalOwner();
   _saveAllOrig();
   if(_fbApplyingRemote)return;
   if(_vsSync)_vsSync.save();else _showSyncStatus('동기화 모듈 확인 필요 · 로컬 저장만 됨');
 };
+function _cfMediaPendingCount(){
+  return _mediaQueueRead().filter(function(x){return x.status==='queued'||x.status==='retry';}).length;
+}
+var _cfMediaDrainBusy=false;
+function _cfDrainMedia(){
+  if(_cfMediaDrainBusy||!hasAdminSession()||!_cfMediaPendingCount()){if(_vsSync)_vsSyncActions(_vsSync.mode||'synced');return Promise.resolve(false);}
+  _cfMediaDrainBusy=true;
+  return processMediaDurabilityQueue(5).catch(function(){return false;}).finally(function(){
+    _cfMediaDrainBusy=false;if(_vsSync)_vsSyncActions(_vsSync.mode||'synced');
+  });
+}
 function _vsSyncActions(mode){
   var top=ge('topSyncStatus');if(!top)return;
   var panel=ge('vsSyncPanel');
@@ -4615,6 +4496,7 @@ function _vsSyncActions(mode){
   if(!bar){
     bar=document.createElement('div');bar.id='vsSyncActions';bar.style.cssText='display:flex;flex-wrap:wrap;gap:6px;width:100%;min-width:0';
     [['vsSyncRetry','다시 확인',function(){if(_vsSync)_vsSync.retry();}],
+     ['vsMediaRetry','미디어 다시 전송',function(){_cfDrainMedia();}],
      ['vsSyncExport','기기 보관본',function(){
        if(!_vsSync)return;var blob=new Blob([JSON.stringify(_vsSync.exportData(),null,2)],{type:'application/json'});
        var url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='vocal-studio-local-recovery.json';
@@ -4628,16 +4510,18 @@ function _vsSyncActions(mode){
      });
     top.parentNode.insertBefore(bar,top.nextSibling);
   }
-  bar.style.display=mode==='synced'?'none':'flex';
+  var mediaPending=_cfMediaPendingCount();
+  bar.style.display=(mode==='synced'&&mediaPending===0)?'none':'flex';
+  ge('vsMediaRetry').hidden=mediaPending===0;
   ge('vsSyncUseServer').hidden=['conflict','legacy-conflict','recovery'].indexOf(mode)<0;
 }
 function _vsDrainSoon(){setTimeout(function(){if(_vsSync)_vsSync.drain();},0);}
 document.addEventListener('focusout',_vsDrainSoon);
 document.addEventListener('click',_vsDrainSoon);
-window.addEventListener('online',function(){if(_vsSync)_vsSync.retry();});
+window.addEventListener('online',function(){if(_vsSync)_vsSync.retry();_cfDrainMedia();});
 
 
-/* 앱 시작 시 Firebase 초기화 */
+/* 앱 시작 시 Cloudflare Access/Worker 초기화 */
 
 /* 모바일 사이드바 위치 강제 고정 */
 function fixMobileSidebar(){
@@ -4689,7 +4573,7 @@ document.addEventListener('DOMContentLoaded',function(){
   window.addEventListener('resize', applyMobileClass);
   /* 동기화 이전에도 끊긴 사진 참조를 먼저 복구해 첫 화면부터 사진이 보이게 한다 */
   try{if(_relinkOrphanPhotos()>0)saveAll();}catch(e){}
-  initFirebase();
+  initCloudflare();
   initMobileTabBar();
 });
 
