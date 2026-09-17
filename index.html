@@ -2,16 +2,16 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="보컬스튜디오">
   <meta name="theme-color" content="#1a1a2e">
   <link rel="manifest" href="manifest.json">
   <script src="./vs-sync.js?v=20260915-cf1"></script>
-  <script src="./cf-transport.js?v=20260915-cf1"></script>
+  <script src="./cf-transport.js?v=20260917-sync2"></script>
   <script src="./cf-migration.js?v=20260915-cf1"></script>
-<title>Vocal Studio</title>
+<title>Vocal Studio · 관리자 스케줄</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600;1,700&family=Noto+Sans+KR:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Noto+Serif+KR:wght@300;400;500;600;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -2543,8 +2543,13 @@ div.mwv .lb { font-size: 7px !important; padding: 0 !important; min-height: 0 !i
   margin-bottom: 8px;
 }
 </style>
+<style id="admin-schedule-design-20260917">
+#vocalAdmin .admin-today button[onclick^="setTodayPrivacy"][style*="background:var(--a)"]{color:#fff!important;}body#vocalAdmin{--bg:#f3f5f8!important;--s1:#fff!important;--s2:#f6f8fb!important;--s3:#e8edf3!important;--t:#18283b!important;--ts:#43576c!important;--tm:#64768a!important;--a:#245f75!important;--a2:#1e4e63!important;--g:#196548!important;--r:#b53647!important;--b:#e1e7ee!important;--b2:#cbd6e2!important;--ag:#eff4f8!important;--ag2:#e2edf3!important;--season-accent:#245f75!important;--season-gold:#245f75!important;--season-border:#e1e7ee!important;--season-border2:#cbd6e2!important;--season-hover:#eff4f8!important;--season-hover2:#e4eff4!important;font-family:'Noto Sans KR',system-ui,sans-serif!important;background:var(--bg)!important;}body#vocalAdmin::before,body#vocalAdmin::after,#vocalAdmin .sb::before{display:none!important;}#vocalAdmin .sb{background:#fff!important;box-shadow:none!important;border-right:1px solid var(--b)!important;}#vocalAdmin .logo{padding:26px 20px!important;}#vocalAdmin .logo-t{font:700 22px/1.3 'Noto Sans KR',sans-serif!important;letter-spacing:-.6px!important;text-shadow:none!important;color:var(--t)!important;}#vocalAdmin .logo-s{font-size:11px!important;letter-spacing:.06em!important;opacity:1!important;}#vocalAdmin .logo-add-btn{height:44px!important;width:44px!important;background:var(--a)!important;color:#fff!important;box-shadow:none!important;right:16px!important;}#vocalAdmin .ni{min-height:46px!important;margin:3px 12px!important;border:0!important;border-radius:10px!important;padding:12px!important;color:var(--ts)!important;font-size:14px!important;}#vocalAdmin .ni.on{background:#e8f1f6!important;color:#174d66!important;font-weight:700!important;}#vocalAdmin .ni-ic{opacity:1!important;}#vocalAdmin .sb-util-btn{min-height:40px!important;}#vocalAdmin .main{background:var(--bg)!important;}#vocalAdmin .topbar{background:#fff!important;box-shadow:none!important;border-bottom:1px solid var(--b)!important;min-height:78px!important;padding:14px 28px!important;gap:12px!important;}#vocalAdmin .pt{font:700 23px/1.35 'Noto Sans KR',sans-serif!important;letter-spacing:-.7px!important;}#vocalAdmin .pt::before{content:'VOCAL STUDIO / ADMIN';display:block;font-size:9px;font-weight:600;letter-spacing:1.6px;color:var(--tm);margin-bottom:5px;}#vocalAdmin .content{padding:24px 28px!important;}#vocalAdmin .btn{min-height:40px!important;border-radius:9px!important;font-family:inherit!important;box-shadow:none!important;}#vocalAdmin .btn.bp,#vocalAdmin .btn.bm{color:#fff!important;background:var(--a)!important;}#vocalAdmin .btn.bg2{background:#fff!important;color:var(--ts)!important;border-color:var(--b2)!important;}#vocalAdmin input:not([type=checkbox]):not([type=radio]),#vocalAdmin select,#vocalAdmin textarea{font-family:inherit!important;min-height:44px!important;border-color:var(--b2)!important;}#vocalAdmin input,#vocalAdmin textarea{min-width:0;}#vocalAdmin label{font-size:12px!important;letter-spacing:0!important;}#vocalAdmin button:focus-visible,#vocalAdmin [role=button]:focus-visible,#vocalAdmin input:focus-visible,#vocalAdmin select:focus-visible,#vocalAdmin textarea:focus-visible{outline:3px solid #62a9cc!important;outline-offset:3px;}#vocalAdmin #syncStatus,#vocalAdmin #adminAuthControls{display:none!important;}#vocalAdmin #vsSyncPanel{padding:12px 28px!important;background:#fff!important;border-bottom:1px solid var(--b)!important;display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px;}#vocalAdmin #topSyncStatus{font-size:13px!important;color:var(--ts)!important;flex:1 1 260px;}#vocalAdmin #topSyncStatus::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:#a56a1e;margin-right:8px;}#vocalAdmin #vsSyncPanel[data-mode=synced] #topSyncStatus::before,#vocalAdmin #vsSyncPanel[data-mode=recovery] #topSyncStatus::before{background:#198055;}#vocalAdmin #vsSyncPanel[data-mode=conflict],#vocalAdmin #vsSyncPanel[data-mode=write-error],#vocalAdmin #vsSyncPanel[data-mode=offline]{background:#fff7ed!important;}#vocalAdmin #vsSyncActions{width:auto!important;gap:8px!important;}#vocalAdmin #vsSyncActions button{font-size:12px!important;}#vocalAdmin .admin-today{max-width:1040px!important;}#vocalAdmin .admin-day-hero{background:#eaf1f6!important;border:1px solid #d1dfe9!important;padding:28px!important;border-radius:16px!important;}#vocalAdmin .admin-day-hero *{font-family:inherit!important;}#vocalAdmin .admin-lesson-card{background:#fff!important;border:1px solid var(--b)!important;padding:20px!important;border-radius:14px!important;box-shadow:0 3px 12px #18283b06;}#vocalAdmin .admin-lesson-head>div{min-width:0;}#vocalAdmin .admin-lesson-head span{overflow-wrap:anywhere;}#vocalAdmin .admin-today .empty{background:#fff!important;border:1px dashed var(--b2);border-radius:14px;margin-top:18px;padding:48px 20px!important;}#vocalAdmin .admin-today .empty .ei{font-size:30px!important;opacity:1!important;}#vocalAdmin .admin-today .empty .et{color:var(--ts)!important;font-size:14px!important;}#vocalAdmin .sg-hd{background:#f0f5f9!important;}#vocalAdmin .sg-cell{border-color:#dfe7ef!important;}#vocalAdmin .sg-cell.td-col{background:#eef6f9!important;}#vocalAdmin .sg-time{color:var(--ts)!important;}#vocalAdmin .card,#vocalAdmin .wk-card{box-shadow:none!important;border-color:var(--b)!important;}#vocalAdmin .mobile-tab-bar{background:#fff!important;border-top:1px solid var(--b)!important;box-shadow:0 -4px 18px #18283b0a!important;}#vocalAdmin #vs-particles{display:none!important;}@media(min-width:769px){#vocalAdmin #topAdminAuthControls{margin-left:auto!important;}#vocalAdmin .admin-today .admin-lesson-card{margin-bottom:16px!important;}}@media(max-width:768px){#vocalAdmin .topbar{min-height:72px!important;padding:10px 14px!important;gap:8px!important;}#vocalAdmin .pt{font-size:19px!important;}#vocalAdmin .pt::before{font-size:8px;letter-spacing:1px;}#vocalAdmin .content{padding:14px!important;}#vocalAdmin #vsSyncPanel{padding:10px 14px!important;gap:8px!important;}#vocalAdmin #topSyncStatus{flex-basis:100%;}#vocalAdmin #vsSyncActions{width:100%!important;}#vocalAdmin #vsSyncActions button{flex:1 1 auto;}#vocalAdmin .admin-day-hero{padding:20px!important;margin-bottom:14px!important;}#vocalAdmin .admin-lesson-card{padding:14px!important;}#vocalAdmin .admin-lesson-head{gap:10px!important;flex-wrap:wrap;}#vocalAdmin .admin-lesson-head>div:nth-child(2){flex:1 1 160px!important;}#vocalAdmin .admin-today button,#vocalAdmin .topbar button{min-height:44px!important;}#vocalAdmin input:not([type=checkbox]):not([type=radio]),#vocalAdmin select,#vocalAdmin textarea{font-size:16px!important;}#vocalAdmin .modal{max-height:calc(100dvh - 24px)!important;overflow-y:auto;}#vocalAdmin .mobile-tab-bar button,#vocalAdmin .mobile-tab-bar [onclick]{min-height:54px!important;}#vocalAdmin .sb{box-shadow:none!important;}#vocalAdmin .memo-grid{grid-template-columns:1fr!important;}
+}@media(prefers-reduced-motion:reduce){#vocalAdmin *,#vocalAdmin *::before,#vocalAdmin *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important;}}@media(max-width:768px){#vocalAdmin .main .topbar{min-height:calc(env(safe-area-inset-top,0px) + 78px)!important;padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 10px 54px!important;overflow:visible!important;align-items:center!important;}#vocalAdmin .main .topbar .pt{line-height:1.35!important;white-space:normal!important;overflow:visible!important;flex:1 1 auto!important;min-width:0!important;}}
+</style>
+
 </head>
-<body>
+<body id="vocalAdmin">
 
 
 
@@ -2586,7 +2591,7 @@ div.mwv .lb { font-size: 7px !important; padding: 0 !important; min-height: 0 !i
 
 <div class="main">
   <div class="topbar">
-    <div class="pt" id="pt">신규 상담</div>
+    <div class="pt" id="pt">오늘 스케줄</div>
     <div class="ta" id="ta"></div>
     <div id="topAdminAuthControls" style="display:flex;gap:6px;align-items:center;margin-left:8px">
       <button id="topAdminLoginBtn" class="btn bsm bm" onclick="signInAdmin()">관리자 로그인</button>
@@ -4510,6 +4515,7 @@ function _vsSyncActions(mode){
      });
     top.parentNode.insertBefore(bar,top.nextSibling);
   }
+  if(panel)panel.dataset.mode=mode;
   var mediaPending=_cfMediaPendingCount();
   bar.style.display=(mode==='synced'&&mediaPending===0)?'none':'flex';
   ge('vsMediaRetry').hidden=mediaPending===0;
@@ -5137,7 +5143,8 @@ function go(p){
   setTimeout(function(){updateMobileTabBar();},0);
 }
 function render(){
-  if(page==='eval') return; /* 평가지 페이지는 render로 덮어쓰지 않음 */
+  if(page==='eval') return;
+  if(ge('pt')&&PT[page])ge('pt').textContent=PT[page]; /* 평가지 페이지는 render로 덮어쓰지 않음 */
   /* 새로고침 후 eval 복원 - Firebase 로드 완료 후에만 */
   if(_fbReady&&!window._skipEvalRestore){
     try{
@@ -5511,10 +5518,10 @@ function buildTodaySchedule(){
   var dayNames=['일','월','화','수','목','금','토'];
   var nowHH=String(now.getHours()).padStart(2,'0');
   var nowMM=String(now.getMinutes()).padStart(2,'0');
-  var o='<div style="max-width:680px;margin:0 auto">';
+  var o='<div class="admin-today" style="max-width:680px;margin:0 auto">';
   /* 헤더 카드 — 세련된 투톤 */
   var isHoliday=typeof isHoliday==='function'&&isHoliday(todayStr);
-  o+='<div style="background:linear-gradient(135deg,rgba(200,169,110,.1) 0%,rgba(16,16,26,0) 60%);border:1px solid var(--b2);border-radius:18px;padding:22px 24px;margin-bottom:20px;position:relative;overflow:hidden">';
+  o+='<div class="admin-day-hero" style="background:linear-gradient(135deg,rgba(200,169,110,.1) 0%,rgba(16,16,26,0) 60%);border:1px solid var(--b2);border-radius:18px;padding:22px 24px;margin-bottom:20px;position:relative;overflow:hidden">';
   o+='<div style="position:absolute;top:-20px;right:-20px;width:120px;height:120px;border-radius:50%;background:rgba(200,169,110,.04);pointer-events:none"></div>';
   o+='<div style="display:flex;align-items:flex-start;justify-content:space-between">';
   o+='<div>';
@@ -5593,8 +5600,8 @@ function buildTodaySchedule(){
     /* 카드 */
     var borderCol=isCurrent?'var(--g)':isPast?'var(--b)':'var(--b2)';
     var bgCol=isCurrent?'rgba(109,200,162,.08)':isPast?'var(--ag)':'var(--s2)';
-    o+='<div style="background:'+bgCol+';border:1.5px solid '+borderCol+';border-radius:14px;padding:18px 22px;margin-bottom:12px;transition:all .15s">';
-    o+='<div style="display:flex;align-items:center;gap:16px;margin-bottom:'+(isCurrent?'16':'0')+'px">';
+    o+='<div class="admin-lesson-card" style="background:'+bgCol+';border:1.5px solid '+borderCol+';border-radius:14px;padding:18px 22px;margin-bottom:12px;transition:all .15s">';
+    o+='<div class="admin-lesson-head" style="display:flex;align-items:center;gap:16px;margin-bottom:'+(isCurrent?'16':'0')+'px">';
 
     /* 사진 */
     var avStyle='width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,'+c+','+COLORS[(students.indexOf(s)+2)%COLORS.length]+');display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#08080d;flex-shrink:0;overflow:hidden';

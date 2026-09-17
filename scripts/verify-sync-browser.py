@@ -180,6 +180,56 @@ try:
         _,_,customer_bytes=http('/api/state')
         canonical=json.loads(customer_bytes)
         check('server confirms both customer fields',canonical['state']['students'][0]['name']=='QA Desktop' and canonical['state']['students'][0]['ph']=='QA-MOBILE')
+        page.evaluate("""async()=>{
+          Object.assign(students[0],{status:'수강중',schedType:'flex',days:[],times:{},cls:'hob',freq:1,fee:0,st:'2026-01-01'});
+          await _vsSync.save();go('schedule');
+        }""")
+        wait_js(phone,"students[0].status==='수강중'")
+        phone.evaluate("go('schedule')")
+        wait_js(page,"document.querySelector('.sg-cell')")
+        day=page.evaluate("JSDOW[new Date().getDay()]")
+        desktop_cell=page.locator(f'.sg-cell[data-day="{day}"][data-h="16:00"]').first
+        desktop_cell.click(position={'x':3,'y':3})
+        page.locator('#qsr-s1').click()
+        page.locator('#mQS button[onclick="saveQS()"]').click()
+        has_slot="(weekOvr[getWK(getMon(new Date()))]?.s1||[]).some(x=>x.time==='16:00')"
+        wait_js(phone,has_slot)
+        check('calendar cell assignment reaches mobile schedule engine',True)
+        page.screenshot(path=str(EVIDENCE/'admin-week-desktop.png'),full_page=True)
+        phone.evaluate("mobileSchedView='week';renderScheduleContent()")
+        wait_js(phone,"document.querySelector('[data-cell=\"1\"]')")
+        phone.locator(f'[data-cell="1"][data-day="{day}"][data-time="17:00"]').first.click(position={'x':3,'y':3})
+        phone.locator('#qsr-s1').click()
+        phone.locator('#mQS button[onclick="saveQS()"]').click()
+        has_second="(weekOvr[getWK(getMon(new Date()))]?.s1||[]).some(x=>x.time==='17:00')"
+        wait_js(page,has_second)
+        check('mobile calendar assignment reaches desktop',True)
+        phone.screenshot(path=str(EVIDENCE/'admin-week-mobile.png'),full_page=True)
+        desktop_cell.click(position={'x':3,'y':3})
+        page.locator('#qsr-s1').click()
+        page.locator('#mQS button[onclick="saveQS()"]').click()
+        wait_js(phone,'!'+has_slot)
+        check('removed appointment stays removed on mobile',True)
+        phone.reload(wait_until='domcontentloaded')
+        wait_js(phone,"window._vsSync&&_vsSync.ready&&"+has_second)
+        check('mobile reload retains remaining appointment and deletion',phone.evaluate('!'+has_slot))
+        page.route('**/api/state',lambda route:route.fulfill(status=200,content_type='text/html',body='<html>Sign in</html>'))
+        page.evaluate("_vsSync.retry()")
+        check('expired-login HTML does not erase loaded customers',page.evaluate("students[0].id==='s1'"))
+        check('invalid server response does not report synchronized',page.evaluate("_vsSync.mode!=='synced'"))
+        page.unroute('**/api/state')
+        page.evaluate("_vsSync.retry()")
+        for client,label in [(page,'desktop'),(phone,'mobile')]:
+            for tab in ['today','schedule','students','logs','payment','consult']:
+                client.evaluate('(tab)=>go(tab)',tab)
+                client.wait_for_timeout(200)
+                wait_js(client,"getComputedStyle(document.getElementById('content')).opacity==='1'&&!document.getElementById('content').classList.contains('fade')")
+                check(label+' '+tab+' heading not clipped',client.evaluate("document.getElementById('pt').getBoundingClientRect().bottom<=document.querySelector('.topbar').getBoundingClientRect().bottom"))
+                check(label+' '+tab+' populated layout fits',client.evaluate('document.documentElement.scrollWidth<=innerWidth+1'))
+                check(label+' '+tab+' title matches',client.evaluate('document.getElementById("pt").textContent===PT[page]'))
+                if tab in ['today','schedule','students']:
+                    client.screenshot(path=str(EVIDENCE/('admin-'+label+'-'+tab+'.png')),full_page=True)
+
         peer.close()
         context.close()
 
