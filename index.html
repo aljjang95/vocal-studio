@@ -4450,7 +4450,7 @@ function _showSyncStatus(msg){
   });
 }
 
-/* saveAll 오버라이드 — localStorage + Firestore 동시 저장 */
+/* Cloudflare unified runtime — local durable recovery + one canonical server write path. */
 var _saveAllOrig=saveAll;
 function _warnLocalOnlySync(msg){
   _showSyncStatus(msg);
@@ -6933,12 +6933,7 @@ function _injectInitialInquiries(){
   localStorage.setItem('vsC_iq_injected_v2','1');
   if(added>0){
     toast(added+'명 문의자 자동 등록됨 📞');
-    /* Firebase에도 즉시 동기화 */
-    try{
-      var db2=_fs();
-      var ref2=db2.collection('studio').doc('data');
-      ref2.set({inquiries:inquiries},{merge:true});
-    }catch(e){console.error('Firebase inquiry sync error:',e);}
+    /* saveAll() already submitted this change through the canonical Cloudflare sync controller. */
   }
 }
 
@@ -11616,7 +11611,6 @@ function resetWeekOvr(){
       createScheduleResetSnapshot(wk,mon,before);
       delete weekOvr[wk];
       saveAll();
-      try{if(typeof _splitMigrationFrozen!=='function'||!_splitMigrationFrozen()){var _db3=_fs();_db3.collection('studio').doc('data').set({weekOvr:weekOvr},{merge:true});}}catch(e){}
       toast('✅ 초기화 완료 · 복구 스냅샷 저장됨');render();
     }
   });
