@@ -1,7 +1,7 @@
 (function(root){
   'use strict';
   var PROTOCOL='vs-cf-1';
-  var pollMs=2500;
+  var pollMs=1000;
   var stateMode='unknown';
   function headers(extra){return Object.assign({'X-VS-Protocol':PROTOCOL},extra||{});}
   async function api(path,options){
