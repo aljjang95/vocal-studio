@@ -2633,6 +2633,7 @@ div.mwv .lb { font-size: 7px !important; padding: 0 !important; min-height: 0 !i
       <button type="button" id="pwaGotoday" onclick="go('today')"><span aria-hidden="true">◷</span>오늘 일정</button>
       <button type="button" id="pwaGoschedule" onclick="go('schedule')"><span aria-hidden="true">＋</span>일정표·등록</button>
       <button type="button" id="pwaGostudents" onclick="go('students')"><span aria-hidden="true">♙</span>고객 관리</button>
+      <button type="button" id="pwaInstallBtn" onclick="installStudioPWA()" hidden><span aria-hidden="true">?</span>? ??</button>
     </div>
     <details id="pwaInstallHelp">
       <summary><span class="pwa-browser-copy">홈 화면에 설치</span><span class="pwa-standalone-copy">설치된 앱 사용 안내</span></summary>
@@ -11978,6 +11979,17 @@ body.is-mobile .mobile-tab-bar{display:flex!important;}
 })();
 
 /* ── PWA Service Worker 등록 ── */
+var _pwaInstallPrompt=null;
+function _pwaInstallButton(){return document.getElementById('pwaInstallBtn');}
+function _pwaStandalone(){return !!((window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone===true);}
+window.addEventListener('beforeinstallprompt',function(event){event.preventDefault();_pwaInstallPrompt=event;var btn=_pwaInstallButton();if(btn&&!_pwaStandalone())btn.hidden=false;});
+window.addEventListener('appinstalled',function(){_pwaInstallPrompt=null;var btn=_pwaInstallButton();if(btn)btn.hidden=true;if(typeof toast==='function')toast('? ?? ?? ?');});
+async function installStudioPWA(){
+  var btn=_pwaInstallButton();if(_pwaStandalone()){if(btn)btn.hidden=true;return;}
+  if(!_pwaInstallPrompt){var help=document.getElementById('pwaInstallHelp');if(help)help.open=true;if(typeof toast==='function')toast('???? ?? ??? ??? ???','?');return;}
+  var prompt=_pwaInstallPrompt;_pwaInstallPrompt=null;await prompt.prompt();try{await prompt.userChoice;}catch(e){}if(btn)btn.hidden=true;
+}
+
 if('serviceWorker' in navigator){
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('./sw.js').then(function(reg){

@@ -53,3 +53,10 @@ test('only the app old cache is retired, no private state is cached',async()=>{
   const sw=serviceWorker(async()=>Response.json({}));let task;sw.events.activate({waitUntil:p=>task=p});await task;
   assert.deepEqual(sw.removed,['vs-v2-old']);assert.doesNotMatch(read('sw.js'),/caches\.(open|match)|cache\.put/);
 });
+
+test('Chrome install prompt is surfaced as an explicit administrator action',()=>{
+  assert.match(html,/id="pwaInstallBtn"/);
+  assert.match(html,/beforeinstallprompt/);
+  assert.match(html,/installStudioPWA/);
+  assert.match(html,/appinstalled/);
+});

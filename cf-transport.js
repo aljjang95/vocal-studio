@@ -1,7 +1,7 @@
 (function(root){
   'use strict';
   var PROTOCOL='vs-cf-1';
-  var pollMs=1000;
+  var auditMs=300000;
   var stateMode='unknown';
   function headers(extra){return Object.assign({'X-VS-Protocol':PROTOCOL},extra||{});}
   async function api(path,options){
@@ -42,17 +42,37 @@
     if(!result.response.ok)throw Object.assign(new Error((result.data&&result.data.error)||('http-'+result.response.status)),{status:result.response.status});
     return snapshot(result.data);
   }
+  function eventUrl(){
+    if(!root.location||!root.location.host)return null;
+    return(root.location.protocol==='https:'?'wss://':'ws://')+root.location.host+'/api/events?protocol='+encodeURIComponent(PROTOCOL);
+  }
   function makeDoc(){
     return{
       onSnapshot:function(options,onValue,onError){
-        var stopped=false,timer=null,controller=new AbortController();
-        async function tick(){
-          if(stopped)return;
-          try{var value=await readState(controller.signal);if(!stopped)onValue(value);}catch(error){if(!stopped&&onError)onError(error);}
-          if(!stopped)timer=setTimeout(tick,pollMs);
+        var stopped=false,auditTimer=null,reconnectTimer=null,controller=null,socket=null,reading=false,queued=false,lastRevision=null,retryMs=1000;
+        function clearTimers(){if(auditTimer)clearTimeout(auditTimer);if(reconnectTimer)clearTimeout(reconnectTimer);auditTimer=reconnectTimer=null;}
+        function scheduleAudit(){if(stopped)return;if(auditTimer)clearTimeout(auditTimer);auditTimer=setTimeout(function(){refresh().finally(scheduleAudit);},auditMs);}
+        async function refresh(){
+          if(stopped)return;if(reading){queued=true;return;}reading=true;controller=new AbortController();
+          try{var value=await readState(controller.signal);if(stopped)return;var data=value.exists?value.data():null;lastRevision=data?Number(data._vsSyncRevision||0):null;onValue(value);}
+          catch(error){if(!stopped&&onError)onError(error);}
+          finally{controller=null;reading=false;if(queued&&!stopped){queued=false;refresh();}}
         }
-        tick();
-        return function(){stopped=true;controller.abort();if(timer)clearTimeout(timer);};
+        function scheduleReconnect(){
+          if(stopped)return;if(reconnectTimer)clearTimeout(reconnectTimer);
+          reconnectTimer=setTimeout(function(){reconnectTimer=null;refresh().finally(connect);},retryMs);
+          retryMs=Math.min(retryMs*2,30000);
+        }
+        function connect(){
+          if(stopped)return;var url=eventUrl();if(!url||!root.WebSocket){scheduleAudit();return;}
+          try{socket=new root.WebSocket(url);}catch(error){scheduleReconnect();return;}
+          socket.onopen=function(){retryMs=1000;scheduleAudit();};
+          socket.onmessage=function(event){try{var msg=JSON.parse(event.data);if(msg.type==='state-changed'&&msg.revision!==lastRevision)refresh();}catch(error){}};
+          socket.onerror=function(){};
+          socket.onclose=function(){socket=null;if(auditTimer){clearTimeout(auditTimer);auditTimer=null;}scheduleReconnect();};
+        }
+        refresh().finally(connect);
+        return function(){stopped=true;clearTimers();if(controller)controller.abort();if(socket)try{socket.close();}catch(error){}socket=null;};
       },
       get:function(){return readState();}
     };
@@ -61,7 +81,6 @@
     return{
       collection:function(){return{doc:function(){return makeDoc();}};},
       runTransaction:async function(fn){
-        // Retry only a known CAS rejection; rerun the caller merge on fresh state.
         for(var attempt=0;attempt<4;attempt++){
           var before=await readState();
           if(!before.exists)throw new Error('missing-remote');
@@ -97,9 +116,7 @@
     if(parts.indexOf('base64')>=0){
       var binary=atob(payload);bytes=new Uint8Array(binary.length);
       for(var i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
-    }else{
-      bytes=new TextEncoder().encode(decodeURIComponent(payload));
-    }
+    }else bytes=new TextEncoder().encode(decodeURIComponent(payload));
     return new Blob([bytes],{type:type});
   }
   async function uploadDataUrl(data,pointer,contentType){
@@ -112,14 +129,6 @@
     return payload.url;
   }
   function mediaUrl(pointer){return '/api/media/'+encodeURIComponent(pointer);}
-  root.VCFTransport={
-    protocol:PROTOCOL,
-    api:api,
-    session:session,
-    database:database,
-    uploadDataUrl:uploadDataUrl,
-    mediaUrl:mediaUrl,
-    stateMode:function(){return stateMode;},
-    setPollMs:function(ms){pollMs=Math.max(100,Number(ms)||2500);}
-  };
+  root.VCFTransport={protocol:PROTOCOL,api:api,session:session,database:database,uploadDataUrl:uploadDataUrl,mediaUrl:mediaUrl,
+    stateMode:function(){return stateMode;},setPollMs:function(ms){auditMs=Math.max(60000,Number(ms)||300000);},setAuditMs:function(ms){auditMs=Math.max(60000,Number(ms)||300000);}};
 })(typeof globalThis!=='undefined'?globalThis:this);
