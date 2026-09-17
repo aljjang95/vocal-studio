@@ -127,6 +127,7 @@
     }
   }
   Controller.prototype.status=function(mode,detail){this.mode=mode;this.a.status(mode,detail);};
+  Controller.prototype.unready=function(){this.ready=false;if(this.a.ready)this.a.ready(false);};
   Controller.prototype.guard=function(epoch){return epoch===this.epoch&&this.owner&&this.a.owner()===this.owner;};
   Controller.prototype.persist=function(next){
     var text=JSON.stringify(next);
@@ -198,9 +199,9 @@
         if(!self.guard(epoch))return;
         var meta=snapshot.metadata||{};
         if(meta.fromCache!==false||meta.hasPendingWrites!==false){self.status('unconfirmed');return;}
-        if(!snapshot.exists){self.ready=false;self.status('missing-remote');return;}
-        try{self.receive(snapshot.data());}catch(error){self.blocked=true;self.status('invalid-remote');}
-      },function(){if(!self.guard(epoch))return;self.unsubscribe=null;self.ready=false;self.status('offline');});
+        if(!snapshot.exists){self.unready();self.status('missing-remote');return;}
+        try{self.receive(snapshot.data());}catch(error){self.unready();self.blocked=true;self.status('invalid-remote');}
+      },function(){if(!self.guard(epoch))return;self.unready();self.status('offline');});
       if(this.guard(epoch))this.unsubscribe=unsubscribe;else unsubscribe();
     }catch(error){this.blocked=true;this.status('storage-error');}
   };
@@ -298,9 +299,9 @@
     var self=this,epoch=this.epoch;
     return this.doc.get({source:'server'}).then(function(snapshot){
       if(!self.guard(epoch))return false;
-      if(!snapshot.exists){self.status('missing-remote');return false;}
+      if(!snapshot.exists){self.unready();self.status('missing-remote');return false;}
       self.receive(snapshot.data());self.drain();return self.flush();
-    }).catch(function(){if(self.guard(epoch))self.status('offline');return false;});
+    }).catch(function(){if(self.guard(epoch)){self.unready();self.status('offline');}return false;});
   };
   Controller.prototype.useServer=function(){
     if(!this.latest||!this.guard(this.epoch)||(this.flight&&!this.state.ack)||(this.a.editing&&this.a.editing()))return false;

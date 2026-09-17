@@ -80,3 +80,26 @@ test('revision conflicts remain visible and never report successful saving',asyn
   const h=harness(async path=>path==='/api/state'?json(record()):json({error:'revision-conflict'},409));
   await assert.rejects(h.api.database().runTransaction(async tx=>{const s=await tx.get();tx.set(null,s.data());}));
 });
+
+test('Cloudflare CAS conflict reruns the merge against fresh state instead of dropping a mobile save',async()=>{
+  let revision=0,callbacks=0,commits=0;
+  let state={students:[{id:'mobile',name:'before'},{id:'pc',name:'before'}]};
+  const h=harness(async(path,options)=>{
+    if(path==='/api/state')return json(record(state,revision));
+    commits++;const body=JSON.parse(options.body);
+    if(commits===1){state.students[1].name='PC edit';revision++;return json({error:'revision-conflict',currentRevision:revision},409);}
+    assert.equal(body.baseRevision,revision);state=body.state;revision++;
+    return json({...record(state,revision),ok:true});
+  });
+  await h.api.database().runTransaction(async tx=>{
+    callbacks++;const snapshot=await tx.get();const next=snapshot.data();next.students[0].name='Mobile edit';tx.set(null,next);
+  });
+  assert.equal(callbacks,2);assert.equal(commits,2);assert.equal(state.students[0].name,'Mobile edit');assert.equal(state.students[1].name,'PC edit');
+});
+test('automatic transaction retry is bounded and never retries semantic conflicts or authentication failures',async()=>{
+  for(const [status,error] of [[409,'revision-conflict'],[409,'request-id-conflict'],[401,'access-required'],[503,'unavailable']]){
+    let reads=0,writes=0;const h=harness(async path=>{if(path==='/api/state'){reads++;return json(record());}writes++;return json({error},status);});
+    await assert.rejects(h.api.database().runTransaction(async tx=>{const snapshot=await tx.get();tx.set(null,snapshot.data());}));
+    assert.equal(writes,error==='revision-conflict'?4:1);assert.equal(reads,writes);
+  }
+});

@@ -4,7 +4,7 @@ Status: **candidate only**. Repository merge and production cutover are separate
 
 ## Canonical runtime
 
-The target runtime is one Cloudflare system:
+The target runtime is one Cloudflare system. Both phone and desktop read and write this same state; neither device is the master. A saved appointment must appear on the other connected device without an export/import or page reload:
 
 - Cloudflare Access authenticates the admin before application assets or APIs are served.
 - Worker Static Assets serves exactly the allowlisted PWA/runtime files.
@@ -37,11 +37,11 @@ The repository candidate is intentionally locked with `DEPLOYMENT_ENABLED=false`
 
 Production cutover requires a separately approved run with all of the following evidence:
 
-1. choose the authoritative customer source; never union recovery snapshots automatically.
+1. preserve desktop, phone and legacy-server copies, then reconcile them into one reviewed import dataset. Neither device is automatically authoritative. Use a verified common baseline to respect deletions, retain all conflicting variants for explicit review, and never blindly union recovery snapshots.
 2. extract legacy media and establish its R2 pointer mapping when media exists.
 3. stage import only into an empty Cloudflare destination.
 4. obtain a private server export/readback from the same Access principal.
-5. compare counts and canonical hashes against the authoritative source.
+5. compare counts and canonical hashes against the reviewed reconciled import dataset, with every preserved source accounted for.
 6. activate only the staged state whose recent principal-bound readback matches.
 7. verify real Cloudflare Access login and logout.
 8. dogfood on a physical phone; viewport emulation is insufficient.

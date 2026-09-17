@@ -159,3 +159,28 @@ test('undo-to-baseline after a failed journal write is recovered without uploadi
   await resumed.controller.retry();await settle();assert.equal(w.writes,0);
   assert.equal(resumed.controller.useServer(),true);assert.equal(resumed.ui.weekOvr.w1.s1.time,'10:00');assert.equal(resumed.controller.pending(),0);
 });
+
+test('offline retry retains exactly one cancellable subscription',async()=>{
+  const w=world(),c=w.client();assert.equal(w.listeners.size,1);
+  const disconnected=[...w.listeners][0];disconnected.error(Error('offline'));
+  assert.equal(w.listeners.size,1,'polling subscription remains available to recover');
+  await c.controller.retry();await settle();assert.equal(w.listeners.size,1);
+  c.controller.disconnect();assert.equal(w.listeners.size,0);
+});
+test('missing or invalid state revokes the ready indicator without removing customer data',async()=>{
+  const w=world(),c=w.client(),saved=copy(c.ui);assert.equal(c.controller.ready,true);
+  w.missing=true;await c.controller.retry();assert.equal(c.controller.ready,false);assert.deepEqual(c.ui,saved);
+  w.missing=false;w.emit();assert.equal(c.controller.ready,true);
+  for(const listener of w.listeners)listener.next({exists:true,metadata:{fromCache:false,hasPendingWrites:false},data:()=>({students:'corrupted'})});
+  assert.equal(c.controller.ready,false);assert.deepEqual(c.ui,saved);
+});
+test('pending schedule registered offline converges without resurrecting an unrelated server deletion',async()=>{
+  const w=world(),mobile=w.client(),desktop=w.client();mobile.frozen=true;
+  mobile.ui.students.push({id:'mobile-new',name:'Synthetic mobile registration'});
+  mobile.ui.weekOvr.w1['mobile-new']=[{day:'목',time:'14:00',absent:false}];await mobile.controller.save();
+  delete desktop.ui.weekOvr.w1.s1;await desktop.controller.save();await settle();mobile.frozen=false;
+  await mobile.controller.retry();await settle();
+  assert.equal(w.data.students.filter(s=>s.id==='mobile-new').length,1);
+  assert.ok(!Object.hasOwn(w.data.weekOvr.w1,'s1'));
+  assert.deepEqual(sync.normalize(mobile.ui),sync.normalize(desktop.ui));
+});

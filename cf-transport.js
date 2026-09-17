@@ -61,21 +61,27 @@
     return{
       collection:function(){return{doc:function(){return makeDoc();}};},
       runTransaction:async function(fn){
-        var before=await readState();
-        if(!before.exists)throw new Error('missing-remote');
-        var base=before.data(),written=null;
-        var tx={get:async function(){return before;},set:function(doc,value){written=JSON.parse(JSON.stringify(value));}};
-        var result=await fn(tx);
-        if(!written)return result;
-        if(before.mode!=='active')throw new Error('staged-readonly');
-        var baseRevision=Number(base._vsSyncRevision||0);delete written._vsSyncRevision;
-        var requestId=(root.crypto&&root.crypto.randomUUID?root.crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2));
-        var committed=await api('/api/commit',{method:'POST',body:{baseRevision:baseRevision,requestId:requestId,state:written}});
-        if(committed instanceof Error)throw committed;
-        var ack=committed.data,expected=Object.assign({},base,written);delete expected._vsSyncRevision;
-        if(!validRecord(ack)||ack.ok!==true||ack.mode!=='active'||ack.revision!==baseRevision+1||
-          JSON.stringify(canonical(ack.state))!==JSON.stringify(canonical(expected)))throw new Error('invalid-commit-acknowledgement');
-        return result;
+        // Retry only a known CAS rejection; rerun the caller merge on fresh state.
+        for(var attempt=0;attempt<4;attempt++){
+          var before=await readState();
+          if(!before.exists)throw new Error('missing-remote');
+          var base=before.data(),written=null;
+          var tx={get:async function(){return before;},set:function(doc,value){written=JSON.parse(JSON.stringify(value));}};
+          var result=await fn(tx);
+          if(!written)return result;
+          if(before.mode!=='active')throw new Error('staged-readonly');
+          var baseRevision=Number(base._vsSyncRevision||0);delete written._vsSyncRevision;
+          var requestId=(root.crypto&&root.crypto.randomUUID?root.crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2));
+          var committed=await api('/api/commit',{method:'POST',body:{baseRevision:baseRevision,requestId:requestId,state:written}});
+          if(committed instanceof Error){
+            if(committed.status===409&&committed.data?.error==='revision-conflict'&&attempt<3)continue;
+            throw committed;
+          }
+          var ack=committed.data,expected=Object.assign({},base,written);delete expected._vsSyncRevision;
+          if(!validRecord(ack)||ack.ok!==true||ack.mode!=='active'||ack.revision!==baseRevision+1||
+            JSON.stringify(canonical(ack.state))!==JSON.stringify(canonical(expected)))throw new Error('invalid-commit-acknowledgement');
+          return result;
+        }
       }
     };
   }
