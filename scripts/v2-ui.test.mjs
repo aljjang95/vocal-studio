@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
+const html=read('v2/index.html'),app=read('v2/app.mjs'),css=read('v2/styles.css');
+test('V2 is isolated and imports the shared Cloudflare runtime',()=>{for(const p of ['/cf-transport.js','/vs-sync.js','/v2/app.mjs','/v2/styles.css'])assert.ok(html.includes(p));assert.match(app,/VSSync\.create/);assert.match(app,/VCFTransport\.database/);assert.match(app,/validateCommit:D\.assertNoNewConflicts/);});
+test('V2 has no damaged Korean placeholders, remote assets or fake polling',()=>{for(const source of [html,app,css]){assert.doesNotMatch(source,/\uFFFD|\?\?\?/);assert.doesNotMatch(source,/https?:\/\/|firebase\.|setInterval\s*\(/);}assert.match(app,/아직 연결되어 있지 않습니다/);});
+test('inquiry booking application and both schedule types are wired to domain actions',()=>{for(const action of ['inquiry.save','inquiry.book','application.save','student.create','schedule.once','schedule.fixed','schedule.move','schedule.cancel','payment.add'])assert.ok(app.includes(action),action);assert.match(app,/D\.applyAction/);assert.match(app,/await sync\.save\(\)/);});
+test('drafts and resume data are principal bound, consent is never prechecked',()=>{assert.match(app,/hlb-v2-draft:.*session\.principal/);assert.match(app,/c\?\.owner===owner/);assert.match(app,/_recordId/);assert.doesNotMatch(app,/name="confirmed"[^>]*checked/);assert.match(app,/초안 보관 실패/);});
+test('native install event is captured before app boot and consumed on user action',()=>{assert.match(html,/beforeinstallprompt/);assert.match(app,/window\.hlbInstallEvent=null/);assert.match(app,/await event\.prompt\(\)/);assert.match(app,/appinstalled/);assert.match(app,/installedThisSession/);assert.doesNotMatch(html,/onclick=/);});
+test('design has mobile navigation, proper dialogs, safe text and motion preferences',()=>{assert.match(html,/<dialog[^>]+aria-labelledby/);assert.match(html,/aria-live="polite"/);assert.match(css,/prefers-reduced-motion/);assert.match(css,/safe-area-inset-bottom/);assert.match(css,/--bg:#090b10/);assert.match(app,/function closeDialog/);assert.match(app,/\.replace\(\/[&<>"']/);assert.doesNotMatch(app,/document\.write\(|eval\(/);});
