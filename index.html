@@ -2,22 +2,20 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="보컬스튜디오">
-  <meta name="theme-color" content="#1a1a2e">
-  <link rel="manifest" href="manifest.json">
-  <!-- FullCalendar -->
-  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
-<title>Vocal Studio</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600;1,700&family=Noto+Sans+KR:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Noto+Serif+KR:wght@300;400;500;600;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <meta name="theme-color" content="#080d15">
+  <link rel="manifest" href="/manifest.json" crossorigin="use-credentials">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <script src="./vs-sync.js?v=20260917-shared1"></script>
+  <script src="./cf-transport.js?v=20260917-shared1"></script>
+  <script src="./cf-migration.js?v=20260915-cf1"></script>
+  <script src="./v2-ui.js?v=20260918-v2"></script>
+<title>Vocal Studio · 관리자 스케줄</title>
+<!-- System fonts keep the administrator startup independent of external font requests. -->
 <style>
 :root{
   /* 라이트 크림 베이스 (기본=가을) */
@@ -174,7 +172,7 @@ body::after{
 }
 
 /* ── MAIN ── */
-.main{margin-left:252px;flex:1;display:flex;flex-direction:column;position:relative;z-index:1;}
+.main{margin-left:252px;flex:1;min-width:0;display:flex;flex-direction:column;position:relative;z-index:1;}
 body.is-mobile .main{margin-left:0!important;padding-bottom:calc(62px + env(safe-area-inset-bottom,20px))!important;}
 
 /* ── TOPBAR ── */
@@ -191,6 +189,10 @@ body.is-mobile .main{margin-left:0!important;padding-bottom:calc(62px + env(safe
 }
 .pt{font-family:"Cormorant Garamond",serif;font-size:22px;font-weight:600;font-style:italic;letter-spacing:.02em;white-space:nowrap;flex-shrink:0;}
 .ta{display:flex;gap:7px;align-items:center;}
+@media(min-width:769px){
+  .topbar{height:auto;min-height:56px;flex-wrap:wrap;gap:8px;padding-top:8px;padding-bottom:8px;}
+  .topbar .ta{flex:1 1 500px;min-width:0;flex-wrap:wrap;justify-content:flex-end;}
+}
 .content{padding:18px 22px;flex:1;}
 
 /* ── BUTTONS ── */
@@ -2544,8 +2546,38 @@ div.mwv .lb { font-size: 7px !important; padding: 0 !important; min-height: 0 !i
   margin-bottom: 8px;
 }
 </style>
+<style id="admin-schedule-design-20260917">
+#vocalAdmin .admin-today button[onclick^="setTodayPrivacy"][style*="background:var(--a)"]{color:#fff!important;}body#vocalAdmin{--bg:#f3f5f8!important;--s1:#fff!important;--s2:#f6f8fb!important;--s3:#e8edf3!important;--t:#18283b!important;--ts:#43576c!important;--tm:#64768a!important;--a:#245f75!important;--a2:#1e4e63!important;--g:#196548!important;--r:#b53647!important;--b:#e1e7ee!important;--b2:#cbd6e2!important;--ag:#eff4f8!important;--ag2:#e2edf3!important;--season-accent:#245f75!important;--season-gold:#245f75!important;--season-border:#e1e7ee!important;--season-border2:#cbd6e2!important;--season-hover:#eff4f8!important;--season-hover2:#e4eff4!important;font-family:'Noto Sans KR',system-ui,sans-serif!important;background:var(--bg)!important;}body#vocalAdmin::before,body#vocalAdmin::after,#vocalAdmin .sb::before{display:none!important;}#vocalAdmin .sb{background:#fff!important;box-shadow:none!important;border-right:1px solid var(--b)!important;}#vocalAdmin .logo{padding:26px 20px!important;}#vocalAdmin .logo-t{font:700 22px/1.3 'Noto Sans KR',sans-serif!important;letter-spacing:-.6px!important;text-shadow:none!important;color:var(--t)!important;}#vocalAdmin .logo-s{font-size:11px!important;letter-spacing:.06em!important;opacity:1!important;}#vocalAdmin .logo-add-btn{height:44px!important;width:44px!important;background:var(--a)!important;color:#fff!important;box-shadow:none!important;right:16px!important;}#vocalAdmin .ni{min-height:46px!important;margin:3px 12px!important;border:0!important;border-radius:10px!important;padding:12px!important;color:var(--ts)!important;font-size:14px!important;}#vocalAdmin .ni.on{background:#e8f1f6!important;color:#174d66!important;font-weight:700!important;}#vocalAdmin .ni-ic{opacity:1!important;}#vocalAdmin .sb-util-btn{min-height:40px!important;}#vocalAdmin .main{background:var(--bg)!important;}#vocalAdmin .topbar{background:#fff!important;box-shadow:none!important;border-bottom:1px solid var(--b)!important;min-height:78px!important;padding:14px 28px!important;gap:12px!important;}#vocalAdmin .pt{font:700 23px/1.35 'Noto Sans KR',sans-serif!important;letter-spacing:-.7px!important;}#vocalAdmin .pt::before{content:'VOCAL STUDIO / ADMIN';display:block;font-size:9px;font-weight:600;letter-spacing:1.6px;color:var(--tm);margin-bottom:5px;}#vocalAdmin .content{padding:24px 28px!important;}#vocalAdmin .btn{min-height:40px!important;border-radius:9px!important;font-family:inherit!important;box-shadow:none!important;}#vocalAdmin .btn.bp,#vocalAdmin .btn.bm{color:#fff!important;background:var(--a)!important;}#vocalAdmin .btn.bg2{background:#fff!important;color:var(--ts)!important;border-color:var(--b2)!important;}#vocalAdmin input:not([type=checkbox]):not([type=radio]),#vocalAdmin select,#vocalAdmin textarea{font-family:inherit!important;min-height:44px!important;border-color:var(--b2)!important;}#vocalAdmin input,#vocalAdmin textarea{min-width:0;}#vocalAdmin label{font-size:12px!important;letter-spacing:0!important;}#vocalAdmin button:focus-visible,#vocalAdmin [role=button]:focus-visible,#vocalAdmin input:focus-visible,#vocalAdmin select:focus-visible,#vocalAdmin textarea:focus-visible{outline:3px solid #62a9cc!important;outline-offset:3px;}#vocalAdmin #syncStatus,#vocalAdmin #adminAuthControls{display:none!important;}#vocalAdmin #vsSyncPanel{padding:12px 28px!important;background:#fff!important;border-bottom:1px solid var(--b)!important;display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px;}#vocalAdmin #topSyncStatus{font-size:13px!important;color:var(--ts)!important;flex:1 1 260px;}#vocalAdmin #topSyncStatus::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:#a56a1e;margin-right:8px;}#vocalAdmin #vsSyncPanel[data-mode=synced] #topSyncStatus::before,#vocalAdmin #vsSyncPanel[data-mode=recovery] #topSyncStatus::before{background:#198055;}#vocalAdmin #vsSyncPanel[data-mode=conflict],#vocalAdmin #vsSyncPanel[data-mode=write-error],#vocalAdmin #vsSyncPanel[data-mode=offline]{background:#fff7ed!important;}#vocalAdmin #vsSyncActions{width:auto!important;gap:8px!important;}#vocalAdmin #vsSyncActions button{font-size:12px!important;}#vocalAdmin .admin-today{max-width:1040px!important;}#vocalAdmin .admin-day-hero{background:#eaf1f6!important;border:1px solid #d1dfe9!important;padding:28px!important;border-radius:16px!important;}#vocalAdmin .admin-day-hero *{font-family:inherit!important;}#vocalAdmin .admin-lesson-card{background:#fff!important;border:1px solid var(--b)!important;padding:20px!important;border-radius:14px!important;box-shadow:0 3px 12px #18283b06;}#vocalAdmin .admin-lesson-head>div{min-width:0;}#vocalAdmin .admin-lesson-head span{overflow-wrap:anywhere;}#vocalAdmin .admin-today .empty{background:#fff!important;border:1px dashed var(--b2);border-radius:14px;margin-top:18px;padding:48px 20px!important;}#vocalAdmin .admin-today .empty .ei{font-size:30px!important;opacity:1!important;}#vocalAdmin .admin-today .empty .et{color:var(--ts)!important;font-size:14px!important;}#vocalAdmin .sg-hd{background:#f0f5f9!important;}#vocalAdmin .sg-cell{border-color:#dfe7ef!important;}#vocalAdmin .sg-cell.td-col{background:#eef6f9!important;}#vocalAdmin .sg-time{color:var(--ts)!important;}#vocalAdmin .card,#vocalAdmin .wk-card{box-shadow:none!important;border-color:var(--b)!important;}#vocalAdmin .mobile-tab-bar{background:#fff!important;border-top:1px solid var(--b)!important;box-shadow:0 -4px 18px #18283b0a!important;}#vocalAdmin #vs-particles{display:none!important;}@media(min-width:769px){#vocalAdmin #topAdminAuthControls{margin-left:auto!important;}#vocalAdmin .admin-today .admin-lesson-card{margin-bottom:16px!important;}}@media(max-width:768px){#vocalAdmin .topbar{min-height:72px!important;padding:10px 14px!important;gap:8px!important;}#vocalAdmin .pt{font-size:19px!important;}#vocalAdmin .pt::before{font-size:8px;letter-spacing:1px;}#vocalAdmin .content{padding:14px!important;}#vocalAdmin #vsSyncPanel{padding:10px 14px!important;gap:8px!important;}#vocalAdmin #topSyncStatus{flex-basis:100%;}#vocalAdmin #vsSyncActions{width:100%!important;}#vocalAdmin #vsSyncActions button{flex:1 1 auto;}#vocalAdmin .admin-day-hero{padding:20px!important;margin-bottom:14px!important;}#vocalAdmin .admin-lesson-card{padding:14px!important;}#vocalAdmin .admin-lesson-head{gap:10px!important;flex-wrap:wrap;}#vocalAdmin .admin-lesson-head>div:nth-child(2){flex:1 1 160px!important;}#vocalAdmin .admin-today button,#vocalAdmin .topbar button{min-height:44px!important;}#vocalAdmin input:not([type=checkbox]):not([type=radio]),#vocalAdmin select,#vocalAdmin textarea{font-size:16px!important;}#vocalAdmin .modal{max-height:calc(100dvh - 24px)!important;overflow-y:auto;}#vocalAdmin .mobile-tab-bar button,#vocalAdmin .mobile-tab-bar [onclick]{min-height:54px!important;}#vocalAdmin .sb{box-shadow:none!important;}#vocalAdmin .memo-grid{grid-template-columns:1fr!important;}
+}@media(prefers-reduced-motion:reduce){#vocalAdmin *,#vocalAdmin *::before,#vocalAdmin *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important;}}@media(max-width:768px){#vocalAdmin .main .topbar{min-height:calc(env(safe-area-inset-top,0px) + 78px)!important;padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 10px 54px!important;overflow:visible!important;align-items:center!important;}#vocalAdmin .main .topbar .pt{line-height:1.35!important;white-space:normal!important;overflow:visible!important;flex:1 1 auto!important;min-width:0!important;}}
+</style>
+
+<style id="pwa-workspace-style">
+#vocalAdmin #pwaWorkspace{margin:16px 28px 0;padding:18px 20px;border:1px solid var(--b);border-radius:14px;background:var(--s1);display:grid;grid-template-columns:minmax(160px,1fr) auto;gap:12px 24px;align-items:center;}
+#vocalAdmin .pwa-workspace-title{display:grid;gap:3px;min-width:0;}
+#vocalAdmin .pwa-workspace-title>span{font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--a);}
+#vocalAdmin .pwa-workspace-title>strong{font-size:16px;line-height:1.45;color:var(--t);}
+#vocalAdmin .pwa-short-actions{display:flex;gap:8px;flex-wrap:wrap;}
+#vocalAdmin .pwa-short-actions button{min-height:46px;padding:10px 14px;border:1px solid var(--b2);border-radius:10px;background:var(--s1);color:var(--t);font-family:inherit;font-size:13px;font-weight:600;line-height:1.4;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;}
+#vocalAdmin .pwa-short-actions button>span{font-size:20px;line-height:1;color:var(--a);}
+#vocalAdmin #pwaGoschedule{background:var(--a);color:#fff;border-color:var(--a);}
+#vocalAdmin #pwaGoschedule>span{color:#fff;}
+#vocalAdmin #pwaInstallHelp{grid-column:1/-1;min-width:0;border-top:1px solid var(--b);padding-top:6px;}
+#vocalAdmin #pwaInstallHelp summary{min-height:44px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-size:13px;font-weight:600;color:var(--a);list-style:none;}
+#vocalAdmin #pwaInstallHelp summary::after{content:'＋';font-size:20px;}#vocalAdmin #pwaInstallHelp[open] summary::after{content:'−';}
+#vocalAdmin #pwaInstallHelp summary::-webkit-details-marker{display:none;}
+#vocalAdmin .pwa-help-body{font-size:13px;line-height:1.8;color:var(--ts);max-width:820px;}
+#vocalAdmin .pwa-help-body p{margin:0 0 12px;overflow-wrap:anywhere;}
+#vocalAdmin .pwa-standalone-copy{display:none;}
+#vocalAdmin #pwaWorkspace button:focus-visible,#vocalAdmin #pwaInstallHelp summary:focus-visible{outline:3px solid #62a9cc;outline-offset:3px;}
+@media(max-width:768px){#vocalAdmin #pwaWorkspace{margin:12px 14px 0;padding:14px;grid-template-columns:1fr;gap:10px;}
+#vocalAdmin .pwa-workspace-title>strong{font-size:15px;}#vocalAdmin .pwa-short-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;}
+#vocalAdmin .pwa-short-actions button{padding:10px 5px;font-size:12px;gap:4px;min-width:0;}#vocalAdmin .pwa-short-actions button>span{font-size:17px;}}
+@media(display-mode:standalone){#vocalAdmin .pwa-browser-copy{display:none;}#vocalAdmin .pwa-standalone-copy{display:inline;}#vocalAdmin #viewToggleBtn{display:none!important;}#vocalAdmin .main .topbar{padding-left:14px!important;}}
+</style>
+
+  <link rel="stylesheet" href="./v2.css?v=20260918-v2">
 </head>
-<body>
+<body id="vocalAdmin">
 
 
 
@@ -2587,7 +2619,7 @@ div.mwv .lb { font-size: 7px !important; padding: 0 !important; min-height: 0 !i
 
 <div class="main">
   <div class="topbar">
-    <div class="pt" id="pt">신규 상담</div>
+    <div class="pt" id="pt">오늘 스케줄</div>
     <div class="ta" id="ta"></div>
     <div id="topAdminAuthControls" style="display:flex;gap:6px;align-items:center;margin-left:8px">
       <button id="topAdminLoginBtn" class="btn bsm bm" onclick="signInAdmin()">관리자 로그인</button>
@@ -2597,6 +2629,39 @@ div.mwv .lb { font-size: 7px !important; padding: 0 !important; min-height: 0 !i
     <div id="topSyncStatus" style="width:100%;font-size:11px;color:var(--tm);display:none;line-height:1.35"></div>
     
   </div>
+  <section id="pwaWorkspace" class="v2-ops-center" aria-label="HLB Studio V2 운영 커맨드센터">
+    <div id="v2OpsCenter">
+      <div class="v2-ops-head">
+        <div><div class="v2-eyebrow">HLB STUDIO V2 · OPERATIONS</div><h2>사람을 놓치지 않는 운영</h2>
+        <p>전화 문의부터 상담 신청서, 고정·변동 스케줄까지 한 흐름으로 저장하고 같은 공용 DB에서 관리합니다.</p></div>
+        <div class="v2-live"><span class="v2-live-dot"></span><span id="v2LiveText">공용 DB 연결</span></div>
+      </div>
+      <div class="v2-kpis">
+        <div class="v2-kpi"><span>미전환 문의</span><strong id="v2InquiryCount">0</strong><small>건</small></div>
+        <div class="v2-kpi"><span>상담 진행</span><strong id="v2ConsultCount">0</strong><small>건</small></div>
+        <div class="v2-kpi"><span>오늘 일정</span><strong id="v2TodayCount">0</strong><small>건</small></div>
+        <div class="v2-kpi" id="v2ConflictCard"><span>스케줄 충돌</span><strong id="v2ConflictCount">0</strong><small>건</small></div>
+      </div>
+      <div class="v2-actions">
+        <button id="v2CallCapture" class="v2-action-card primary" onclick="openV2PhoneCapture()"><span class="v2-action-icon">☎</span><strong>전화 문의 즉시 저장</strong><span>번호만 먼저 저장해도 문의 이력으로 남습니다.</span></button>
+        <button id="v2ConsultIntake" class="v2-action-card" onclick="showConsultForm()"><span class="v2-action-icon">▤</span><strong>상담 신청서 작성</strong><span>현장 상담 내용을 자동 임시저장하며 작성합니다.</span></button>
+        <button id="v2FixedSchedule" class="v2-action-card" onclick="openV2ScheduleMode('fixed')"><span class="v2-action-icon">◆</span><strong>고정 스케줄 등록</strong><span>반복 요일·시간을 등록하고 충돌을 차단합니다.</span></button>
+        <button id="v2FlexSchedule" class="v2-action-card" onclick="openV2ScheduleMode('flex')"><span class="v2-action-icon">↻</span><strong>변동 스케줄 배정</strong><span>이번 주만 다른 일정도 공용 DB에 안전하게 반영합니다.</span></button>
+        <button id="pwaGostudents" class="v2-action-card" onclick="go('students')"><span class="v2-action-icon">◎</span><strong>고객 관리</strong><span>문의·상담·레슨 이력을 한 고객 흐름으로 확인합니다.</span></button>
+      </div>
+      <div class="v2-install-row">
+        <button type="button" id="pwaGotoday" class="btn bg2 bsm" onclick="go('today')">오늘 일정</button>
+        <button type="button" id="pwaGoschedule" class="btn bg2 bsm" onclick="go('schedule')">주간 일정</button>
+        <details id="pwaInstallHelp"><summary><span class="pwa-browser-copy">설치·동기화 안내</span><span class="pwa-standalone-copy">설치된 앱 사용 안내</span></summary>
+          <div class="pwa-help-body"><p><strong>PC와 모바일은 같은 공용 DB를 사용합니다.</strong> ‘동기화됨’ 상태에서 저장이 서버에 확인됩니다.</p>
+          <p><strong>설치:</strong> Chrome/Edge의 앱 설치 또는 ‘홈 화면에 추가’를 사용합니다. 설치 버튼이 지원되면 오른쪽 버튼으로 바로 설치할 수 있습니다.</p>
+          <p><strong>오프라인:</strong> 고객 개인정보는 서비스워커 캐시에 저장하지 않으며, 연결이 끊기면 서버 전송 대기 상태로 보존하고 연결 복구 후 서버 상태를 다시 검증합니다.</p></div>
+        </details>
+        <button type="button" id="pwaInstallBtn" class="btn bp bsm v2-install-btn" onclick="installStudioPWA()"><span aria-hidden="true">↓</span> 앱 설치</button>
+      </div>
+    </div>
+  </section>
+
   <div class="content" id="content"></div>
 </div>
 
@@ -3417,12 +3482,7 @@ var SPLIT_MIGRATION_POLICY_VERSION='split-v1-2026-06-18';
 function _splitStudioId(){
   try{return localStorage.getItem('vsC_studioId')||'default';}catch(e){return 'default';}
 }
-function _splitAdminId(){
-  try{
-    var u=(typeof firebase!=='undefined'&&firebase.auth&&firebase.auth().currentUser)||null;
-    return (u&&u.uid)||'local-admin';
-  }catch(e){return 'local-admin';}
-}
+function _splitAdminId(){return hasAdminSession()?_cfSession.principal:'local-admin';}
 function _splitHash(input){
   input=String(input||'');
   var h=2166136261;
@@ -3622,24 +3682,7 @@ function endSplitMigrationFreeze(){
   return{ok:true,status:'unfrozen'};
 }
 async function writeSplitMigrationPlan(plan,options){
-  options=options||{};
-  plan=plan||buildSplitMigrationPlan(options);
-  if(plan.status==='abort')return{ok:false,status:'abort',errors:plan.errors,plan:plan};
-  var currentHash=_splitHash(_dataSignature());
-  if(currentHash!==plan.legacyHash)return{ok:false,status:'abort',errors:[{code:'legacy-hash-drift',expected:plan.legacyHash,actual:currentHash}],plan:plan};
-  if(!options.allowWithoutFreeze&&!_splitMigrationFrozen())return{ok:false,status:'blocked',errors:[{code:'freeze-required',message:'Start migration freeze before split writes.'}],plan:plan};
-  if(typeof firebase==='undefined'||!firebase.firestore||!_isFirebaseAdminUser(firebase.auth().currentUser))return{ok:false,status:'blocked',errors:[{code:'admin-auth-required',message:'Firebase admin authentication required for split writes.'}],plan:plan};
-  var db=_fs();
-  var root=db.collection('studios').doc(plan.studioId);
-  await root.set({schemaVersion:SPLIT_SCHEMA_VERSION,policyVersion:SPLIT_MIGRATION_POLICY_VERSION,legacyHash:plan.legacyHash,migrationRunId:plan.migrationRunId,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:_splitAdminId()},{merge:true});
-  for(var cname of Object.keys(plan.collections)){
-    var docs=plan.collections[cname]||[];
-    for(var i=0;i<docs.length;i++){
-      var doc=docs[i];
-      await root.collection(cname).doc(doc.id).set(doc,{merge:true});
-    }
-  }
-  return{ok:true,status:'written',plan:plan};
+  return{ok:false,status:'retired',errors:[{code:'firebase-split-write-retired',message:'Legacy split migration writes are disabled in the Cloudflare unified runtime.'}],plan:plan||buildSplitMigrationPlan(options||{})};
 }
 function runSplitMigrationDryRun(options){
   var plan=buildSplitMigrationPlan(options||{});
@@ -3762,6 +3805,15 @@ function mediaDelete(key){
 }
 /* MEDIA DURABILITY / RECOVERY MANAGER — Storage is durable, IndexedDB is queue/cache only */
 var MEDIA_POLICY_VERSION='media-v1-2026-06-18';
+var MEDIA_MAX_BYTES=20*1024*1024;
+function _mediaDataBytes(data){
+  if(typeof data!=='string'||data.indexOf('data:')!==0)return 0;
+  var comma=data.indexOf(',');if(comma<0)return 0;
+  var body=data.slice(comma+1);
+  if(data.slice(0,comma).indexOf(';base64')<0){try{return new TextEncoder().encode(decodeURIComponent(body)).length;}catch(e){return body.length;}}
+  var pad=body.endsWith('==')?2:(body.endsWith('=')?1:0);
+  return Math.max(0,Math.floor(body.length*3/4)-pad);
+}
 function _mediaQueueRead(){
   try{return JSON.parse(localStorage.getItem('vsC_media_queue')||'[]')||[];}catch(e){return [];}
 }
@@ -3780,12 +3832,18 @@ function _mediaOwnerType(mode){return mode==='consult'?'consult':'student';}
 function prepareMediaEntryForDurability(entry,ownerType,ownerId,field,data,contentType){
   entry=entry||{};
   var key=entry._mediaKey||('vsM_'+(entry.id||uid()));
+  var raw=data||entry.data||'';
   entry._mediaKey=key;
   entry.storagePath=entry.storagePath||_mediaStoragePath(ownerType,ownerId,field,entry.id||key,contentType||'');
+  entry.mediaPolicyVersion=MEDIA_POLICY_VERSION;
+  mediaSave(key,raw);
+  if(_mediaDataBytes(raw)>MEDIA_MAX_BYTES){
+    entry.storageStatus='oversize-blocked';entry.recoveryRequired=true;entry.lastError='media-size-invalid';
+    setTimeout(function(){try{toast('⚠️ 20MB 초과 미디어는 서버 동기화되지 않습니다. 파일을 줄여 다시 등록해 주세요.','⚠️');}catch(e){}},0);
+    return entry;
+  }
   entry.storageStatus=entry.storageStatus||'queued';
   entry.recoveryRequired=false;
-  entry.mediaPolicyVersion=MEDIA_POLICY_VERSION;
-  mediaSave(key,data||entry.data||'');
   queueMediaForStorage({id:entry.id||key,ownerType:ownerType,ownerId:ownerId,field:field,entryId:entry.id||'',localKey:key,storagePath:entry.storagePath,contentType:contentType||'',status:'queued',attempts:0,policyVersion:MEDIA_POLICY_VERSION,updatedAt:new Date().toISOString()});
   return entry;
 }
@@ -3804,10 +3862,8 @@ function _mediaLoadPromise(key){
   return new Promise(function(resolve){mediaLoad(key,function(data){resolve(data||null);});});
 }
 function _mediaPutString(data,path,contentType){
-  if(typeof firebase==='undefined'||typeof firebase.storage!=='function')return Promise.reject(new Error('storage SDK 미로드'));
-  if(!_isFirebaseAdminUser(firebase.auth().currentUser))return Promise.reject(new Error('admin auth required'));
-  var ref=firebase.storage().ref(path);
-  return ref.putString(data,'data_url',{contentType:contentType||'application/octet-stream'}).then(function(){return ref.getDownloadURL();});
+  if(typeof VCFTransport==='undefined'||!hasAdminSession())return Promise.reject(new Error('cloudflare-session-required'));
+  return VCFTransport.uploadDataUrl(data,path,contentType||'application/octet-stream');
 }
 function _findMediaOwner(ownerType,ownerId){
   var list=ownerType==='consult'?consults:students;
@@ -3833,10 +3889,10 @@ function _applyMediaUploaded(rec,url){
 }
 async function processMediaDurabilityQueue(limit){
   var q=_mediaQueueRead();
-  var pending=q.filter(function(x){return x.status!=='uploaded'&&x.status!=='deleted';}).slice(0,limit||5);
+  var pending=q.filter(function(x){return x.status==='queued'||x.status==='retry';}).slice(0,limit||5);
   if(!pending.length)return{ok:true,status:'empty',processed:0,queued:q.length};
-  if(typeof firebase==='undefined'||!firebase.storage||!_isFirebaseAdminUser(firebase.auth().currentUser)){
-    return{ok:false,status:'blocked',code:'storage-auth-required',processed:0,queued:pending.length};
+  if(typeof VCFTransport==='undefined'||!hasAdminSession()){
+    return{ok:false,status:'blocked',code:'cloudflare-session-required',processed:0,queued:pending.length};
   }
   var processed=0,failed=[];
   for(var i=0;i<pending.length;i++){
@@ -3849,7 +3905,13 @@ async function processMediaDurabilityQueue(limit){
       _applyMediaUploaded(rec,url);
       processed++;
     }catch(e){
-      rec.status='retry';rec.attempts=(rec.attempts||0)+1;rec.lastError=(e&&e.message)||String(e);rec.updatedAt=new Date().toISOString();failed.push({localKey:rec.localKey,error:rec.lastError});
+      rec.lastError=(e&&e.message)||String(e);rec.attempts=(rec.attempts||0)+1;rec.updatedAt=new Date().toISOString();
+      rec.status=rec.lastError==='media-size-invalid'?'oversize-blocked':'retry';
+      if(rec.status==='oversize-blocked'){
+        var owner=_findMediaOwner(rec.ownerType,rec.ownerId),entry=_findMediaEntry(owner,rec.field,rec.entryId);
+        if(entry){entry.storageStatus='oversize-blocked';entry.recoveryRequired=true;entry.lastError=rec.lastError;}
+      }
+      failed.push({localKey:rec.localKey,error:rec.lastError,status:rec.status});
     }
   }
   var next=_mediaQueueRead().map(function(x){
@@ -3858,7 +3920,7 @@ async function processMediaDurabilityQueue(limit){
   });
   _mediaQueueWrite(next);
   if(processed)try{saveAll();}catch(e){}
-  return{ok:failed.length===0,status:failed.length?'partial':'uploaded',processed:processed,failed:failed,queued:next.filter(function(x){return x.status!=='uploaded'&&x.status!=='deleted';}).length};
+  return{ok:failed.length===0,status:failed.length?'partial':'uploaded',processed:processed,failed:failed,queued:next.filter(function(x){return x.status==='queued'||x.status==='retry';}).length};
 }
 function _mediaEntryStatus(ownerType,ownerId,field,entry,index){
   entry=entry||{};
@@ -3868,7 +3930,8 @@ function _mediaEntryStatus(ownerType,ownerId,field,entry,index){
   var status='ok';
   var recoveryRequired=false;
   var reason='';
-  if(storageUrl)status='storage';
+  if(entry.storageStatus==='oversize-blocked'){status='oversizeBlocked';recoveryRequired=true;reason='media-size-invalid';}
+  else if(storageUrl)status='storage';
   else if(localKey)status='queuedOrCached';
   else if(String(data)==='[saved]'||String(data)==='[recoveryRequired]'||!data){status='recoveryRequired';recoveryRequired=true;reason='missing-storage-and-local-cache';}
   else if(/^data:/.test(String(data||''))){status='queued';recoveryRequired=false;reason='inline-data-needs-storage';}
@@ -3953,46 +4016,15 @@ function _adminVerificationSaveProbeMedia(key,content){
   return new Promise(function(resolve){mediaSave(key,content,function(ok){resolve(!!ok);});});
 }
 async function runAdminVerificationProbe(live){
-  var user=(typeof firebase!=='undefined'&&firebase.auth&&firebase.auth().currentUser)||null;
-  var receipt={schemaVersion:1,kind:'admin-live-verification',mode:live?'live':'dry-run',checkedAt:new Date().toISOString(),url:location.href,admin:{uid:user&&user.uid||'',email:user&&user.email||'',emailVerified:!!(user&&user.emailVerified),authorized:_isFirebaseAdminUser(user)},split:null,media:null,ok:false,errors:[]};
-  if(!receipt.admin.authorized){
-    receipt.errors.push({code:'admin-auth-required',message:'관리자 로그인 후 실행하세요.'});
-    return receipt;
-  }
+  var receipt={schemaVersion:2,kind:'cloudflare-admin-verification',mode:live?'live-blocked':'read-only',checkedAt:new Date().toISOString(),url:location.href,admin:{principal:hasAdminSession()?_cfSession.principal:'',email:hasAdminSession()?_cfSession.email:'',authorized:hasAdminSession()},media:null,readback:null,ok:false,errors:[]};
+  if(!receipt.admin.authorized){receipt.errors.push({code:'access-required',message:'Cloudflare Access 인증이 필요합니다.'});return receipt;}
+  if(live)receipt.errors.push({code:'protected-live-probe-retired',message:'브라우저의 레거시 live write probe는 Cloudflare unified runtime에서 비활성화되었습니다.'});
   try{
-    var expected=_splitHash(_dataSignature());
-    var freeze=live?beginSplitMigrationFreeze(expected):{ok:true,status:'dry-run-only',legacyHash:expected};
-    var plan=buildSplitMigrationPlan({expectedLegacyHash:expected,migrationRunId:'verify_'+expected+'_'+_splitHash(Date.now())});
-    receipt.split={freeze:freeze,dryRun:_adminVerificationSummarizePlan(plan),write:null};
-    if(live){
-      try{
-        var writeRes=await writeSplitMigrationPlan(plan,{allowWithoutFreeze:false});
-        receipt.split.write={ok:!!(writeRes&&writeRes.ok),status:writeRes&&writeRes.status,counts:writeRes&&writeRes.plan&&writeRes.plan.counts,errors:writeRes&&writeRes.errors||[]};
-      }catch(e){
-        receipt.split.write={ok:false,error:_adminVerificationError(e)};
-      }finally{
-        try{endSplitMigrationFreeze();}catch(e){}
-      }
-    }
-  }catch(e){
-    receipt.errors.push(Object.assign({code:'split-probe-failed'},_adminVerificationError(e)));
-    try{endSplitMigrationFreeze();}catch(e2){}
-  }
-  try{
-    if(live){
-      var key='vsVerify_'+Date.now();
-      var mediaOk=await _adminVerificationSaveProbeMedia(key,'data:text/plain;base64,'+btoa('vocal-studio-admin-verification '+new Date().toISOString()));
-      if(mediaOk){
-        queueMediaForStorage({localKey:key,storagePath:'studios/'+_splitStudioId()+'/media/verification/'+key+'.txt',ownerType:'verification',ownerId:'admin',field:'probe',entryId:key,contentType:'text/plain',status:'queued'});
-      }
-    }
     var beforeQ=_mediaQueueRead();
-    var processed=await processMediaDurabilityQueue(3);
-    receipt.media={queuedBefore:beforeQ.filter(function(x){return x.status!=='uploaded'&&x.status!=='deleted';}).length,result:processed,scan:scanMediaRecovery()};
-  }catch(e){
-    receipt.errors.push(Object.assign({code:'media-probe-failed'},_adminVerificationError(e)));
-  }
-  receipt.ok=receipt.admin.authorized&&(!receipt.split||!receipt.split.write||receipt.split.write.ok!==false)&&(!receipt.media||receipt.media.result.ok!==false);
+    receipt.media={queued:beforeQ.filter(function(x){return x.status!=='uploaded'&&x.status!=='deleted';}).length,scan:scanMediaRecovery()};
+    if(typeof VCFMigration!=='undefined')receipt.readback=await VCFMigration.privateExport().catch(function(e){return{error:(e&&e.message)||String(e)};});
+  }catch(e){receipt.errors.push(Object.assign({code:'read-only-probe-failed'},_adminVerificationError(e)));}
+  receipt.ok=receipt.admin.authorized&&!live&&receipt.errors.length===0;
   try{localStorage.setItem('vsC_adminVerificationReceipt',JSON.stringify(receipt));}catch(e){}
   return receipt;
 }
@@ -4128,37 +4160,9 @@ var KR_HOLIDAYS = {
 var _holidayLoaded = {};
 
 function loadHolidaysFromGoogle(year, cb){
-  if(_holidayLoaded[year]){if(cb)cb();return;}
-  /* 구글 캘린더 공개 한국 공휴일 - API 키 불필요 */
-  var calId='ko.south_korea%23holiday%40group.v.calendar.google.com';
-  var timeMin=encodeURIComponent(year+'-01-01T00:00:00Z');
-  var timeMax=encodeURIComponent(year+'-12-31T23:59:59Z');
-  var url='https://www.googleapis.com/calendar/v3/calendars/'+calId+'/events'
-    +'?key=AIzaSyBNlYH01_9Hc5S1J9vuFmu2nUqBZJNAXxs'
-    +'&timeMin='+timeMin+'&timeMax='+timeMax
-    +'&singleEvents=true&maxResults=50';
-  fetch(url)
-    .then(function(r){return r.json();})
-    .then(function(data){
-      var items=data&&data.items;
-      if(items&&items.length){
-        items.forEach(function(item){
-          var ds=item.start&&(item.start.date||item.start.dateTime);
-          if(!ds) return;
-          var key=ds.slice(0,10);
-          /* 내장 한국어 라벨이 있으면 보존, 없을 때만 구글 summary로 채움 */
-          if(typeof KR_HOLIDAYS[key]==='string') return;
-          KR_HOLIDAYS[key]=item.summary||'공휴일';
-        });
-      }
-      _holidayLoaded[year]=true;
-      if(cb)cb();
-    })
-    .catch(function(e){
-      console.warn('구글 캘린더 공휴일 로드 실패, 내장 데이터 사용:',e);
-      _holidayLoaded[year]=true;
-      if(cb)cb();
-    });
+  /* Cloudflare unified runtime: 법정 공휴일은 내장 화이트리스트만 사용한다. */
+  _holidayLoaded[year]=true;
+  if(cb)cb();
 }
 
 function loadHolidaysForView(cb){
@@ -4208,27 +4212,11 @@ function getOffLabel(dateStr){
 
 var _fbReady=false, _fbSyncing=false, _fbUnsub=null, _skipRenderCount=0, _fbApplyingRemote=false, _lastFirestorePushSig='', _lastFirestorePushAt=0, _localProtectUntil=0;
 
-var firebaseConfig={
-  apiKey:"AIzaSyBhVoh01SUIjL9syfQcxh7CR0_Nl0gTUCY",
-  authDomain:"hlbvocalstudio-72481.firebaseapp.com",
-  projectId:"hlbvocalstudio-72481",
-  storageBucket:"hlbvocalstudio-72481.firebasestorage.app",
-  messagingSenderId:"131827810958",
-  appId:"1:131827810958:web:0794a34a29dc2070ee7fdf"
-};
-var VS_ADMIN_UIDS=['hhGHaSfiKYReJ9njvhGH0x3yB8E2','toUXxzS4OqYqD4n0F65YTtQeZ1s2'];
-var VS_ADMIN_EMAILS=['aljjang95@gmail.com'];
-var _fbAuthReady=false;
-
-function _isFirebaseAdminUser(user){
-  if(!user)return false;
-  var uid=user.uid||'';
-  var email=(user.email||'').toLowerCase();
-  if(VS_ADMIN_UIDS.indexOf(uid)>=0)return true;
-  return !!email&&VS_ADMIN_EMAILS.map(function(x){return String(x).toLowerCase();}).indexOf(email)>=0;
-}
-function _updateAdminAuthControls(user){
-  var isAdmin=_isFirebaseAdminUser(user);
+var _cfSession=null,_cfAppHydrated=false;
+function _isFirebaseAdminUser(){return false;}
+function hasAdminSession(){return !!(_cfSession&&_cfSession.ok&&_cfSession.principal);}
+function _updateAdminAuthControls(){
+  var isAdmin=hasAdminSession();
   [
     {login:ge('adminLoginBtn'),logout:ge('adminLogoutBtn')},
     {login:ge('topAdminLoginBtn'),logout:ge('topAdminLogoutBtn')}
@@ -4237,34 +4225,26 @@ function _updateAdminAuthControls(user){
     pair.login.style.display=isAdmin?'none':'inline-flex';
     pair.logout.style.display=isAdmin?'inline-flex':'none';
   });
-  var verifyBtn=ge('topAdminVerifyBtn');
-  if(verifyBtn)verifyBtn.style.display=isAdmin?'inline-flex':'none';
+  var verifyBtn=ge('topAdminVerifyBtn');if(verifyBtn)verifyBtn.style.display='none';
 }
-function hasAdminSession(){
-  try{return typeof firebase!=='undefined'&&firebase.auth&&_isFirebaseAdminUser(firebase.auth().currentUser);}catch(e){return false;}
+function _cfLocalOwnerKey(){return 'vsC_cf_owner_v1';}
+function _cfBindLocalOwner(){
+  if(!hasAdminSession())return false;
+  try{localStorage.setItem(_cfLocalOwnerKey(),_cfSession.principal);return true;}catch(e){return false;}
 }
-function _disableFirestoreSync(msg){
-  _fbReady=false;
-  try{if(_fbUnsub){_fbUnsub();_fbUnsub=null;}}catch(e){}
-  _showSyncStatus(msg||'🔒 관리자 인증 필요 · 로컬 모드');
+function _cfLoadLocalResume(owner){
+  try{
+    if(localStorage.getItem(_cfLocalOwnerKey())!==owner)return null;
+    return{students:JSON.parse(localStorage.getItem('vsC_s')||'[]'),logs:JSON.parse(localStorage.getItem('vsC_l')||'[]'),weekOvr:JSON.parse(localStorage.getItem('vsC_wo')||'{}'),consults:JSON.parse(localStorage.getItem('vsC_c')||'[]'),payments:JSON.parse(localStorage.getItem('vsC_p')||'[]'),inquiries:JSON.parse(localStorage.getItem('vsC_iq')||'[]')};
+  }catch(e){return null;}
 }
-function signInAdmin(){
-  if(typeof firebase==='undefined'||!firebase.auth)return Promise.reject(new Error('firebase auth unavailable'));
-  var provider=new firebase.auth.GoogleAuthProvider();
-  return firebase.auth().signInWithPopup(provider).catch(function(e){
-    console.error('관리자 로그인 실패',e);
-    var code=e&&e.code;
-    var msg=code==='auth/unauthorized-domain'
-      ?'⚠️ 현재 도메인이 Firebase 로그인 허용 목록에 없습니다'
-      :'⚠️ 관리자 로그인 실패';
-    _showSyncStatus(msg);
-    throw e;
-  });
+function _disableCloudflareSync(msg){
+  _fbReady=false;_cfSession=null;
+  if(typeof _vsSync!=='undefined'&&_vsSync)_vsSync.disconnect();
+  _showSyncStatus(msg||'Cloudflare Access 세션 확인 필요');
 }
-function signOutAdmin(){
-  if(typeof firebase==='undefined'||!firebase.auth)return Promise.resolve();
-  return firebase.auth().signOut().then(function(){_disableFirestoreSync('🔒 로그아웃됨 · 로컬 모드');});
-}
+function signInAdmin(){location.reload();return Promise.resolve();}
+function signOutAdmin(){location.assign('/cdn-cgi/access/logout');return Promise.resolve();}
 
 
 function toggleSunCollapse(){
@@ -4350,111 +4330,20 @@ function removeCustomHoliday(ds){
   saveCfg();renderHolidayList();render();
   toast('휴무일 삭제: '+ds+' ✓');
 }
-function initFirebase(){
-  if(typeof firebase==='undefined'){
-    setTimeout(initFirebase,500);return;
+function initCloudflare(){
+  if(typeof VCFTransport==='undefined'){
+    _disableCloudflareSync('Cloudflare transport 확인 필요');return;
   }
-  if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-  firebase.auth().onAuthStateChanged(function(user){
-    _fbAuthReady=true;
-    _updateAdminAuthControls(user);
-    if(_isFirebaseAdminUser(user)){
-      _showSyncStatus('🔐 관리자 인증됨');
-      _startFirestoreListener();
-    }else{
-      _disableFirestoreSync(user?'🔒 권한 없는 계정 · 로컬 모드':'🔒 관리자 인증 필요 · 로컬 모드');
-    }
-  },function(e){
-    console.error('관리자 인증 확인 실패',e);
-    _disableFirestoreSync('⚠️ 인증 확인 실패 · 로컬 모드');
+  VCFTransport.session().then(function(session){
+    _cfSession=session;_updateAdminAuthControls();
+    _showSyncStatus('🔐 Cloudflare Access 인증됨');
+    if(_vsSync)_vsSync.connect();else _showSyncStatus('동기화 모듈 확인 필요 · 서버 연결 중지');
+  }).catch(function(e){
+    console.error('Cloudflare Access 세션 확인 실패',e);
+    _disableCloudflareSync('⚠️ Access 세션 확인 실패');
   });
 }
-/* Firestore 인스턴스 — undefined 필드 자동 무시(첫 작업 전 1회 settings). */
-var _fsSettingsApplied=false;
-function _fs(){
-  var db=firebase.firestore();
-  if(!_fsSettingsApplied){
-    _fsSettingsApplied=true;
-    try{db.settings({ignoreUndefinedProperties:true});}catch(e){}
-  }
-  return db;
-}
-function _startFirestoreListener(){
-  if(_fbUnsub)return;
-  if(!_isFirebaseAdminUser(firebase.auth().currentUser)){
-    _disableFirestoreSync('🔒 관리자 인증 필요 · 로컬 모드');
-    return;
-  }
-  var db=_fs();
-  var docRef=db.collection('studio').doc('data');
-  try{window._fbDocRef=docRef;}catch(e){}
-
-  /* 실시간 리스너 — Firestore 변경 시 즉시 반영 */
-  _fbUnsub=docRef.onSnapshot(function(snap){
-    if(!snap.exists){
-      /* 원격 문서가 없을 때 기본 39명/빈 상태가 서버를 덮지 않도록 실제 로컬 데이터가 있을 때만 부트스트랩 */
-      if(_hasBootstrapDataForFirestore()) _pushToFirestore(docRef);
-      else _showSyncStatus('⚠️ 원격 데이터 없음');
-      return;
-    }
-    var d=snap.data();
-    var _beforeSig=_dataSignature();
-    var _preferLocal=Date.now()<_localProtectUntil;
-    var _needPushBack=false;
-    _writeRecoverySnapshot('before-remote');
-    /* 원격 변경사항을 메모리 + localStorage에 반영하되, 로컬에만 있던 신규 상담/스케줄은 보존 */
-    _fbApplyingRemote=true;
-    try{
-      var _mStudents=_mergeByIdentity(d.students||[],students||[],'student',_preferLocal); _needPushBack=_needPushBack||_mStudents.added>0||_mStudents.replaced>0;
-      var _fbStudents=_mStudents.list;
-      /* 기본 39명 중 Firebase/로컬 병합 결과에 없는 사람 병합 */
-      var _fbNames=_fbStudents.map(function(s){return s.name;});
-      var _fbPhs=_fbStudents.map(function(s){return s.ph;});
-      _DEFAULT_STUDENTS.forEach(function(s){
-        if(_fbNames.indexOf(s.name)>=0||(_fbPhs.indexOf(s.ph)>=0&&s.ph)) return;
-        _fbStudents.push(s);
-        _fbNames.push(s.name);
-        _fbPhs.push(s.ph);
-      });
-      students=_fbStudents;
-      _safeSetLS('vsC_s',JSON.stringify(students));
-    }catch(e){}
-    try{var _mLogs=_mergeByIdentity(d.logs||[],logs||[],'log',_preferLocal);logs=_mLogs.list;_needPushBack=_needPushBack||_mLogs.added>0||_mLogs.replaced>0;_safeSetLS('vsC_l',JSON.stringify(logs));}catch(e){}
-    try{var _mergedWO=_mergeWeekOvr(d.weekOvr||{},weekOvr||{},_preferLocal);if(JSON.stringify(_mergedWO)!==JSON.stringify(d.weekOvr||{}))_needPushBack=true;weekOvr=_mergedWO;_safeSetLS('vsC_wo',JSON.stringify(weekOvr));}catch(e){}
-    try{var _mConsults=_mergeByIdentity(d.consults||[],consults||[],'consult',_preferLocal);consults=_mConsults.list;_needPushBack=_needPushBack||_mConsults.added>0||_mConsults.replaced>0;_safeSetLS('vsC_c',JSON.stringify(consults));}catch(e){}
-    try{var _mPayments=_mergeByIdentity(d.payments||[],payments||[],'payment',_preferLocal);payments=_mPayments.list;_needPushBack=_needPushBack||_mPayments.added>0||_mPayments.replaced>0;_safeSetLS('vsC_p',JSON.stringify(payments));}catch(e){}
-    try{var _mInq=_mergeByIdentity(d.inquiries||[],inquiries||[],'inquiry',_preferLocal);inquiries=_mInq.list;_needPushBack=_needPushBack||_mInq.added>0||_mInq.replaced>0;_safeSetLS('vsC_iq',JSON.stringify(inquiries));}catch(e){}
-    _fbReady=true;
-    /* 병합 결과에 사진 참조가 끊긴 행이 있으면 로컬 백업으로 다시 연결하고 즉시 보존 */
-    var _relinked=_relinkOrphanPhotos();
-    if(_relinked>0){
-      try{_safeSetLS('vsC_s',JSON.stringify(students));}catch(e){}
-      try{_safeSetLS('vsC_c',JSON.stringify(consults));}catch(e){}
-      console.warn('사진 참조 복구:',_relinked,'건');
-    }
-    _injectInitialInquiries(); /* 문의자 초기 데이터 주입 */
-    var _afterSig=_dataSignature();
-    var _changed=_afterSig!==_beforeSig;
-    if(_changed)_writeRecoverySnapshot('after-remote-merge');
-    /* UI 갱신 — 원격 echo가 현재 상태와 같으면 다시 그리지 않아 깜빡임 방지 */
-    if(_changed){
-      renderSidebarToday();
-      if(typeof render==='function'&&_skipRenderCount<=0){
-        render();
-      }
-    }
-    if(_skipRenderCount>0) _skipRenderCount--;
-    _showSyncStatus(_needPushBack?'✅ 동기화됨 · 로컬 보호':'✅ 동기화됨');
-    _fbApplyingRemote=false;
-    if(_needPushBack){
-      setTimeout(function(){try{if(_fbReady&&!_fbApplyingRemote)_pushToFirestore(docRef);}catch(e){}},900);
-    }
-  },function(err){
-    console.error('Firestore 리스너 오류',err);
-    _showSyncStatus('⚠️ 오프라인');
-    _fbApplyingRemote=false;
-  });
-}
+function _cfDatabase(){return VCFTransport.database();}
 
 /* ── 사진 웹용 압축 (canvas 리사이즈 + JPEG) ──
    업로드 전 호출. 큰 원본을 maxDim 이하 / JPEG quality로 줄여 용량을 1/5~1/10로. */
@@ -4477,32 +4366,10 @@ function compressImage(base64, maxDim, quality){
     }catch(e){res(base64);}
   });
 }
-/* ── Firebase Storage 업로드 → 다운로드 URL ──
-   사진을 Storage에 올리고 URL만 DB에 저장(Firestore 1MB 압박 제거 + 크로스기기 표시). */
-function uploadPhoto(base64, path){
-  if(typeof firebase==='undefined'||typeof firebase.storage!=='function')
-    return Promise.reject(new Error('storage SDK 미로드'));
-  var waitAuth=function(){
-    return new Promise(function(resolve,reject){
-      try{
-        if(!firebase.auth){reject(new Error('auth unavailable'));return;}
-        var auth=firebase.auth();
-        if(_isFirebaseAdminUser(auth.currentUser)){resolve(auth.currentUser);return;}
-        var done=false,unsub=null;
-        var cleanup=function(timer){try{if(unsub)unsub();}catch(e){}clearTimeout(timer);};
-        var timer=setTimeout(function(){if(done)return;done=true;cleanup(timer);reject(new Error('admin auth required'));},7000);
-        unsub=auth.onAuthStateChanged(function(user){
-          if(done||!_isFirebaseAdminUser(user))return;
-          done=true;cleanup(timer);resolve(user);
-        });
-      }catch(e){reject(e);}
-    });
-  };
-  var up=waitAuth().then(function(){
-    var ref=firebase.storage().ref(path);
-    return ref.putString(base64,'data_url',{contentType:'image/jpeg'}).then(function(){return ref.getDownloadURL();});
-  });
-  /* Storage 미활성/네트워크 지연 시 putString이 무한 대기 → 타임아웃으로 폴백 보장 */
+/* Cloudflare private R2 업로드 — 앱은 same-origin Worker API만 호출한다. */
+function uploadPhoto(base64,path){
+  if(typeof VCFTransport==='undefined'||!hasAdminSession())return Promise.reject(new Error('cloudflare-session-required'));
+  var up=VCFTransport.uploadDataUrl(base64,path,'image/jpeg');
   var to=new Promise(function(_,rej){setTimeout(function(){rej(new Error('upload timeout'));},15000);});
   return Promise.race([up,to]);
 }
@@ -4586,58 +4453,19 @@ function _hasBootstrapDataForFirestore(){
   }catch(e){return false;}
 }
 function _pushToFirestore(docRef){
-  if(!_isFirebaseAdminUser(firebase.auth().currentUser)){
-    _showSyncStatus('🔒 관리자 인증 필요 · 로컬 저장됨');
-    return Promise.resolve();
-  }
-  if(_splitMigrationFrozen()){
-    _showSyncStatus('🧊 마이그레이션 동결 · 원격 저장 보류');
-    return Promise.resolve();
-  }
-  var db=_fs();
-  docRef=docRef||db.collection('studio').doc('data');
-  try{window._fbDocRef=docRef;}catch(e){}
-  _backupOrphanPhotos(students);
-  _backupOrphanPhotos(consults);
-  var payload={
-    students:_stripMediaForSync(students),
-    logs:logs,
-    weekOvr:weekOvr,
-    consults:_stripMediaForSync(consults),
-    payments:payments,
-    inquiries:inquiries,
-    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-  };
-  var sig='';
-  try{sig=JSON.stringify(_stableForSig(Object.assign({},payload,{updatedAt:'server'})));}catch(e){}
-  if(sig&&sig===_lastFirestorePushSig&&Date.now()-_lastFirestorePushAt<2500){
-    return Promise.resolve();
-  }
-  _lastFirestorePushSig=sig;
-  _lastFirestorePushAt=Date.now();
-  _writeRecoverySnapshot('before-firestore-push');
-  return docRef.set(payload).then(function(){_showSyncStatus('✅ 동기화됨');})
-    .catch(function(e){console.error('Firestore 저장 오류',e);_showSyncStatus('⚠️ 저장 실패');});
+  return _vsSync?_vsSync.save():Promise.resolve(false);
 }
 
 function _showSyncStatus(msg){
-  var el=document.getElementById('syncStatus');
-  var top=document.getElementById('topSyncStatus');
-  if(el){
-    el.textContent=msg;
-    clearTimeout(el._t);
-    if(msg.indexOf('✅ 동기화됨')===0) el._t=setTimeout(function(){el.textContent='';},3000);
-  }
-  if(top){
-    top.textContent=msg;
-    top.style.display=msg?'block':'none';
-    top.style.color=msg.indexOf('✅')===0?'var(--g)':(msg.indexOf('⚠️')===0||msg.indexOf('🔒')===0?'var(--r)':'var(--tm)');
-    clearTimeout(top._t);
-    if(msg.indexOf('✅ 동기화됨')===0) top._t=setTimeout(function(){top.style.display='none';top.textContent='';},3000);
-  }
+  ['syncStatus','topSyncStatus'].forEach(function(id){
+    var el=document.getElementById(id);if(!el)return;
+    clearTimeout(el._t);el.textContent=msg;el.style.display=msg?'block':'none';
+    el.style.setProperty('font-size','12px','important');el.style.setProperty('white-space','normal','important');el.style.overflowWrap='anywhere';el.style.setProperty('line-height','1.5','important');
+    el.setAttribute('role','status');el.setAttribute('aria-live','polite');
+  });
 }
 
-/* saveAll 오버라이드 — localStorage + Firestore 동시 저장 */
+/* Cloudflare unified runtime — local durable recovery + one canonical server write path. */
 var _saveAllOrig=saveAll;
 function _warnLocalOnlySync(msg){
   _showSyncStatus(msg);
@@ -4646,30 +4474,121 @@ function _warnLocalOnlySync(msg){
      작은 상태뱃지만으로는 "다른 기기에 동기화 안 됨"이 묻히기 쉽다 — 반드시 토스트로도 알린다. */
   setTimeout(function(){toast(msg,'⚠️');},900);
 }
-saveAll=function(){
-  _saveAllOrig();
-  _localProtectUntil=Date.now()+8000;
-  if(_splitMigrationFrozen()){
-    _warnLocalOnlySync('🧊 마이그레이션 동결 · 로컬 저장만 됨 · 다른 기기 미동기화');
-    return;
-  }
-  /* 원격 초기 로드가 끝난 뒤의 사용자 저장만 Firestore로 보낸다.
-     로드 중 자동 저장/기본 데이터 주입이 기존 서버 데이터를 덮어쓰는 사고를 막는다. */
-  if(typeof firebase!=='undefined'&&firebase.apps&&firebase.apps.length){
-    if(!hasAdminSession()){
-      _warnLocalOnlySync('🔒 관리자 로그인 필요 · 로컬에만 저장됨 · 다른 기기 미동기화');
-      return;
-    }
-    if(!_fbReady||_fbApplyingRemote){_showSyncStatus('⏸️ 동기화 대기');return;}
-    var db=_fs();
-    _showSyncStatus('🔄 저장 중...');
-    _pushToFirestore(db.collection('studio').doc('data'));
-  }else{
-    _warnLocalOnlySync('⚠️ Firebase 미연결 · 로컬에만 저장됨');
-  }
+/* Active runtime adapter: all writes pass through the versioned transaction controller. */
+var _vsSyncLabels={
+  'auth-required':'관리자 로그인 필요 · 이 기기에만 저장됩니다',
+  'local-only':'서버 확인 전 · 변경은 이 기기에 보관됩니다',
+  saving:'서버 저장 확인 중',pending:'미동기화 변경 보관 중',synced:'동기화됨',
+  recovery:'동기화됨 · 이전 기기 보관본 있음',deferred:'입력·저장 응답 확인 후 다른 기기 변경을 반영합니다',
+  unconfirmed:'연결 확인 중 · 기기 보관 상태',offline:'연결 끊김 · 변경 보관',
+  'missing-remote':'서버 자료 없음 · 자동 덮어쓰기 중지',
+  'invalid-remote':'서버 자료 형식 확인 필요 · 변경 보관',
+  'legacy-conflict':'이전 버전 변경 감지 · 자동 저장 중지',
+  conflict:'동시 수정 충돌 · 변경 보관 · 확인 필요',
+  'storage-error':'기기 저장 공간 확인 필요 · 서버 전송 중지',
+  'apply-error':'화면 반영 확인 필요 · 보관본 유지',
+  'write-error':'서버 저장 실패 · 변경 보관 · 다시 확인해 주세요',
+  frozen:'마이그레이션 동결 · 서버 저장 보류'
 };
+function _vsEditing(){
+  var el=document.activeElement;
+  return !!document.querySelector('.ov.open')||!!(el&&el.matches('input,textarea,select,[contenteditable="true"]'));
+}
+function _vsCarryRows(rows,previous){
+  var found=new Map();
+  (previous||[]).forEach(function(row){if(!row||row.id==null)return;var key=typeof row.id+':'+row.id;found.set(key,found.has(key)?null:row);});
+  return rows.map(function(row){
+    if(!row||typeof row!=='object')return row;
+    return VSSync.retainLocal(Object.assign({},row),found.get(typeof row.id+':'+row.id));
+  });
+}
+var _vsSync=null;
+try{if(typeof VSSync!=='undefined')_vsSync=VSSync.create({
+  namespace:'vocal-studio',store:sessionStorage,backupStore:localStorage,
+  instanceId:typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():undefined,
+  forkInstance:!!(performance.getEntriesByType&&performance.getEntriesByType('navigation')[0]&&performance.getEntriesByType('navigation')[0].type==='navigate'),
+  owner:function(){return hasAdminSession()?_cfSession.principal:null;},
+  database:_cfDatabase,timestamp:function(){return new Date().toISOString();},
+  frozen:function(){return false;},editing:_vsEditing,later:function(fn){setTimeout(fn,0);},
+  ready:function(value){_fbReady=value;},doc:function(ref){window._fbDocRef=ref;},
+  hydrated:function(){return _cfAppHydrated;},resumeData:function(owner){return _cfLoadLocalResume(owner);},
+  getData:function(){return {students:students,logs:logs,weekOvr:weekOvr,consults:consults,payments:payments,inquiries:inquiries};},
+  setData:function(data){
+    _fbApplyingRemote=true;
+    try{
+      students=_vsCarryRows(data.students,students);logs=_vsCarryRows(data.logs,logs);
+      consults=_vsCarryRows(data.consults,consults);payments=_vsCarryRows(data.payments,payments);
+      inquiries=_vsCarryRows(data.inquiries,inquiries);weekOvr=data.weekOvr;
+      _cfAppHydrated=true;_cfBindLocalOwner();_saveAllOrig();
+      setTimeout(_cfDrainMedia,0);
+    }finally{_fbApplyingRemote=false;}
+  },
+  render:function(){
+    _fbApplyingRemote=true;
+    try{renderSidebarToday();if(typeof render==='function')render();}finally{_fbApplyingRemote=false;}
+  },
+  status:function(mode,count){_showSyncStatus((_vsSyncLabels[mode]||mode)+(count?' ('+count+'건)':''));_vsSyncActions(mode);}
+});}catch(error){_showSyncStatus('동기화 저장소 확인 필요 · 서버 전송 중지');}
+saveAll=function(){
+  if(hasAdminSession())_cfBindLocalOwner();
+  _saveAllOrig();
+  if(_fbApplyingRemote)return;
+  if(_vsSync)_vsSync.save();else _showSyncStatus('동기화 모듈 확인 필요 · 로컬 저장만 됨');
+};
+function _cfMediaPendingCount(){
+  return _mediaQueueRead().filter(function(x){return x.status==='queued'||x.status==='retry';}).length;
+}
+var _cfMediaDrainBusy=false;
+function _cfDrainMedia(){
+  if(_cfMediaDrainBusy||!hasAdminSession()||!_cfMediaPendingCount()){if(_vsSync)_vsSyncActions(_vsSync.mode||'synced');return Promise.resolve(false);}
+  _cfMediaDrainBusy=true;
+  return processMediaDurabilityQueue(5).catch(function(){return false;}).finally(function(){
+    _cfMediaDrainBusy=false;if(_vsSync)_vsSyncActions(_vsSync.mode||'synced');
+  });
+}
+function _vsSyncActions(mode){
+  var top=ge('topSyncStatus');if(!top)return;
+  var panel=ge('vsSyncPanel');
+  if(!panel){
+    var header=top.closest('.topbar');
+    if(header){
+      panel=document.createElement('div');panel.id='vsSyncPanel';
+      panel.style.cssText='min-width:0;padding:8px 14px;background:var(--s1);border-bottom:1px solid var(--b)';
+      header.insertAdjacentElement('afterend',panel);panel.appendChild(top);
+      [['position','static'],['max-width','100%'],['width','auto'],['font-size','12px'],['line-height','1.5'],['white-space','normal'],['overflow','visible'],['pointer-events','auto']].forEach(function(pair){top.style.setProperty(pair[0],pair[1],'important');});
+    }
+  }
+  var bar=ge('vsSyncActions');
+  if(!bar){
+    bar=document.createElement('div');bar.id='vsSyncActions';bar.style.cssText='display:flex;flex-wrap:wrap;gap:6px;width:100%;min-width:0';
+    [['vsSyncRetry','다시 확인',function(){if(_vsSync)_vsSync.retry();}],
+     ['vsMediaRetry','미디어 다시 전송',function(){_cfDrainMedia();}],
+     ['vsSyncExport','기기 보관본',function(){
+       if(!_vsSync)return;var blob=new Blob([JSON.stringify(_vsSync.exportData(),null,2)],{type:'application/json'});
+       var url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='vocal-studio-local-recovery.json';
+       document.body.appendChild(link);link.click();link.remove();setTimeout(function(){URL.revokeObjectURL(url);},1000);
+     }],
+     ['vsSyncUseServer','서버 기준 사용',function(){
+       if(_vsSync&&confirm('미동기화 변경을 기기 보관본에 남기고, 마지막으로 확인한 서버 자료를 사용합니다. 계속할까요?'))_vsSync.useServer();
+     }]].forEach(function(item){
+       var button=document.createElement('button');button.id=item[0];button.type='button';button.className='btn bg2 bsm';
+       button.textContent=item[1];button.style.cssText='min-height:44px!important;min-width:44px!important;white-space:normal!important';button.onclick=item[2];bar.appendChild(button);
+     });
+    top.parentNode.insertBefore(bar,top.nextSibling);
+  }
+  if(panel)panel.dataset.mode=mode;
+  var mediaPending=_cfMediaPendingCount();
+  bar.style.display=(mode==='synced'&&mediaPending===0)?'none':'flex';
+  ge('vsMediaRetry').hidden=mediaPending===0;
+  ge('vsSyncUseServer').hidden=['conflict','legacy-conflict','recovery'].indexOf(mode)<0;
+}
+function _vsDrainSoon(){setTimeout(function(){if(_vsSync)_vsSync.drain();},0);}
+document.addEventListener('focusout',_vsDrainSoon);
+document.addEventListener('click',_vsDrainSoon);
+window.addEventListener('online',function(){if(_vsSync)_vsSync.retry();_cfDrainMedia();});
 
-/* 앱 시작 시 Firebase 초기화 */
+
+/* 앱 시작 시 Cloudflare Access/Worker 초기화 */
 
 /* 모바일 사이드바 위치 강제 고정 */
 function fixMobileSidebar(){
@@ -4721,7 +4640,7 @@ document.addEventListener('DOMContentLoaded',function(){
   window.addEventListener('resize', applyMobileClass);
   /* 동기화 이전에도 끊긴 사진 참조를 먼저 복구해 첫 화면부터 사진이 보이게 한다 */
   try{if(_relinkOrphanPhotos()>0)saveAll();}catch(e){}
-  initFirebase();
+  initCloudflare();
   initMobileTabBar();
 });
 
@@ -5285,7 +5204,8 @@ function go(p){
   setTimeout(function(){updateMobileTabBar();},0);
 }
 function render(){
-  if(page==='eval') return; /* 평가지 페이지는 render로 덮어쓰지 않음 */
+  if(page==='eval') return;
+  if(ge('pt')&&PT[page])ge('pt').textContent=PT[page]; /* 평가지 페이지는 render로 덮어쓰지 않음 */
   /* 새로고침 후 eval 복원 - Firebase 로드 완료 후에만 */
   if(_fbReady&&!window._skipEvalRestore){
     try{
@@ -5659,10 +5579,10 @@ function buildTodaySchedule(){
   var dayNames=['일','월','화','수','목','금','토'];
   var nowHH=String(now.getHours()).padStart(2,'0');
   var nowMM=String(now.getMinutes()).padStart(2,'0');
-  var o='<div style="max-width:680px;margin:0 auto">';
+  var o='<div class="admin-today" style="max-width:680px;margin:0 auto">';
   /* 헤더 카드 — 세련된 투톤 */
   var isHoliday=typeof isHoliday==='function'&&isHoliday(todayStr);
-  o+='<div style="background:linear-gradient(135deg,rgba(200,169,110,.1) 0%,rgba(16,16,26,0) 60%);border:1px solid var(--b2);border-radius:18px;padding:22px 24px;margin-bottom:20px;position:relative;overflow:hidden">';
+  o+='<div class="admin-day-hero" style="background:linear-gradient(135deg,rgba(200,169,110,.1) 0%,rgba(16,16,26,0) 60%);border:1px solid var(--b2);border-radius:18px;padding:22px 24px;margin-bottom:20px;position:relative;overflow:hidden">';
   o+='<div style="position:absolute;top:-20px;right:-20px;width:120px;height:120px;border-radius:50%;background:rgba(200,169,110,.04);pointer-events:none"></div>';
   o+='<div style="display:flex;align-items:flex-start;justify-content:space-between">';
   o+='<div>';
@@ -5741,8 +5661,8 @@ function buildTodaySchedule(){
     /* 카드 */
     var borderCol=isCurrent?'var(--g)':isPast?'var(--b)':'var(--b2)';
     var bgCol=isCurrent?'rgba(109,200,162,.08)':isPast?'var(--ag)':'var(--s2)';
-    o+='<div style="background:'+bgCol+';border:1.5px solid '+borderCol+';border-radius:14px;padding:18px 22px;margin-bottom:12px;transition:all .15s">';
-    o+='<div style="display:flex;align-items:center;gap:16px;margin-bottom:'+(isCurrent?'16':'0')+'px">';
+    o+='<div class="admin-lesson-card" style="background:'+bgCol+';border:1.5px solid '+borderCol+';border-radius:14px;padding:18px 22px;margin-bottom:12px;transition:all .15s">';
+    o+='<div class="admin-lesson-head" style="display:flex;align-items:center;gap:16px;margin-bottom:'+(isCurrent?'16':'0')+'px">';
 
     /* 사진 */
     var avStyle='width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,'+c+','+COLORS[(students.indexOf(s)+2)%COLORS.length]+');display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#08080d;flex-shrink:0;overflow:hidden';
@@ -7028,12 +6948,7 @@ function _injectInitialInquiries(){
   localStorage.setItem('vsC_iq_injected_v2','1');
   if(added>0){
     toast(added+'명 문의자 자동 등록됨 📞');
-    /* Firebase에도 즉시 동기화 */
-    try{
-      var db2=_fs();
-      var ref2=db2.collection('studio').doc('data');
-      ref2.set({inquiries:inquiries},{merge:true});
-    }catch(e){console.error('Firebase inquiry sync error:',e);}
+    /* saveAll() already submitted this change through the canonical Cloudflare sync controller. */
   }
 }
 
@@ -11711,7 +11626,6 @@ function resetWeekOvr(){
       createScheduleResetSnapshot(wk,mon,before);
       delete weekOvr[wk];
       saveAll();
-      try{if(typeof _splitMigrationFrozen!=='function'||!_splitMigrationFrozen()){var _db3=_fs();_db3.collection('studio').doc('data').set({weekOvr:weekOvr},{merge:true});}}catch(e){}
       toast('✅ 초기화 완료 · 복구 스냅샷 저장됨');render();
     }
   });
@@ -12079,6 +11993,18 @@ body.is-mobile .mobile-tab-bar{display:flex!important;}
 })();
 
 /* ── PWA Service Worker 등록 ── */
+var _pwaInstallPrompt=null;
+function _pwaInstallButton(){return document.getElementById('pwaInstallBtn');}
+function _pwaStandalone(){return !!((window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone===true);}
+window.addEventListener('beforeinstallprompt',function(event){event.preventDefault();_pwaInstallPrompt=event;var btn=_pwaInstallButton();if(btn&&!_pwaStandalone())btn.hidden=false;});
+window.addEventListener('appinstalled',function(){_pwaInstallPrompt=null;var btn=_pwaInstallButton();if(btn)btn.hidden=true;if(typeof toast==='function')toast('HLB Studio 앱 설치가 완료되었습니다','✓');});
+async function installStudioPWA(){
+  var btn=_pwaInstallButton();if(_pwaStandalone()){if(btn)btn.hidden=true;if(typeof toast==='function')toast('이미 앱으로 실행 중입니다','✓');return;}
+  if(!_pwaInstallPrompt){var help=document.getElementById('pwaInstallHelp');if(help)help.open=true;if(typeof toast==='function')toast('브라우저 설치 메뉴를 열거나 설치 안내를 확인해주세요','ℹ');return;}
+  var prompt=_pwaInstallPrompt;_pwaInstallPrompt=null;await prompt.prompt();
+  try{var choice=await prompt.userChoice;if(btn)btn.hidden=choice&&choice.outcome==='accepted';}catch(e){if(btn)btn.hidden=false;}
+}
+
 if('serviceWorker' in navigator){
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('./sw.js').then(function(reg){
