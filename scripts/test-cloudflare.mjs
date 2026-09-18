@@ -87,7 +87,7 @@ try{
     method:'PUT',headers:{'Content-Type':'application/octet-stream'},body:oversize
   });
   check('oversize media rejected',r.status===413);
-  const assets=['/','/index.html','/vs-sync.js','/cf-transport.js','/cf-migration.js','/sw.js','/manifest.json','/icon-192.png','/icon-512.png'];
+  const assets=['/','/index.html','/vs-sync.js','/cf-transport.js','/cf-migration.js','/v2-ui.js','/v2.css','/sw.js','/manifest.json','/icon-192.png','/icon-512.png'];
   for(const asset of assets){r=await fetch(origin+asset,{redirect:'manual'});check('asset '+asset,r.status===200);}
   r=await fetch(origin+'/not-allowlisted.txt');check('unknown asset is hidden',r.status===404);
   console.log(JSON.stringify({ok:true,checks:checks.length,names:checks},null,2));

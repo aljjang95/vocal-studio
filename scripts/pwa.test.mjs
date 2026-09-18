@@ -8,7 +8,7 @@ const html=read('index.html'),manifest=JSON.parse(read('manifest.json'));
 test('installed identity stays tied to the previous start URL and uses both device layouts',()=>{
   assert.equal(manifest.id,'/index.html');assert.equal(manifest.start_url,'/index.html');assert.equal(manifest.scope,'/');
   assert.equal(manifest.display,'standalone');assert.equal(manifest.orientation,'any');assert.equal(manifest.lang,'ko-KR');
-  assert.equal(manifest.theme_color,'#245f75');assert.equal(manifest.background_color,'#f3f5f8');
+  assert.equal(manifest.theme_color,'#080d15');assert.equal(manifest.background_color,'#060910');
 });
 test('manifest credentials and Apple icon are explicit without disabling zoom',()=>{
   assert.match(html,/<link[^>]+rel="manifest"[^>]+crossorigin="use-credentials"/);

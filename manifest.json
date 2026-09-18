@@ -1,13 +1,15 @@
 {
-  "name": "?????? ???",
-  "short_name": "???? ??",
-  "description": "????? ?????? ???? ???? ??? ?. ???? PC? ?? Cloudflare ??? ???? ?????.",
+  "name": "HLB Studio V2 관리자",
+  "short_name": "HLB Studio",
+  "description": "고객·문의·상담·일정·결제를 하나의 Cloudflare 공용 데이터로 관리하는 HLB Studio V2 관리자 앱",
+  "id": "/index.html",
   "start_url": "/index.html",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#f3f5f8",
-  "theme_color": "#245f75",
+  "background_color": "#060910",
+  "theme_color": "#080d15",
   "orientation": "any",
+  "lang": "ko-KR",
   "icons": [
     {
       "src": "icon-192.png",
@@ -22,8 +24,6 @@
       "purpose": "any"
     }
   ],
-  "id": "/index.html",
-  "lang": "ko-KR",
   "categories": [
     "business",
     "productivity"

@@ -3,7 +3,7 @@ import path from 'node:path';
 
 const root=path.resolve(import.meta.dirname,'..');
 const out=path.join(root,'dist','cloudflare-assets');
-const assets=['index.html','vs-sync.js','cf-transport.js','cf-migration.js','sw.js','manifest.json','icon-192.png','icon-512.png'];
+const assets=['index.html','vs-sync.js','cf-transport.js','cf-migration.js','v2-ui.js','v2.css','sw.js','manifest.json','icon-192.png','icon-512.png'];
 await rm(out,{recursive:true,force:true});
 await mkdir(out,{recursive:true});
 for(const name of assets)await cp(path.join(root,name),path.join(out,name));

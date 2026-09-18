@@ -5,6 +5,7 @@ const PROTOCOL = 'vs-cf-1';
 const MAX_MEDIA_BYTES = 20 * 1024 * 1024;
 const ASSETS = new Set([
   '/index.html', '/vs-sync.js', '/cf-transport.js', '/cf-migration.js',
+  '/v2-ui.js', '/v2.css',
   '/sw.js', '/manifest.json', '/icon-192.png', '/icon-512.png',
 ]);
 const CSP = "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; " +

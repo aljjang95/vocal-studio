@@ -6,13 +6,14 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="보컬스튜디오">
-  <meta name="theme-color" content="#245f75">
+  <meta name="theme-color" content="#080d15">
   <link rel="manifest" href="/manifest.json" crossorigin="use-credentials">
   <link rel="apple-touch-icon" href="/icon-192.png">
   <meta name="mobile-web-app-capable" content="yes">
   <script src="./vs-sync.js?v=20260917-shared1"></script>
   <script src="./cf-transport.js?v=20260917-shared1"></script>
   <script src="./cf-migration.js?v=20260915-cf1"></script>
+  <script src="./v2-ui.js?v=20260918-v2"></script>
 <title>Vocal Studio · 관리자 스케줄</title>
 <!-- System fonts keep the administrator startup independent of external font requests. -->
 <style>
@@ -2574,6 +2575,7 @@ div.mwv .lb { font-size: 7px !important; padding: 0 !important; min-height: 0 !i
 @media(display-mode:standalone){#vocalAdmin .pwa-browser-copy{display:none;}#vocalAdmin .pwa-standalone-copy{display:inline;}#vocalAdmin #viewToggleBtn{display:none!important;}#vocalAdmin .main .topbar{padding-left:14px!important;}}
 </style>
 
+  <link rel="stylesheet" href="./v2.css?v=20260918-v2">
 </head>
 <body id="vocalAdmin">
 
@@ -2627,25 +2629,37 @@ div.mwv .lb { font-size: 7px !important; padding: 0 !important; min-height: 0 !i
     <div id="topSyncStatus" style="width:100%;font-size:11px;color:var(--tm);display:none;line-height:1.35"></div>
     
   </div>
-  <section id="pwaWorkspace" aria-label="관리자 앱 빠른 실행">
-    <div class="pwa-workspace-title"><span>MY STUDIO</span><strong>오늘도 한곳에서 관리하세요</strong></div>
-    <div class="pwa-short-actions">
-      <button type="button" id="pwaGotoday" onclick="go('today')"><span aria-hidden="true">◷</span>오늘 일정</button>
-      <button type="button" id="pwaGoschedule" onclick="go('schedule')"><span aria-hidden="true">＋</span>일정표·등록</button>
-      <button type="button" id="pwaGostudents" onclick="go('students')"><span aria-hidden="true">♙</span>고객 관리</button>
-      <button type="button" id="pwaInstallBtn" onclick="installStudioPWA()" hidden><span aria-hidden="true">?</span>? ??</button>
-    </div>
-    <details id="pwaInstallHelp">
-      <summary><span class="pwa-browser-copy">홈 화면에 설치</span><span class="pwa-standalone-copy">설치된 앱 사용 안내</span></summary>
-      <div class="pwa-help-body">
-        <p><strong>휴대폰·PC 모두 같은 관리자 앱입니다.</strong> 로그인한 뒤 일정을 등록하면 같은 공용 서버를 통해 다른 기기에도 반영됩니다.</p>
-        <p><strong>안드로이드·PC:</strong> 브라우저 메뉴의 ‘앱 설치’ 또는 ‘홈 화면에 추가’를 선택하세요. 해당 메뉴가 없으면 일반 브라우저에서 계속 이용할 수 있습니다.</p>
-        <p><strong>아이폰·아이패드:</strong> Safari에서 공유 버튼 → ‘홈 화면에 추가’를 선택하세요.</p>
-        <p><strong>저장 확인:</strong> ‘동기화됨’이 서버 저장 확인 상태입니다. 연결이 끊기면 서버 전송 대기 상태이므로 연결 후 다시 확인하세요. 저장 공간 오류가 뜨면 작성 내용을 먼저 보존해 주세요.</p>
-        <p><strong>오프라인:</strong> 이미 열려 있는 앱의 변경은 기기 저장이 성공한 경우 보관됩니다. 앱을 새로 열려면 인터넷 연결이 필요합니다. 이 앱은 고객 자료를 오프라인 페이지 캐시에 넣지 않습니다.</p>
-        <p><strong>업데이트:</strong> 작성 중인 내용을 저장하고 동기화 상태를 확인한 뒤 앱을 다시 여세요. 화면을 강제로 새로고침하지 않습니다.</p>
+  <section id="pwaWorkspace" class="v2-ops-center" aria-label="HLB Studio V2 운영 커맨드센터">
+    <div id="v2OpsCenter">
+      <div class="v2-ops-head">
+        <div><div class="v2-eyebrow">HLB STUDIO V2 · OPERATIONS</div><h2>사람을 놓치지 않는 운영</h2>
+        <p>전화 문의부터 상담 신청서, 고정·변동 스케줄까지 한 흐름으로 저장하고 같은 공용 DB에서 관리합니다.</p></div>
+        <div class="v2-live"><span class="v2-live-dot"></span><span id="v2LiveText">공용 DB 연결</span></div>
       </div>
-    </details>
+      <div class="v2-kpis">
+        <div class="v2-kpi"><span>미전환 문의</span><strong id="v2InquiryCount">0</strong><small>건</small></div>
+        <div class="v2-kpi"><span>상담 진행</span><strong id="v2ConsultCount">0</strong><small>건</small></div>
+        <div class="v2-kpi"><span>오늘 일정</span><strong id="v2TodayCount">0</strong><small>건</small></div>
+        <div class="v2-kpi" id="v2ConflictCard"><span>스케줄 충돌</span><strong id="v2ConflictCount">0</strong><small>건</small></div>
+      </div>
+      <div class="v2-actions">
+        <button id="v2CallCapture" class="v2-action-card primary" onclick="openV2PhoneCapture()"><span class="v2-action-icon">☎</span><strong>전화 문의 즉시 저장</strong><span>번호만 먼저 저장해도 문의 이력으로 남습니다.</span></button>
+        <button id="v2ConsultIntake" class="v2-action-card" onclick="showConsultForm()"><span class="v2-action-icon">▤</span><strong>상담 신청서 작성</strong><span>현장 상담 내용을 자동 임시저장하며 작성합니다.</span></button>
+        <button id="v2FixedSchedule" class="v2-action-card" onclick="openV2ScheduleMode('fixed')"><span class="v2-action-icon">◆</span><strong>고정 스케줄 등록</strong><span>반복 요일·시간을 등록하고 충돌을 차단합니다.</span></button>
+        <button id="v2FlexSchedule" class="v2-action-card" onclick="openV2ScheduleMode('flex')"><span class="v2-action-icon">↻</span><strong>변동 스케줄 배정</strong><span>이번 주만 다른 일정도 공용 DB에 안전하게 반영합니다.</span></button>
+        <button id="pwaGostudents" class="v2-action-card" onclick="go('students')"><span class="v2-action-icon">◎</span><strong>고객 관리</strong><span>문의·상담·레슨 이력을 한 고객 흐름으로 확인합니다.</span></button>
+      </div>
+      <div class="v2-install-row">
+        <button type="button" id="pwaGotoday" class="btn bg2 bsm" onclick="go('today')">오늘 일정</button>
+        <button type="button" id="pwaGoschedule" class="btn bg2 bsm" onclick="go('schedule')">주간 일정</button>
+        <details id="pwaInstallHelp"><summary><span class="pwa-browser-copy">설치·동기화 안내</span><span class="pwa-standalone-copy">설치된 앱 사용 안내</span></summary>
+          <div class="pwa-help-body"><p><strong>PC와 모바일은 같은 공용 DB를 사용합니다.</strong> ‘동기화됨’ 상태에서 저장이 서버에 확인됩니다.</p>
+          <p><strong>설치:</strong> Chrome/Edge의 앱 설치 또는 ‘홈 화면에 추가’를 사용합니다. 설치 버튼이 지원되면 오른쪽 버튼으로 바로 설치할 수 있습니다.</p>
+          <p><strong>오프라인:</strong> 고객 개인정보는 서비스워커 캐시에 저장하지 않으며, 연결이 끊기면 서버 전송 대기 상태로 보존하고 연결 복구 후 서버 상태를 다시 검증합니다.</p></div>
+        </details>
+        <button type="button" id="pwaInstallBtn" class="btn bp bsm v2-install-btn" onclick="installStudioPWA()"><span aria-hidden="true">↓</span> 앱 설치</button>
+      </div>
+    </div>
   </section>
 
   <div class="content" id="content"></div>
@@ -11983,11 +11997,12 @@ var _pwaInstallPrompt=null;
 function _pwaInstallButton(){return document.getElementById('pwaInstallBtn');}
 function _pwaStandalone(){return !!((window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone===true);}
 window.addEventListener('beforeinstallprompt',function(event){event.preventDefault();_pwaInstallPrompt=event;var btn=_pwaInstallButton();if(btn&&!_pwaStandalone())btn.hidden=false;});
-window.addEventListener('appinstalled',function(){_pwaInstallPrompt=null;var btn=_pwaInstallButton();if(btn)btn.hidden=true;if(typeof toast==='function')toast('? ?? ?? ?');});
+window.addEventListener('appinstalled',function(){_pwaInstallPrompt=null;var btn=_pwaInstallButton();if(btn)btn.hidden=true;if(typeof toast==='function')toast('HLB Studio 앱 설치가 완료되었습니다','✓');});
 async function installStudioPWA(){
-  var btn=_pwaInstallButton();if(_pwaStandalone()){if(btn)btn.hidden=true;return;}
-  if(!_pwaInstallPrompt){var help=document.getElementById('pwaInstallHelp');if(help)help.open=true;if(typeof toast==='function')toast('???? ?? ??? ??? ???','?');return;}
-  var prompt=_pwaInstallPrompt;_pwaInstallPrompt=null;await prompt.prompt();try{await prompt.userChoice;}catch(e){}if(btn)btn.hidden=true;
+  var btn=_pwaInstallButton();if(_pwaStandalone()){if(btn)btn.hidden=true;if(typeof toast==='function')toast('이미 앱으로 실행 중입니다','✓');return;}
+  if(!_pwaInstallPrompt){var help=document.getElementById('pwaInstallHelp');if(help)help.open=true;if(typeof toast==='function')toast('브라우저 설치 메뉴를 열거나 설치 안내를 확인해주세요','ℹ');return;}
+  var prompt=_pwaInstallPrompt;_pwaInstallPrompt=null;await prompt.prompt();
+  try{var choice=await prompt.userChoice;if(btn)btn.hidden=choice&&choice.outcome==='accepted';}catch(e){if(btn)btn.hidden=false;}
 }
 
 if('serviceWorker' in navigator){

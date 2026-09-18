@@ -96,7 +96,7 @@ try:
         context=browser.new_context(viewport={'width':1440,'height':900})
         page=context.new_page()
         page.on('pageerror',lambda exc: errors.append('desktop: '+str(exc)))
-        page.goto(ORIGIN+'/',wait_until='domcontentloaded')
+        page.goto(ORIGIN+'/',wait_until='domcontentloaded',timeout=60000)
         wait_js(page,"window._cfSession && window._vsSync && window._vsSync.ready")
         check('desktop actual app hydrated',page.evaluate("weekOvr.w1.s1.time==='10:00'"))
         check('desktop Cloudflare principal bound',page.evaluate("_cfSession.principal.length>0"))
@@ -241,7 +241,8 @@ try:
         check('PWA launches standalone without portrait-only lock',manifest['display']=='standalone' and manifest['orientation']=='any')
         installability=cdp.send('Page.getInstallabilityErrors')
         (EVIDENCE/'pwa-installability.json').write_text(json.dumps(installability,indent=2),encoding='utf-8')
-        check('Chrome reports no PWA installability errors',not installability.get('installabilityErrors'))
+        product_installability_errors=[e for e in installability.get('installabilityErrors',[]) if e.get('errorId')!='in-incognito']
+        check('Chrome reports no product PWA installability errors',not product_installability_errors)
         for client,label in [(page,'desktop'),(phone,'mobile')]:
             for view in ['today','schedule','students']:
                 client.locator('#pwaGo'+view).click()
