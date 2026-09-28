@@ -517,6 +517,51 @@ try:
             mobile_page.screenshot(path=str(EVIDENCE/(f'browser-{label}.png')),full_page=True)
             mobile.close()
 
+        # Reproduce the production quota failure: a closed tab left a same-as-server sync backup
+        # and several recovery snapshots that together fill localStorage. The new tab must reclaim
+        # only superseded copies and keep syncing.
+        quota_context=browser.new_context(viewport={'width':1440,'height':900},storage_state=visual_storage_state)
+        quota_page=quota_context.new_page()
+        quota_page.on('pageerror',lambda exc: errors.append('quota: '+str(exc)))
+        quota_page.goto(ORIGIN+'/',wait_until='domcontentloaded')
+        wait_js(quota_page,"window._cfSession&&window._vsSync&&window._vsSync.ready&&_vsSync.mode==='synced'")
+        quota_seed=quota_page.evaluate("""()=>{
+          const s=_vsSync,text=JSON.stringify(s.state),prefix=s.key+':backup:';
+          for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(k&&k.indexOf(prefix)===0)localStorage.removeItem(k);}
+          localStorage.setItem(prefix+'closed-tab-00000000-0000-0000-0000-000000000000',text);
+          const older=JSON.parse(JSON.stringify(s.state.base));older.students=older.students.map(r=>Object.assign({},r,{name:(r.name||'')+' (old)'}));
+          localStorage.setItem(prefix+'closed-tab-11111111-1111-1111-1111-111111111111',JSON.stringify({version:1,namespace:s.state.namespace,owner:s.state.owner,revision:0,base:older,local:s.state.base,recovery:[older],resumeConflict:true}));
+          for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(/^vsC_recovery_\\d+$/.test(k))localStorage.removeItem(k);}
+          for(let i=0;i<3;i++)localStorage.setItem('vsC_recovery_'+(4000000000000+i),'r'.repeat(60000));
+          let filled=0,seq=0;
+          for(const size of [200000,20000,2000,200]){const pad='x'.repeat(size);for(let i=0;i<200;i++){try{localStorage.setItem('vsC_qa_fill_'+seq,pad);seq++;filled++;}catch(e){break;}}}
+          let freeProbe=true;try{localStorage.setItem('__vs_quota_probe__',text);localStorage.removeItem('__vs_quota_probe__');}catch(e){freeProbe=false;}
+          return {filled,freeProbe,stateLen:text.length};}""")
+        print('quota seed: '+json.dumps(quota_seed))
+        check('quota fixture fills local storage before reload',quota_seed['filled']>0 and not quota_seed['freeProbe'])
+        quota_page.reload(wait_until='domcontentloaded')
+        wait_js(quota_page,"window._cfSession&&window._vsSync&&window._vsSync.ready")
+        quota_after=quota_page.evaluate("""()=>{const s=_vsSync,prefix=s.key+':backup:';let backups=0,snapshots=0;
+          for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.indexOf(prefix)===0)backups++;if(/^vsC_recovery_\\d+$/.test(k))snapshots++;}
+          return {mode:s.mode,blocked:s.blocked,panel:document.getElementById('vsSyncPanel').dataset.mode,own:localStorage.getItem(prefix+s.instance)!==null,
+            closed:localStorage.getItem(prefix+'closed-tab-00000000-0000-0000-0000-000000000000')!==null,superseded:localStorage.getItem(prefix+'closed-tab-11111111-1111-1111-1111-111111111111')!==null,backups,snapshots};}""")
+        print('quota after reload: '+json.dumps(quota_after))
+        check('full local storage reclaims superseded copies and keeps sync running',quota_after['mode'] in ('synced','recovery') and not quota_after['blocked'] and quota_after['own'] and not quota_after['closed'] and not quota_after['superseded'])
+        quota_page.evaluate("()=>{weekOvr.w1=weekOvr.w1||{};weekOvr.w1.s1={time:'10:30'};saveAll();}")
+        wait_js(quota_page,"_vsSync.pending()===0&&(_vsSync.mode==='synced'||_vsSync.mode==='recovery')")
+        status,_,body=http('/api/export')
+        check('edit after quota recovery reaches the server',status==200 and json.loads(body)['state']['weekOvr']['w1']['s1']['time']=='10:30')
+        quota_page.evaluate("()=>{weekOvr.w1.s1={time:'10:00'};saveAll();}")
+        wait_js(quota_page,"_vsSync.pending()===0")
+        quota_page.evaluate("()=>{for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(k.indexOf('vsC_qa_fill_')===0||/^vsC_recovery_4000000000\\d{3}$/.test(k))localStorage.removeItem(k);}}")
+        reclaim_check=quota_page.evaluate("""()=>{const count=()=>{let n=0;for(let i=0;i<localStorage.length;i++)if(/^vsC_recovery_\\d+$/.test(localStorage.key(i)))n++;return n;};
+          for(let i=0;i<3;i++)localStorage.setItem('vsC_recovery_'+(4100000000000+i),'q');const before=count();const removed=_vsSync.a.reclaim();const after=count();
+          for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(/^vsC_recovery_41000000000\\d{2}$/.test(k))localStorage.removeItem(k);}
+          return {before,removed,after};}""")
+        print('adapter reclaim: '+json.dumps(reclaim_check))
+        check('sync adapter reclaim prunes local recovery snapshots to one',reclaim_check['before']>=3 and reclaim_check['after']==1 and reclaim_check['removed']==reclaim_check['before']-1)
+        quota_context.close()
+
         visual_context=browser.new_context(viewport={'width':1440,'height':900},storage_state=visual_storage_state)
         visual_page=visual_context.new_page()
         visual_page.on('pageerror',lambda exc: errors.append('visual-desktop: '+str(exc)))
@@ -540,9 +585,11 @@ try:
         }""")
         print('desktop weekly style diagnostics: '+json.dumps(weekly_style_diagnostics,ensure_ascii=False))
         check('weekday header uses dark V2 surface and readable text',weekly_style_diagnostics['normalHeader']['background']=='rgb(16, 24, 38)' and weekly_style_diagnostics['normalHeader']['color']=='rgb(237, 240, 255)')
-        check('today and holiday remain distinct on the dark schedule',weekly_style_diagnostics['todayHeader']['background'].startswith('rgba(127, 134, 255,') and weekly_style_diagnostics['todayHeader']['labelColor']=='rgb(227, 229, 255)' and weekly_style_diagnostics['todayHeader']['dateColor']=='rgb(227, 229, 255)' and weekly_style_diagnostics['todayHeader']['holidayLabelColor']=='rgb(255, 158, 174)' and '127, 134, 255' in weekly_style_diagnostics['todayCell'])
+        check('today and holiday remain distinct on the dark schedule',weekly_style_diagnostics['todayHeader']['background'].startswith('rgba(127, 134, 255,') and weekly_style_diagnostics['todayHeader']['labelColor']=='rgb(227, 229, 255)' and weekly_style_diagnostics['todayHeader']['dateColor']=='rgb(227, 229, 255)' and weekly_style_diagnostics['todayHeader']['holidayLabelColor'] in (None,'rgb(255, 158, 174)') and '127, 134, 255' in weekly_style_diagnostics['todayCell'])
+        holiday_labels=visual_page.evaluate("()=>[...document.querySelectorAll('.sg-hd.off-day > div[style*=\"font-size:9px\"][style*=\"color:var(--r)\"]')].map(e=>getComputedStyle(e).color)")
+        check('holiday labels on the weekly header stay readable rose',len(holiday_labels)>0 and all(c=='rgb(255, 158, 174)' for c in holiday_labels))
         check('schedule card header uses dark V2 surface and readable title',weekly_style_diagnostics['cardHeader']['background']=='rgb(16, 24, 38)' and weekly_style_diagnostics['cardHeader']['titleColor']=='rgb(245, 247, 255)')
-        check('desktop schedule card labels use readable sizes',weekly_style_diagnostics['desktopLabels']=={'name':'13px','time':'11px','kind':'11px','status':'10px'})
+        check('desktop schedule card labels use readable sizes',weekly_style_diagnostics['desktopLabels']=={'name':'13px','time':'11.5px','kind':'11.5px','status':'11px'})
         check('clean desktop visual sync state settled',visual_page.evaluate("_vsSync.ready&&_vsSync.mode==='synced'&&document.getElementById('vsSyncPanel').dataset.mode==='synced'"))
         check('clean desktop visual capture has no alert',visual_page.locator('#mTodayAlert').count()==0)
         check('clean desktop visual capture has no open modal',visual_page.locator('.ov.open').count()==0)

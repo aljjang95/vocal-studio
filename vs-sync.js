@@ -129,6 +129,47 @@
   Controller.prototype.status=function(mode,detail){this.mode=mode;this.a.status(mode,detail);};
   Controller.prototype.unready=function(){this.ready=false;if(this.a.ready)this.a.ready(false);};
   Controller.prototype.guard=function(epoch){return epoch===this.epoch&&this.owner&&this.a.owner()===this.owner;};
+  /* A backup from another tab is superseded when everything it holds is already server-confirmed:
+     its local copy equals the current confirmed base and every recovery copy is a copy of server data
+     (its own base or the current base). Anything else, including unsynced edits, is kept. */
+  function supersededBackup(raw,next){
+    try{
+      var saved=JSON.parse(raw);
+      if(!saved||saved.version!==1||saved.owner!==next.owner||saved.namespace!==next.namespace||saved.ack)return false;
+      if(!Number.isSafeInteger(saved.revision)||saved.revision>next.revision||!Array.isArray(saved.recovery))return false;
+      if(!equal(normalize(saved.local),next.base))return false;
+      var base=normalize(saved.base);
+      return saved.recovery.every(function(data){return equal(data,base)||equal(data,next.base);});
+    }catch(error){return false;}
+  }
+  /* Remove other tabs' byte-identical or superseded backups. Returns the removed [key,raw] pairs so the
+     caller can put them back if the space still is not enough. */
+  Controller.prototype.reclaimBackups=function(next,text,backupKey){
+    var store=this.a.backupStore,prefix=this.key+':backup:',candidates=[],removed=[];
+    for(var i=0;i<store.length;i++){
+      var key=store.key(i);
+      if(!key||key===backupKey||key.indexOf(prefix)!==0)continue;
+      var raw=store.getItem(key);
+      if(raw===text||supersededBackup(raw,next))candidates.push([key,raw]);
+    }
+    /* Re-read before removing so a copy another open tab rewrote meanwhile is kept. */
+    candidates.forEach(function(entry){try{if(store.getItem(entry[0])!==entry[1])return;store.removeItem(entry[0]);removed.push(entry);}catch(error){}});
+    return removed;
+  };
+  /* Write this tab's backup. On quota failure, free superseded backups from other tabs and retry; the
+     removal is kept only if the write then succeeds, otherwise the removed backups are restored. The
+     adapter's reclaim hook (local cache pruning) is the last resort. */
+  Controller.prototype.writeBackup=function(next,text,backupKey){
+    var store=this.a.backupStore,self=this;
+    try{store.setItem(backupKey,text);return;}catch(error){}
+    var removed=this.reclaimBackups(next,text,backupKey);
+    function restore(){removed.forEach(function(entry){try{if(store.getItem(entry[0])===null)store.setItem(entry[0],entry[1]);}catch(error){if(typeof console!=='undefined'&&console.error)console.error('vs-sync: could not restore backup',entry[0],error);}});removed=[];}
+    if(removed.length){try{store.setItem(backupKey,text);return;}catch(error){}}
+    var freed=0;try{freed=self.a.reclaim?Number(self.a.reclaim())||0:0;}catch(error){freed=0;}
+    if(freed||removed.length){try{store.setItem(backupKey,text);return;}catch(error){}}
+    restore();
+    throw Error('backup-quota');
+  };
   Controller.prototype.persist=function(next){
     var text=JSON.stringify(next);
     try{
@@ -136,7 +177,7 @@
       if(this.a.store.getItem(this.key)!==text)throw Error('journal-readback');
       if(this.a.backupStore){
         var store=this.a.backupStore,backupKey=this.key+':backup:'+this.instance;
-        store.setItem(backupKey,text);
+        this.writeBackup(next,text,backupKey);
         if(!next.ack&&!diff(next.base,next.local).length){
           var duplicates=[];
           for(var i=0;i<store.length&&duplicates.length<64;i++){

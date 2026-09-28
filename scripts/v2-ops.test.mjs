@@ -153,3 +153,24 @@ test('PWA install copy and manifest contain no mojibake placeholders',()=>{
   assert.match(manifest,/고객·문의·상담·일정·결제/);
   assert.doesNotMatch(manifest,/"(?:name|short_name|description)"\s*:\s*"[^"\n]*\?\?+/);
 });
+test('lesson types map to stable color keys and cards expose them without contact details',()=>{
+  const start=html.indexOf('function scheduleKindKey(slot)');
+  const end=html.indexOf('function scheduleStatusLabel(slot)',start);
+  assert.ok(start>=0&&end>start,'kind key helper exists');
+  const context=vm.createContext({});vm.runInContext(html.slice(start,end),context);
+  assert.equal(context.scheduleKindKey({type:'consult-sched',s:{cls:'pro'}}),'consult');
+  assert.equal(context.scheduleKindKey({type:'fixed-sched',s:{cls:'pro'}}),'pro');
+  assert.equal(context.scheduleKindKey({type:'fixed-sched',s:{cls:'chuk'}}),'chuk');
+  assert.equal(context.scheduleKindKey({type:'fixed-sched',s:{cls:'voice'}}),'voice');
+  assert.equal(context.scheduleKindKey({type:'fixed-sched',s:{cls:'hob'}}),'hob');
+  assert.equal(context.scheduleKindKey({type:'fixed-sched',s:{}}),'pro');
+  assert.equal(context.scheduleKindKey(null),'');
+  assert.equal(html.split('data-kind="\'+scheduleKindKey(x)+\'"').length-1,3,'desktop, mobile day and mobile week cards carry the kind key');
+  for(const kind of ['hob','chuk','voice','consult'])assert.match(css,new RegExp('\\.schedule-card-kind\\[data-kind="'+kind+'"\\]::before'));
+  assert.match(css,/--v2-font:"Pretendard"/);
+  assert.doesNotMatch(css.slice(css.indexOf('V2.1 design refresh')),/font-style:italic/);
+});
+test('sync backup quota falls back to pruning local recovery snapshots',()=>{
+  assert.match(html,/backupStore:localStorage,\s*\/\*[^*]*\*\/\s*reclaim:function\(\)\{return _pruneRecoverySnapshots\(1\);\}/);
+  assert.match(html,/vs-sync\.js\?v=20260928-quota1/);
+});

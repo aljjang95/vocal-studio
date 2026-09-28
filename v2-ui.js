@@ -92,6 +92,9 @@ window.v2UpdateOps=function(){
   Object.keys(values).forEach(function(id){var n=el(id);if(n)n.textContent=String(values[id]);});
   var st=el('v2LiveText'),source=el('topSyncStatus')||el('syncStatus');
   if(st&&source){var txt=(source.textContent||'').trim();st.textContent=txt||'공용 DB 연결';}
+  /* Color the live pill by sync health so a stopped sync never looks like a green success. */
+  var live=st&&st.closest('.v2-live'),panel=el('vsSyncPanel'),mode=panel&&panel.dataset.mode||'';
+  if(live)live.dataset.state=(mode==='synced'||mode==='recovery'||!mode)?'ok':(mode==='saving'||mode==='pending'||mode==='deferred'||mode==='checking-server'||mode==='checking-session'||mode==='unconfirmed')?'busy':'warn';
   var warn=el('v2ConflictCard');if(warn)warn.classList.toggle('v2-has-conflict',cf>0);
 };
 function initV2(){
