@@ -37,6 +37,14 @@
 #vocalAdmin .topbar{background:rgba(7,11,18,.76)!important;border-bottom:1px solid var(--v2-line)!important;
   box-shadow:0 14px 50px rgba(0,0,0,.18)!important;backdrop-filter:blur(24px)!important;}
 #vocalAdmin .pt{font-family:Georgia,"Times New Roman",serif!important;font-style:normal!important;font-size:19px!important;}
+#vocalAdmin .topbar .pt{color:var(--v2-text,#f5f7ff)!important;}
+#vocalAdmin .v2-initial-sync-state{box-sizing:border-box;width:min(100%,720px);min-height:clamp(220px,38vh,300px);margin:12px auto;padding:28px 22px;display:grid;place-content:center;justify-items:center;gap:12px;text-align:center;border:1px solid var(--v2-line-strong);border-radius:20px;background:linear-gradient(145deg,rgba(17,25,40,.92),rgba(9,14,23,.96));color:var(--v2-text);}
+#vocalAdmin .v2-initial-sync-state strong{font-size:16px;line-height:1.5;color:var(--v2-text);}
+#vocalAdmin .v2-initial-sync-state p{max-width:42ch;margin:0;font-size:13px;line-height:1.65;color:var(--v2-muted);}
+#vocalAdmin .v2-initial-sync-spinner{width:32px;height:32px;border:3px solid rgba(127,134,255,.2);border-top-color:var(--v2-violet);border-radius:50%;animation:v2-sync-spin .9s linear infinite;}
+#vocalAdmin .v2-initial-sync-state.is-error{border-color:rgba(255,123,155,.24);}
+#vocalAdmin .v2-initial-sync-error-icon{width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:rgba(255,123,155,.12);color:var(--v2-rose);font-weight:800;font-size:18px;}
+@keyframes v2-sync-spin{to{transform:rotate(360deg);}}
 #vocalAdmin .content{padding:18px 20px 34px;}
 #vocalAdmin .card,#vocalAdmin .modal{background:linear-gradient(180deg,rgba(15,22,34,.96),rgba(9,15,24,.98))!important;
   border:1px solid var(--v2-line)!important;box-shadow:0 18px 70px rgba(0,0,0,.28)!important;}
@@ -120,9 +128,17 @@ body#vocalAdmin{
   --b:rgba(168,180,214,.12)!important;--b2:rgba(145,158,255,.3)!important;
   --a:#7f86ff!important;--a2:#9ca1ff!important;--ag:rgba(127,134,255,.09)!important;--ag2:rgba(127,134,255,.18)!important;
   --t:#f5f7ff!important;--ts:#c8cfdf!important;--tm:#8993a8!important;--g:#53e0c0!important;--r:#ff788d!important;
+  --season-accent:#7f86ff!important;--season-gold:#9ca1ff!important;--season-glow:rgba(127,134,255,.18)!important;
+  --season-border:rgba(168,180,214,.14)!important;--season-border2:rgba(145,158,255,.3)!important;
+  --season-hover:rgba(127,134,255,.08)!important;--season-hover2:rgba(127,134,255,.16)!important;
+  --season-topbar:rgba(7,11,18,.9)!important;--season-card-bg:#0b111b!important;--season-modal-bg:#0b111b!important;
+  --season-text:#f5f7ff!important;--season-text-sub:#c8cfdf!important;--season-text-muted:#8993a8!important;
   background:#060910!important;color:#f5f7ff!important;
 }
 body#vocalAdmin::before{display:block!important;}
+/* The document root keeps the legacy cream color; paint it dark so long pages never show a light band. */
+html:has(body#vocalAdmin){background:#060910!important;}
+body#vocalAdmin{min-height:100%;}
 body#vocalAdmin::after{display:block!important;}
 body#vocalAdmin .sb::before{display:block!important;}
 body#vocalAdmin .main{background:#060910!important;}
@@ -136,6 +152,9 @@ body#vocalAdmin #pwaWorkspace{
   overflow:hidden!important;isolation:isolate;z-index:2;
 }
 body#vocalAdmin #pwaWorkspace::before{z-index:-1;}
+/* Keep the command-center launcher out of the schedule and roster work views. */
+body#vocalAdmin[data-active-page="schedule"] #pwaWorkspace,
+body#vocalAdmin[data-active-page="students"] #pwaWorkspace{display:none!important;}
 body#vocalAdmin #pwaInstallHelp{border-top:0!important;padding-top:0!important;}
 @media(max-width:768px){
   body#vocalAdmin #pwaWorkspace{margin:12px 12px 0!important;padding:15px!important;border-radius:18px!important;}
@@ -145,3 +164,94 @@ body#vocalAdmin #pwaInstallHelp{border-top:0!important;padding-top:0!important;}
 /* Accessible touch targets across desktop PWA and mobile. */
 body#vocalAdmin #pwaWorkspace .btn{min-height:44px!important;}
 body#vocalAdmin #pwaWorkspace button{touch-action:manipulation;}
+
+/* Keep legacy seasonal light-surface overrides from washing out the V2 work area. */
+body#vocalAdmin .card .ch{
+  background:#101826!important;color:var(--v2-text)!important;
+  border-bottom-color:var(--v2-line)!important;
+}
+body#vocalAdmin .card .ch .ct{color:var(--v2-text)!important;}
+body#vocalAdmin .sg-hd{
+  background:#101826!important;border-color:var(--v2-line-strong)!important;
+}
+body#vocalAdmin .sg-hd .dn{color:#edf0ff!important;opacity:1!important;}
+body#vocalAdmin .sg-hd .dd{color:#aab4ca!important;}
+body#vocalAdmin .sg-hd.sun .dn{color:#ff9eae!important;opacity:1!important;}
+body#vocalAdmin .sg-hd.td{background:rgba(127,134,255,.16)!important;}
+body#vocalAdmin .sg-hd.td .dn,
+body#vocalAdmin .sg-hd.td .dd{color:#e3e5ff!important;}
+body#vocalAdmin .sg-hd.off-day{background:rgba(255,123,155,.09)!important;}
+body#vocalAdmin .sg-hd.off-day .dn{color:#c8cfdf!important;opacity:1!important;}
+body#vocalAdmin .sg-hd.off-day > div[style*="font-size:9px"][style*="color:var(--r)"]{color:#ff9eae!important;opacity:1!important;}
+body#vocalAdmin .sg-hd.td.off-day{background:rgba(127,134,255,.16)!important;}
+body#vocalAdmin .sg-hd.td.off-day .dn{color:#e3e5ff!important;opacity:1!important;}
+body#vocalAdmin .sg-cell.td-col{background:rgba(127,134,255,.07)!important;}
+body#vocalAdmin .sg-cell.td-col{box-shadow:inset 1px 0 0 rgba(127,134,255,.35),inset -1px 0 0 rgba(127,134,255,.35)!important;}
+body#vocalAdmin .sg-cell.off-col{background:rgba(255,123,155,.06)!important;}
+body#vocalAdmin .sg-cell.td-col.off-col{background:rgba(127,134,255,.1)!important;}
+@media(min-width:769px){
+  body#vocalAdmin .schedule-card-name{font-size:13px!important;}
+  body#vocalAdmin .schedule-card-time{font-size:11px!important;}
+  body#vocalAdmin .schedule-card-details{font-size:11px!important;}
+  body#vocalAdmin .schedule-status{font-size:10px!important;}
+}
+
+/* Legacy light-theme block (index.html admin style) still paints white panels, buttons and cards.
+   Re-apply the V2 dark surfaces so text keeps readable contrast on every screen. */
+body#vocalAdmin .sb{background:rgba(7,11,18,.96)!important;border-right:1px solid var(--v2-line)!important;}
+body#vocalAdmin .topbar{background:rgba(7,11,18,.9)!important;border-bottom:1px solid var(--v2-line)!important;}
+body#vocalAdmin .ni{color:#aab4ca!important;}
+body#vocalAdmin .ni.on{background:linear-gradient(90deg,rgba(120,129,255,.24),rgba(120,129,255,.07))!important;color:#f5f7ff!important;}
+body#vocalAdmin #vsSyncPanel{background:#0b111b!important;border-bottom:1px solid var(--v2-line)!important;}
+body#vocalAdmin #topSyncStatus{color:#c8cfdf!important;}
+body#vocalAdmin #vsSyncPanel[data-mode=conflict],
+body#vocalAdmin #vsSyncPanel[data-mode=write-error],
+body#vocalAdmin #vsSyncPanel[data-mode=offline],
+body#vocalAdmin #vsSyncPanel[data-mode=auth-required]{background:#1d1218!important;}
+body#vocalAdmin .btn.bg2,body#vocalAdmin .bg2{background:#141d2c!important;color:#dbe1ef!important;border:1px solid rgba(168,180,214,.24)!important;}
+body#vocalAdmin .btn.bg2:hover,body#vocalAdmin .bg2:hover{background:#1b2638!important;border-color:rgba(127,134,255,.4)!important;}
+body#vocalAdmin .btn.bp,body#vocalAdmin .btn.bm{background:linear-gradient(135deg,#7f86ff,#5f68e6)!important;color:#fff!important;border-color:transparent!important;}
+body#vocalAdmin .wn-btn{background:#141d2c!important;color:#e3e7f3!important;border:1px solid rgba(168,180,214,.24)!important;width:36px!important;height:36px!important;}
+body#vocalAdmin .wn-lbl{color:#dbe1ef!important;font-size:13px!important;}
+body#vocalAdmin .admin-day-hero{background:linear-gradient(135deg,rgba(127,134,255,.16),rgba(16,24,38,.95))!important;border:1px solid rgba(145,158,255,.28)!important;}
+body#vocalAdmin .admin-day-hero > div > div > div:nth-child(2){color:#f5f7ff!important;}
+body#vocalAdmin .admin-lesson-card{background:#101826!important;border-color:rgba(168,180,214,.18)!important;color:#f5f7ff!important;}
+body#vocalAdmin .admin-today .empty{background:#0d1420!important;border:1px dashed rgba(168,180,214,.24)!important;}
+body#vocalAdmin .admin-today .empty .et{color:#c8cfdf!important;}
+body#vocalAdmin .admin-today button[onclick^="om('mManual')"]{background:#141d2c!important;color:#c7cbff!important;border-color:rgba(145,158,255,.3)!important;}
+body#vocalAdmin .admin-today button[onclick^="setTodayPrivacy"]:not([style*="background:var(--a)"]){color:#c8cfdf!important;}
+body#vocalAdmin .sg-cell{border-color:rgba(168,180,214,.1)!important;}
+body#vocalAdmin .sg-tm,body#vocalAdmin .sg-time{color:#aab4ca!important;background:#0b111b!important;}
+body#vocalAdmin .mobile-tab-bar{background:rgba(7,11,18,.97)!important;border-top:1px solid var(--v2-line)!important;}
+body#vocalAdmin .mtab-lb{color:#aab4ca!important;}
+body#vocalAdmin .mtab-item.on .mtab-lb{color:#c7cbff!important;}
+body#vocalAdmin .schedule-card.lb{background:#101826!important;color:#f5f7ff!important;border-color:rgba(168,180,214,.18)!important;border-left-color:var(--student-color,#7f86ff)!important;}
+body#vocalAdmin .schedule-card-name{color:#f5f7ff!important;}
+body#vocalAdmin .schedule-card-time{background:rgba(127,134,255,.16)!important;color:#e3e5ff!important;}
+body#vocalAdmin .schedule-card-details,body#vocalAdmin .schedule-card-kind{color:#c8cfdf!important;}
+body#vocalAdmin .schedule-status{background:rgba(255,255,255,.06)!important;border-color:rgba(168,180,214,.24)!important;color:#dbe1ef!important;}
+body#vocalAdmin .schedule-status.is-pending{background:rgba(242,184,75,.14)!important;border-color:rgba(242,184,75,.4)!important;color:#ffd58a!important;}
+body#vocalAdmin .schedule-status.is-cancel{background:rgba(255,123,155,.12)!important;border-color:rgba(255,123,155,.36)!important;color:#ffadc0!important;}
+body#vocalAdmin .mobile-week-day{background:#0d1420!important;border-color:rgba(168,180,214,.16)!important;}
+body#vocalAdmin .mobile-week-day.is-today{border-color:#7f86ff!important;box-shadow:0 0 0 1px #7f86ff inset!important;}
+body#vocalAdmin .mobile-week-day-head{background:#121b2a!important;}
+body#vocalAdmin .mobile-week-day-name{color:#f5f7ff!important;}
+body#vocalAdmin .mobile-week-day-date,body#vocalAdmin .mobile-week-empty{color:#aab4ca!important;}
+body#vocalAdmin .mobile-week-day-badge{color:#c7cbff!important;}
+body#vocalAdmin .mobile-week-day-badge.is-holiday{color:#ff9eae!important;}
+body#vocalAdmin .mobile-week-nav{background:#0d1420!important;}
+body#vocalAdmin .mobile-week-nav button,body#vocalAdmin .mobile-week-today,body#vocalAdmin .mobile-week-add{background:#141d2c!important;color:#e3e7f3!important;border-color:rgba(168,180,214,.24)!important;}
+body#vocalAdmin .mobile-week-range{color:#f5f7ff!important;}
+body#vocalAdmin .person-avatar{box-shadow:0 0 0 1px rgba(0,0,0,.25);}
+body#vocalAdmin .person-avatar .schedule-avatar-fallback{color:#fff!important;text-shadow:0 1px 2px rgba(0,0,0,.35);}
+body#vocalAdmin .profile-photo .no-photo{opacity:.9!important;color:#fff!important;}
+/* Status badges: legacy dark-on-light tones are unreadable on V2 surfaces. */
+body#vocalAdmin .bdg.bg-a{background:rgba(127,134,255,.16)!important;color:#d6d9ff!important;border:1px solid rgba(145,158,255,.34)!important;}
+body#vocalAdmin .bdg.bg-g{background:rgba(83,224,192,.14)!important;color:#8ff0d8!important;border:1px solid rgba(83,224,192,.3)!important;}
+body#vocalAdmin .bdg.bg-r{background:rgba(255,123,155,.14)!important;color:#ffb3c4!important;border:1px solid rgba(255,123,155,.32)!important;}
+body#vocalAdmin .bdg.bg-b{background:rgba(95,184,255,.14)!important;color:#a9d8ff!important;border:1px solid rgba(95,184,255,.3)!important;}
+/* Operations card: keep KPI tiles fully visible instead of clipping them at the card edge. */
+body#vocalAdmin #pwaWorkspace{overflow:visible!important;}
+body#vocalAdmin .v2-kpi{background:rgba(255,255,255,.035)!important;}
+body#vocalAdmin .v2-kpi span{color:#aab4ca!important;}
+body#vocalAdmin .v2-kpi small{color:#8993a8!important;}
