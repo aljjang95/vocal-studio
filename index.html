@@ -10,10 +10,10 @@
   <link rel="manifest" href="/manifest.json" crossorigin="use-credentials">
   <link rel="apple-touch-icon" href="/icon-192.png">
   <meta name="mobile-web-app-capable" content="yes">
-  <script src="./vs-sync.js?v=20260917-shared1"></script>
+  <script src="./vs-sync.js?v=20260928-quota1"></script>
   <script src="./cf-transport.js?v=20260917-shared1"></script>
   <script src="./cf-migration.js?v=20260915-cf1"></script>
-  <script src="./v2-ui.js?v=20260918-v2"></script>
+  <script src="./v2-ui.js?v=20260928-v3"></script>
 <title>Vocal Studio · 관리자 스케줄</title>
 <!-- System fonts keep the administrator startup independent of external font requests. -->
 <style>
@@ -2632,7 +2632,7 @@ div.mwv .lb { font-size: 7px !important; padding: 0 !important; min-height: 0 !i
 @media(display-mode:standalone){#vocalAdmin .pwa-browser-copy{display:none;}#vocalAdmin .pwa-standalone-copy{display:inline;}#vocalAdmin #viewToggleBtn{display:none!important;}#vocalAdmin .main .topbar{padding-left:14px!important;}}
 </style>
 
-  <link rel="stylesheet" href="./v2.css?v=20260918-v2">
+  <link rel="stylesheet" href="./v2.css?v=20260928-v3">
 </head>
 <body id="vocalAdmin">
 
@@ -4638,6 +4638,8 @@ function _vsCarryRows(rows,previous){
 var _vsSync=null;
 try{if(typeof VSSync!=='undefined')_vsSync=VSSync.create({
   namespace:'vocal-studio',store:sessionStorage,backupStore:localStorage,
+  /* Last resort when a sync backup cannot be written: keep only the newest local recovery snapshot. */
+  reclaim:function(){return _pruneRecoverySnapshots(1);},
   instanceId:typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():undefined,
   forkInstance:!!(performance.getEntriesByType&&performance.getEntriesByType('navigation')[0]&&performance.getEntriesByType('navigation')[0].type==='navigate'),
   owner:function(){return hasAdminSession()?_cfSession.principal:null;},
@@ -4803,6 +4805,13 @@ function scheduleLessonKind(slot){
   var group=!!(slot.sharedSlot||scheduleIsGroup(slot.s));
   if(slot.type==='consult-sched')return group?'그룹 상담':'상담 예약';
   return (group?'그룹':'개인')+' · '+clsL(slot.s.cls||'pro');
+}
+/* Stable lesson-type key for color coding: consult, pro, chuk, voice, or hob. */
+function scheduleKindKey(slot){
+  if(!slot||!slot.s)return '';
+  if(slot.type==='consult-sched')return 'consult';
+  var c=slot.s.cls||'pro';
+  return (c==='pro'||c==='chuk'||c==='voice')?c:'hob';
 }
 function scheduleStatusLabel(slot){
   if(!slot)return '';
@@ -7370,7 +7379,7 @@ function buildMobileWeekView(mon,sched,todayStr,isThis,flexS,unassignedFlex,acti
       o+=' onclick="event.stopPropagation();lbClick(this)" oncontextmenu="event.preventDefault();event.stopPropagation();lbRightClick(this)">';
       o+=scheduleAvatarHtml(x.s,40,'round',false);
       o+='<div class="schedule-card-main"><div class="schedule-card-title"><span class="schedule-card-name">'+esc(x.s.name||'이름 없음')+'</span><time class="schedule-card-time">'+esc(x.time)+'</time></div>';
-      o+='<div class="schedule-card-details"><span class="schedule-card-kind">'+esc(scheduleLessonKind(x))+'</span><span class="schedule-status'+statusClass+'">'+esc(status)+'</span></div></div></div>';
+      o+='<div class="schedule-card-details"><span class="schedule-card-kind" data-kind="'+scheduleKindKey(x)+'">'+esc(scheduleLessonKind(x))+'</span><span class="schedule-status'+statusClass+'">'+esc(status)+'</span></div></div></div>';
     });
     o+='<button type="button" class="mobile-week-add" onclick="mSelectWeekDay('+i+')">＋ 이 요일 시간 배정</button></div></section>';
   });
@@ -7432,7 +7441,7 @@ function buildMobileSchedule(){
     var slotCnt=HRS_LBL.reduce(function(acc,h){return acc+(schedH[day+'_'+h]||[]).length;},0);
     var numColor=isSel?'#fff':(isT?'var(--season-accent,var(--a))':'var(--ts)');
     var dayColor=isSun?'var(--r)':(isSel?'#fff':'var(--tm)');
-    var numBg=isSel?'var(--season-accent,var(--a))':(isT?'var(--ag2)':'transparent');
+    var numBg=isSel?'#565ee0':(isT?'var(--ag2)':'transparent');
     o+='<div data-daysel="'+i+'" style="flex:1;min-width:42px;padding:0 2px 8px;text-align:center;cursor:pointer;border-bottom:3px solid '+(isSel?'var(--season-accent,var(--a))':'transparent')+';transition:all .13s;-webkit-tap-highlight-color:rgba(200,169,110,.2)">';
     o+='<div style="font-size:10px;font-weight:700;color:'+dayColor+';margin-bottom:3px">'+day+'</div>';
     o+='<div style="width:34px;height:34px;border-radius:50%;background:'+numBg+';display:flex;align-items:center;justify-content:center;margin:0 auto 3px">';
@@ -7489,7 +7498,7 @@ function buildMobileSchedule(){
         o+=' onclick="event.stopPropagation();lbClick(this)" oncontextmenu="event.preventDefault();event.stopPropagation();lbRightClick(this)">';
         o+=scheduleAvatarHtml(x.s,44,'round',false);
         o+='<div class="schedule-card-main"><div class="schedule-card-title"><span class="schedule-card-name">'+esc(x.s.name||'이름 없음')+'</span><time class="schedule-card-time">'+esc(x.time)+'</time></div>';
-        o+='<div class="schedule-card-details"><span class="schedule-card-kind">'+esc(scheduleLessonKind(x))+'</span><span class="schedule-status'+statusClass+'">'+esc(status)+'</span></div></div></div>';
+        o+='<div class="schedule-card-details"><span class="schedule-card-kind" data-kind="'+scheduleKindKey(x)+'">'+esc(scheduleLessonKind(x))+'</span><span class="schedule-status'+statusClass+'">'+esc(status)+'</span></div></div></div>';
       });
       o+='</div></div>';
     }
@@ -7586,7 +7595,7 @@ function buildSchedule(){
         o+='>';
         o+=scheduleAvatarHtml(x.s,36,'round',true);
         o+='<div class="schedule-card-main"><div class="schedule-card-title"><span class="schedule-card-name">'+esc(x.s.name||'이름 없음')+'</span><time class="schedule-card-time">'+esc(x.time)+'</time></div>';
-        o+='<div class="schedule-card-details"><span class="schedule-card-kind">'+esc(scheduleLessonKind(x))+'</span><span class="schedule-status'+statusClass+'">'+esc(status)+'</span></div></div></div>';
+        o+='<div class="schedule-card-details"><span class="schedule-card-kind" data-kind="'+scheduleKindKey(x)+'">'+esc(scheduleLessonKind(x))+'</span><span class="schedule-status'+statusClass+'">'+esc(status)+'</span></div></div></div>';
       });
       var hasAny=(schedH[d+'_'+h]||[]).length;
       if(!hasAny&&!_collapsed)o+='<div class="cell-add">+</div>';

@@ -30,7 +30,7 @@ function world(){
   }};
   w.client=(options={})=>{
     const c={ui:sync.normalize(options.ui||w.data),owner:'admin-A',editing:false,frozen:false,renders:0,store:options.store||storage()};
-    c.controller=sync.create({namespace:'demo/studio/data',instanceId:'client-'+(++w.clients),forkInstance:!!options.forkInstance,store:c.store,backupStore:w.backup,
+    c.controller=sync.create({namespace:'demo/studio/data',instanceId:'client-'+(++w.clients),forkInstance:!!options.forkInstance,store:c.store,backupStore:w.backup,reclaim:options.reclaim,
       owner:()=>c.owner,database:()=>w.db,timestamp:()=> 'synthetic-timestamp',frozen:()=>c.frozen,editing:()=>c.editing,
       getData:()=>c.ui,setData:data=>{c.ui=data;},render:()=>{c.renders++;},status:(mode,detail)=>{c.mode=mode;c.detail=detail;},later:fn=>queueMicrotask(fn)});
     c.controller.connect();if(options.emit!==false)w.emit();return c;
@@ -183,4 +183,84 @@ test('pending schedule registered offline converges without resurrecting an unre
   assert.equal(w.data.students.filter(s=>s.id==='mobile-new').length,1);
   assert.ok(!Object.hasOwn(w.data.weekOvr.w1,'s1'));
   assert.deepEqual(sync.normalize(mobile.ui),sync.normalize(desktop.ui));
+});
+
+const backupPrefix='vsC_sync_v1:'+encodeURIComponent('demo/studio/data:admin-A')+':backup:';
+function boundBackup(w,limit){
+  const write=w.backup.setItem.bind(w.backup);
+  w.backup.setItem=(key,value)=>{let size=value.length;for(let i=0;i<w.backup.length;i++){const other=w.backup.key(i);if(other!==key)size+=w.backup.getItem(other).length;}if(size>limit)throw Error('bounded-backup-quota');write(key,value);};
+  return write;
+}
+function journal(base,local,recovery=[],extra={}){return {version:1,namespace:'demo/studio/data',owner:'admin-A',revision:0,base,local,recovery,...extra};}
+test('a full backup store reclaims closed-tab copies that hold nothing unsynced',async()=>{
+  const w=world(),confirmed=sync.normalize(w.data),older=copy(confirmed);older.students[1].name='Older server name';
+  const same=JSON.stringify(journal(confirmed,confirmed)),superseded=JSON.stringify(journal(older,confirmed,[older],{resumeConflict:true}));
+  const write=boundBackup(w,same.length+superseded.length+50);
+  write(backupPrefix+'closed-same',same);write(backupPrefix+'closed-superseded',superseded);
+  const c=w.client();
+  assert.equal(c.controller.blocked,false);assert.equal(c.mode,'synced');
+  assert.equal(w.backup.getItem(backupPrefix+'closed-same'),null);assert.equal(w.backup.getItem(backupPrefix+'closed-superseded'),null);
+  assert.ok(w.backup.getItem(c.controller.key+':backup:'+c.controller.instance));
+  c.ui.weekOvr.w1.s1.time='11:00';await c.controller.save();await settle();
+  assert.equal(w.data.weekOvr.w1.s1.time,'11:00');assert.equal(c.controller.pending(),0);
+});
+test('a closed-tab backup with unsynced edits is never reclaimed and sync stops safely instead',async()=>{
+  const w=world(),confirmed=sync.normalize(w.data),edited=copy(confirmed);edited.weekOvr.w1.s1.time='09:00';
+  const pending=JSON.stringify(journal(confirmed,edited));
+  const write=boundBackup(w,pending.length+50);write(backupPrefix+'closed-pending',pending);
+  const c=w.client();
+  assert.equal(w.backup.getItem(backupPrefix+'closed-pending'),pending);
+  assert.equal(c.mode,'storage-error');assert.equal(c.controller.blocked,true);assert.equal(w.writes,0);
+});
+test('a closed-tab recovery copy that differs from confirmed data is kept',async()=>{
+  const w=world(),confirmed=sync.normalize(w.data),offline=copy(confirmed);offline.students.push({id:'offline-row',name:'Offline only'});
+  const kept=JSON.stringify(journal(confirmed,confirmed,[offline]));
+  const write=boundBackup(w,kept.length+50);write(backupPrefix+'closed-recovery',kept);
+  const c=w.client();
+  assert.equal(w.backup.getItem(backupPrefix+'closed-recovery'),kept);assert.equal(c.mode,'storage-error');
+});
+test('adapter reclaim frees app cache space as a last resort and preserves unsynced backups',async()=>{
+  const w=world(),confirmed=sync.normalize(w.data),edited=copy(confirmed);edited.weekOvr.w1.s1.time='09:00';
+  const pending=JSON.stringify(journal(confirmed,edited)),cache='X'.repeat(2000);
+  const write=boundBackup(w,pending.length+cache.length+JSON.stringify(journal(confirmed,confirmed)).length-500);
+  write(backupPrefix+'closed-pending',pending);write('app-recovery-snapshot',cache);
+  let calls=0;
+  const c=w.client({reclaim:()=>{calls++;const had=w.backup.getItem('app-recovery-snapshot')!==null;w.backup.removeItem('app-recovery-snapshot');return had?1:0;}});
+  assert.equal(calls,1);assert.equal(c.controller.blocked,false);assert.equal(c.mode,'synced');
+  assert.equal(w.backup.getItem(backupPrefix+'closed-pending'),pending);
+});
+test('when every reclaim still falls short, removed closed-tab backups are restored',async()=>{
+  const w=world(),confirmed=sync.normalize(w.data),divergent=copy(w.data);divergent.students.push({id:'local-only',name:'Local only row'});
+  const superseded=JSON.stringify(journal(confirmed,confirmed)),cache='X'.repeat(2000);
+  const write=boundBackup(w,cache.length+superseded.length+10+20);
+  write('app-cache',cache);write('tiny-cache','T'.repeat(10));write(backupPrefix+'closed-superseded',superseded);
+  let calls=0;
+  const c=w.client({ui:divergent,reclaim:()=>{calls++;const had=w.backup.getItem('tiny-cache')!==null;w.backup.removeItem('tiny-cache');return had?1:0;}});
+  assert.equal(calls,1);assert.equal(c.mode,'storage-error');assert.equal(c.controller.blocked,true);assert.equal(w.writes,0);
+  assert.equal(w.backup.getItem(backupPrefix+'closed-superseded'),superseded,'superseded backup is put back when the write still fails');
+  assert.equal(w.backup.getItem('app-cache'),cache);
+});
+test('a closed-tab recovery copy shared only with the current tab is still kept',async()=>{
+  const w=world(),confirmed=sync.normalize(w.data),divergent=copy(w.data);divergent.students.push({id:'shared-local',name:'Shared local row'});
+  const shared=JSON.stringify(journal(confirmed,confirmed,[sync.normalize(divergent)],{resumeConflict:true}));
+  const write=boundBackup(w,shared.length+50);write(backupPrefix+'closed-shared',shared);
+  const c=w.client({ui:divergent});
+  assert.equal(w.backup.getItem(backupPrefix+'closed-shared'),shared);assert.equal(c.mode,'storage-error');
+});
+test('a byte-identical closed-tab backup is replaced only by an equal copy in the current tab',async()=>{
+  const w=world(),confirmed=sync.normalize(w.data),divergent=copy(w.data);divergent.students.push({id:'shared-local',name:'Shared local row'});
+  const same=JSON.stringify(journal(confirmed,confirmed,[sync.normalize(divergent)]));
+  const write=boundBackup(w,same.length+50);write(backupPrefix+'closed-same-recovery',same);
+  const c=w.client({ui:divergent});
+  assert.equal(w.backup.getItem(backupPrefix+'closed-same-recovery'),null);
+  assert.equal(w.backup.getItem(c.controller.key+':backup:'+c.controller.instance),same,'the recovery copy survives in the current tab backup');
+});
+test('closed-tab backups with a newer revision or a saved ack are never reclaimed',async()=>{
+  const w=world(),confirmed=sync.normalize(w.data);
+  const newer=JSON.stringify(journal(confirmed,confirmed,[],{revision:5}));
+  const acked=JSON.stringify(journal(confirmed,confirmed,[],{ack:{sent:confirmed,value:confirmed,revision:0}}));
+  const write=boundBackup(w,newer.length+acked.length+50);write(backupPrefix+'closed-newer',newer);write(backupPrefix+'closed-acked',acked);
+  const c=w.client();
+  assert.equal(w.backup.getItem(backupPrefix+'closed-newer'),newer);assert.equal(w.backup.getItem(backupPrefix+'closed-acked'),acked);
+  assert.equal(c.mode,'storage-error');assert.equal(w.writes,0);
 });

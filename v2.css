@@ -255,3 +255,129 @@ body#vocalAdmin #pwaWorkspace{overflow:visible!important;}
 body#vocalAdmin .v2-kpi{background:rgba(255,255,255,.035)!important;}
 body#vocalAdmin .v2-kpi span{color:#aab4ca!important;}
 body#vocalAdmin .v2-kpi small{color:#8993a8!important;}
+/* ---- V2.1 design refresh: clean Korean sans type, lesson-type color coding, clearer hierarchy ---- */
+body#vocalAdmin{
+  --v2-font:"Pretendard","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",system-ui,sans-serif;
+  --kind-pro:#8f96ff;--kind-hob:#4fd1b0;--kind-chuk:#ff9fbe;--kind-voice:#f5c26b;--kind-consult:#6cc4ff;
+}
+body#vocalAdmin,body#vocalAdmin .pt,body#vocalAdmin .ct,body#vocalAdmin .mt,body#vocalAdmin .st2,
+body#vocalAdmin .logo-t,body#vocalAdmin h1,body#vocalAdmin h2,body#vocalAdmin h3,
+body#vocalAdmin .v2-ops-head h2,body#vocalAdmin .sb-today-hd,body#vocalAdmin .profile-name-big{
+  font-family:var(--v2-font)!important;font-style:normal!important;
+}
+body#vocalAdmin .btn,body#vocalAdmin input,body#vocalAdmin select,body#vocalAdmin textarea,
+body#vocalAdmin .ni,body#vocalAdmin .mtab-lb,body#vocalAdmin .bdg,body#vocalAdmin label{font-family:var(--v2-font)!important;}
+body#vocalAdmin .pt{font-size:20px!important;font-weight:750!important;letter-spacing:-.02em!important;text-transform:none!important;}
+body#vocalAdmin .card .ch .ct{font-size:15px!important;font-weight:750!important;letter-spacing:-.01em!important;}
+body#vocalAdmin .v2-ops-head h2{font-size:24px!important;font-weight:760!important;letter-spacing:-.02em!important;}
+/* Sidebar brand: keep the add button clear of the wordmark. */
+body#vocalAdmin .logo{padding:22px 68px 18px 20px!important;}
+body#vocalAdmin .logo-t{font-size:14px!important;font-weight:800!important;letter-spacing:.07em!important;line-height:1.3!important;text-transform:uppercase!important;text-shadow:none!important;white-space:nowrap;}
+body#vocalAdmin .logo-t::after{content:" V2";color:#9ca1ff;letter-spacing:.06em;}
+body#vocalAdmin .logo-s{font-size:11px!important;letter-spacing:.04em!important;text-transform:none!important;color:#8993a8!important;opacity:1!important;margin-top:4px!important;}
+body#vocalAdmin .logo-add-btn{width:40px!important;height:40px!important;right:16px!important;border-radius:12px!important;font-size:20px!important;color:#fff!important;}
+body#vocalAdmin .ni{font-size:14px!important;font-weight:600!important;}
+body#vocalAdmin .ni.on{box-shadow:inset 3px 0 0 #8f96ff,inset 0 0 0 1px rgba(139,147,255,.16)!important;}
+/* Weekly board: calmer grid, stronger day headers. */
+body#vocalAdmin .sg-hd{padding-top:12px!important;padding-bottom:10px!important;}
+body#vocalAdmin .sg-hd .dn{font-size:14px!important;font-weight:750!important;letter-spacing:-.01em;}
+body#vocalAdmin .sg-hd .dd{font-size:12px!important;margin-top:3px!important;}
+body#vocalAdmin .sg-hd.td{box-shadow:inset 0 3px 0 #8f96ff!important;}
+body#vocalAdmin .sg-tm,body#vocalAdmin .sg-time{font-size:12px!important;font-weight:600!important;}
+body#vocalAdmin .sg-cell{border-color:rgba(168,180,214,.08)!important;}
+/* Schedule cards: lesson type drives the accent bar and chip; the avatar keeps the student's own color. */
+body#vocalAdmin .schedule-card.lb{--kind-color:#8f96ff;background:linear-gradient(135deg,rgba(143,150,255,.10),rgba(16,24,38,.98) 58%)!important;border:1px solid rgba(168,180,214,.16)!important;border-left:3px solid var(--kind-color)!important;border-radius:12px!important;box-shadow:0 6px 18px rgba(0,0,0,.22)!important;}
+body#vocalAdmin .schedule-card.lb:has([data-kind="hob"]){--kind-color:var(--kind-hob);background:linear-gradient(135deg,rgba(79,209,176,.10),rgba(16,24,38,.98) 58%)!important;}
+body#vocalAdmin .schedule-card.lb:has([data-kind="chuk"]){--kind-color:var(--kind-chuk);background:linear-gradient(135deg,rgba(255,159,190,.10),rgba(16,24,38,.98) 58%)!important;}
+body#vocalAdmin .schedule-card.lb:has([data-kind="voice"]){--kind-color:var(--kind-voice);background:linear-gradient(135deg,rgba(245,194,107,.10),rgba(16,24,38,.98) 58%)!important;}
+body#vocalAdmin .schedule-card.lb:has([data-kind="consult"]){--kind-color:var(--kind-consult);background:linear-gradient(135deg,rgba(108,196,255,.10),rgba(16,24,38,.98) 58%)!important;}
+body#vocalAdmin .schedule-card.lb.flex-sched{border-style:dashed!important;border-left-style:solid!important;}
+body#vocalAdmin .schedule-card.lb.absent-block{opacity:.72!important;}
+body#vocalAdmin .schedule-card.lb.absent-block .schedule-card-name{text-decoration:line-through;text-decoration-color:rgba(255,173,192,.7);}
+body#vocalAdmin .schedule-card-name{font-weight:760!important;letter-spacing:-.01em;}
+body#vocalAdmin .schedule-card-time{background:rgba(255,255,255,.07)!important;color:#f5f7ff!important;border:1px solid rgba(255,255,255,.1);font-weight:700!important;}
+body#vocalAdmin .schedule-card-kind{display:inline-flex;align-items:center;gap:5px;color:#dbe1ef!important;font-weight:600;}
+body#vocalAdmin .schedule-card-kind::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:var(--kind-color,#8f96ff);box-shadow:0 0 0 2px rgba(255,255,255,.06);}
+body#vocalAdmin .schedule-card-kind[data-kind="hob"]::before{background:var(--kind-hob);}
+body#vocalAdmin .schedule-card-kind[data-kind="chuk"]::before{background:var(--kind-chuk);}
+body#vocalAdmin .schedule-card-kind[data-kind="voice"]::before{background:var(--kind-voice);}
+body#vocalAdmin .schedule-card-kind[data-kind="consult"]::before{background:var(--kind-consult);}
+body#vocalAdmin .schedule-card .person-avatar{box-shadow:0 0 0 2px rgba(7,11,18,.9),0 0 0 3px var(--student-color,#7f86ff)!important;}
+/* Mobile agenda: today stands out, each day reads as its own block. */
+body#vocalAdmin .mobile-week-day{border-radius:16px!important;}
+body#vocalAdmin .mobile-week-day.is-today .mobile-week-day-head{background:linear-gradient(90deg,rgba(143,150,255,.22),rgba(18,27,42,.95))!important;}
+body#vocalAdmin .mobile-week-day-name{font-size:14px!important;font-weight:760!important;}
+body#vocalAdmin .mobile-week-day-badge{padding:2px 8px;border-radius:999px;background:rgba(143,150,255,.16);}
+body#vocalAdmin .mobile-week-day-badge.is-holiday{background:rgba(255,123,155,.14);}
+body#vocalAdmin .mobile-week-slot .schedule-card-name{font-size:15px!important;}
+/* ---- V2.2 legibility pass: remove leftover seasonal light surfaces and raise small/low-contrast text ---- */
+body#vocalAdmin .pay-card,body#vocalAdmin .wk-card,body#vocalAdmin .lc,body#vocalAdmin .ci{
+  background:#0f1726!important;border-color:rgba(168,180,214,.16)!important;color:#f5f7ff!important;box-shadow:0 8px 26px rgba(0,0,0,.24)!important;}
+body#vocalAdmin .lc:hover,body#vocalAdmin .ci:hover{background:#131d2f!important;border-color:rgba(143,150,255,.34)!important;}
+body#vocalAdmin .pay-card-hd{background:#121b2b!important;border-bottom-color:rgba(168,180,214,.14)!important;}
+body#vocalAdmin .pay-card [style*="rgba(255,255,255,.015)"]{background:rgba(255,255,255,.025)!important;}
+body#vocalAdmin .pay-card [style*="border-top"],body#vocalAdmin .pay-card [style*="border-bottom"]{border-color:rgba(168,180,214,.12)!important;}
+body#vocalAdmin .pay-card [style*="rgba(200,80,80"],body#vocalAdmin .pay-card [style*="rgba(180,40,40"]{background:rgba(255,123,155,.10)!important;}
+body#vocalAdmin .pay-ok{background:rgba(83,224,192,.14)!important;color:#8ff0d8!important;border:1px solid rgba(83,224,192,.34)!important;}
+body#vocalAdmin .pay-no{background:rgba(255,123,155,.14)!important;color:#ffb3c4!important;border:1px solid rgba(255,123,155,.36)!important;}
+body#vocalAdmin .pay-partial{background:rgba(143,150,255,.16)!important;color:#d6d9ff!important;border:1px solid rgba(145,158,255,.36)!important;}
+body#vocalAdmin .pay-nav-btn{min-height:40px;}
+body#vocalAdmin .modal{background:linear-gradient(180deg,#111a2a,#0b111b)!important;border-color:rgba(168,180,214,.18)!important;color:#f5f7ff!important;}
+body#vocalAdmin .mh{background:#131d2f!important;border-bottom-color:rgba(168,180,214,.14)!important;}
+body#vocalAdmin .mf{background:#0e1624!important;border-top-color:rgba(168,180,214,.12)!important;}
+body#vocalAdmin .mt{color:#f5f7ff!important;font-weight:750!important;}
+body#vocalAdmin .mc{color:#c8cfdf!important;background:rgba(255,255,255,.06)!important;}
+body#vocalAdmin .ov{background:rgba(3,6,12,.62)!important;}
+body#vocalAdmin .modal [style*="color:var(--tm)"],body#vocalAdmin .modal .fi-label{color:#aab4ca!important;}
+body#vocalAdmin .toast{background:#141d2c!important;color:#f5f7ff!important;border-color:rgba(145,158,255,.3)!important;}
+body#vocalAdmin thead th{background:#121b2b!important;color:#c8cfdf!important;}
+body#vocalAdmin tbody tr:hover{background:rgba(143,150,255,.06)!important;}
+body#vocalAdmin .tab-bar{background:#0e1624!important;border-bottom-color:rgba(168,180,214,.14)!important;}
+body#vocalAdmin .fi-value{background:#0e1624!important;color:#f5f7ff!important;border-color:rgba(168,180,214,.16)!important;}
+body#vocalAdmin select option{background:#101826!important;color:#f5f7ff!important;}
+body#vocalAdmin .lw,body#vocalAdmin .wk-badge,body#vocalAdmin .ci-av{background:rgba(143,150,255,.14)!important;border-color:rgba(145,158,255,.3)!important;}
+body#vocalAdmin .lw-n,body#vocalAdmin .wk-badge-n{color:#d6d9ff!important;}
+body#vocalAdmin .lw-l,body#vocalAdmin .wk-badge-l{color:#aab4ca!important;font-size:10px!important;}
+/* Muted text: the legacy muted grey (#8993a8) falls below 4.5:1 on panels; lift it. */
+body#vocalAdmin{--tm:#a3adc2!important;--v2-muted:#a3adc2;}
+body#vocalAdmin [style*="color:var(--tm)"]{color:#a3adc2!important;}
+/* Primary accent fills: the violet is too light for white text, use a deeper fill. */
+body#vocalAdmin .btn.bp,body#vocalAdmin .btn.bm,body#vocalAdmin .bp{background:linear-gradient(135deg,#6a72f0,#4f57d6)!important;color:#fff!important;}
+body#vocalAdmin [style*="background:var(--a)"][style*="color:#08080d"],
+body#vocalAdmin [style*="background:var(--season-accent,var(--a))"][style*="color:#fff"]{background:#565ee0!important;color:#fff!important;}
+body#vocalAdmin button[onclick^="setTodayPrivacy"][style*="background:var(--a)"]{background:#565ee0!important;color:#fff!important;}
+/* Operations center: bigger, brighter captions and icons. */
+body#vocalAdmin .v2-eyebrow{font-size:11px!important;letter-spacing:.18em!important;color:#aab4ca!important;}
+body#vocalAdmin .v2-ops-head p{font-size:13px!important;color:#b7c0d3!important;}
+body#vocalAdmin .v2-kpi span{font-size:12px!important;font-weight:600;color:#c8cfdf!important;}
+body#vocalAdmin .v2-kpi small{font-size:12px!important;color:#aab4ca!important;}
+body#vocalAdmin .v2-kpi strong{font-size:24px!important;}
+body#vocalAdmin .v2-action-icon{width:34px!important;height:34px!important;font-size:17px!important;color:#e3e5ff!important;background:rgba(143,150,255,.22)!important;}
+body#vocalAdmin .v2-action-card strong{font-size:14.5px!important;}
+body#vocalAdmin .v2-action-card span:not(.v2-action-icon){font-size:12px!important;line-height:1.5!important;color:#b7c0d3!important;}
+body#vocalAdmin .v2-live{font-size:12px!important;color:#a8f0dc!important;}
+/* Weekly board labels and small badges. */
+body#vocalAdmin .sg-hd.off-day > div[style*="font-size:9px"]{font-size:11px!important;}
+body#vocalAdmin .schedule-status{font-size:11px!important;padding:2px 7px!important;}
+body#vocalAdmin .schedule-card-kind,body#vocalAdmin .schedule-card-time{font-size:11.5px!important;}
+body#vocalAdmin .mtab-lb{font-size:11px!important;color:#b7c0d3!important;}
+body#vocalAdmin .mtab-item.on .mtab-lb{color:#d6d9ff!important;}
+body#vocalAdmin #content [style*="font-size:8px"],body#vocalAdmin #content [style*="font-size:9px"]{font-size:10.5px!important;}
+body#vocalAdmin #content [style*="font-size:10px"]{font-size:11px!important;}
+body#vocalAdmin #content [style*="Cormorant Garamond"]{font-family:var(--v2-font)!important;font-style:normal!important;}
+/* Timeline rating stars: unfilled stars were nearly invisible. */
+body#vocalAdmin [style*="color:var(--b)"]{color:#7d88a3!important;}
+body#vocalAdmin .v2-live[data-state="busy"]{border-color:rgba(242,184,75,.4)!important;background:rgba(242,184,75,.12)!important;color:#ffd58a!important;}
+body#vocalAdmin .v2-live[data-state="busy"] .v2-live-dot{background:#f2b84b!important;box-shadow:0 0 12px #f2b84b!important;}
+body#vocalAdmin .v2-live[data-state="warn"]{border-color:rgba(255,123,155,.45)!important;background:rgba(255,123,155,.14)!important;color:#ffc2cf!important;}
+body#vocalAdmin .v2-live[data-state="warn"] .v2-live-dot{background:#ff7b9b!important;box-shadow:0 0 12px #ff7b9b!important;}
+/* Any inline accent fill with white text uses the deeper violet so labels stay readable. */
+body#vocalAdmin [style*="background:var(--season-accent,var(--a));color:#fff"],body#vocalAdmin [style*="background:var(--a);color:#fff"],body#vocalAdmin .mobile-week-quick-add,body#vocalAdmin #pwaGoschedule{background:#565ee0!important;color:#fff!important;border-color:#565ee0!important;}
+/* Sidebar today list: same clean type as the rest of V2. */
+body#vocalAdmin .sb-today,body#vocalAdmin .sb-today *{font-family:var(--v2-font)!important;font-style:normal!important;}
+body#vocalAdmin .sb-today-hd{color:#d6d9ff!important;font-size:13px!important;font-weight:750!important;}
+body#vocalAdmin .sb-lesson-name{font-size:13px!important;color:#f5f7ff!important;}
+body#vocalAdmin .sb-lesson-time,body#vocalAdmin .sb-today-date{font-size:12px!important;color:#b7c0d3!important;}
+/* Weekly grid: clearer hour rows and time labels. */
+body#vocalAdmin .sg-cell{border-top:1px solid rgba(168,180,214,.12)!important;}
+body#vocalAdmin .sg-tm{color:#c8cfdf!important;}
