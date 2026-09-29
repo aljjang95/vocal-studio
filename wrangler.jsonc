@@ -1,0 +1,26 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "vocal-studio",
+  "main": "worker/index.mjs",
+  "compatibility_date": "2026-09-14",
+  "workers_dev": true,
+  "assets": {
+    "directory": "./dist/cloudflare-assets",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+    "html_handling": "none"
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "STUDIO", "class_name": "StudioState" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["StudioState"] }],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "vocal-studio-media" }],
+  "vars": {
+    "ENVIRONMENT": "production",
+    "STUDIO_NAMESPACE": "vocal-studio",
+    "ACCESS_TEAM_DOMAIN": "lucky-darkness-1a97.cloudflareaccess.com",
+    "ACCESS_AUD": "5c27461e13a37da1b3c13f3b00b6c00f25af5052d82f2306913536767b23fe5d",
+    "ACCESS_ALLOWED_EMAILS": "aljjang95@gmail.com",
+    "DEPLOYMENT_ENABLED": "false"
+  }
+}

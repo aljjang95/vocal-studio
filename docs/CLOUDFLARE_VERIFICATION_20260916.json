@@ -1,0 +1,43 @@
+{
+  "date": "2026-09-16",
+  "baseCommit": "692299743ffde2b362d5fd5589449a97d59290e9",
+  "unitTests": {
+    "pass": 62,
+    "fail": 0,
+    "skip": 0
+  },
+  "localCloudflareChecks": 32,
+  "staticInvariants": 90,
+  "browserChecks": 25,
+  "browserPageErrors": [],
+  "browserSurface": "Actual index.html against local Wrangler Worker + SQLite Durable Object + R2; Chrome desktop and emulated mobile viewports; not a physical phone",
+  "customerBidirectionalChecks": [
+    "desktop customer edit reaches independent mobile context",
+    "mobile customer edit reaches desktop",
+    "customer edits persist across mobile reload",
+    "server confirms both customer fields"
+  ],
+  "buildAssets": 8,
+  "dryRun": "PASS",
+  "independentReview": "INTERRUPTED: model capacity; no verdict",
+  "productionDeploymentPerformed": false,
+  "productionDataImportedOrActivated": false,
+  "observedDeployment": {
+    "id": "96ea59a2-4c43-4380-9454-904d8e36756c",
+    "created_on": "2026-09-14T17:24:05.607697Z",
+    "versions": [
+      {
+        "version_id": "b85fc736-1d0e-4e0e-9b5c-e87f0ee8d6b2",
+        "percentage": 100
+      }
+    ]
+  },
+  "sourceSha256": {
+    "index.html": "3d068f1a24da174de9f63a52e46404fce0e7e8b989685097549fd9d24d832472",
+    "worker/state.mjs": "88643bc5b6ab71ce7e7641e6fb7a2ef2902be8bb6f30727dc21886dfe6d0160e",
+    "worker/index.mjs": "c57b49cf4e061a9f89824049837bf90b1fccda64ddf9f3a64d04d5cf1ae9f41a",
+    "worker/auth.mjs": "496080a12d7c71e6d6c129f27f74acc19fe94cd8d6a4b80391ab01ac4240de13",
+    "vs-sync.js": "bb85256962dbd344c88815e468c67da34e33f36d69c4f71467166cda3146fcde",
+    "cf-transport.js": "0be023c225b894f042b1733b34f23917ff8239a25d892b6d4dc6e4e11d42fa93"
+  }
+}
