@@ -10,7 +10,7 @@
   <link rel="manifest" href="/manifest.json" crossorigin="use-credentials">
   <link rel="apple-touch-icon" href="/icon-192.png">
   <meta name="mobile-web-app-capable" content="yes">
-  <script src="./vs-sync.js?v=20260928-quota1"></script>
+  <script src="./vs-sync.js?v=20260929-quota2"></script>
   <script src="./cf-transport.js?v=20260917-shared1"></script>
   <script src="./cf-migration.js?v=20260915-cf1"></script>
   <script src="./v2-ui.js?v=20260928-v3"></script>
@@ -3434,7 +3434,11 @@ function _safeParseLS(key,fallback){
 function _safeSetLS(key,val){
   /* setItem replaces one value atomically. A second full-size __tmp copy can hit quota
      before the replacement is attempted, even when the replacement itself would fit. */
-  localStorage.setItem(key,val);
+  try{localStorage.setItem(key,val);}
+  catch(error){
+    if(typeof _reclaimDuplicateRecoverySnapshot==='function'&&_reclaimDuplicateRecoverySnapshot()>0)localStorage.setItem(key,val);
+    else throw error;
+  }
 }
 function _persistableListForBackup(list){
   var stripA=function(arr){return (arr||[]).map(function(a){return (a&&a.data&&a.data.length>50000)?Object.assign({},a,{data:'[saved]'}):a;});};
@@ -3464,6 +3468,22 @@ function _pruneRecoverySnapshots(keep){
   var removed=0;
   all.slice(keep).forEach(function(k){try{localStorage.removeItem(k);removed++;}catch(e){}});
   try{localStorage.setItem('vsC_recovery_keys',JSON.stringify(all.slice(0,keep)));}catch(e){}
+  return removed;
+}
+/* Quota fallback only: retain latest and archive any exact timestamp duplicate before removal. */
+function _reclaimDuplicateRecoverySnapshot(){
+  if(typeof _vsSync==='undefined'||!_vsSync||!_vsSync.preserveReclaimedBackup)return 0;
+  var latest=localStorage.getItem('vsC_recovery_latest'),candidates=[],removed=0;
+  if(!latest)return 0;
+  for(var i=0;i<localStorage.length;i++){
+    var key=localStorage.key(i);
+    if(key&&key.indexOf(RECOVERY_PREFIX)===0&&/^[0-9]+$/.test(key.slice(RECOVERY_PREFIX.length))&&localStorage.getItem(key)===latest)candidates.push(key);
+  }
+  candidates.forEach(function(key){try{
+    if(!_vsSync.preserveReclaimedBackup(latest))return;
+    if(localStorage.getItem(key)!==latest||localStorage.getItem('vsC_recovery_latest')!==latest)return;
+    localStorage.removeItem(key);removed++;
+  }catch(error){}});
   return removed;
 }
 function _writeRecoverySnapshot(reason){
@@ -4694,7 +4714,7 @@ var _vsSync=null;
 try{if(typeof VSSync!=='undefined')_vsSync=VSSync.create({
   namespace:'vocal-studio',store:sessionStorage,backupStore:localStorage,
   /* Last resort when a sync backup cannot be written: keep only the newest local recovery snapshot. */
-  reclaim:function(){return _pruneRecoverySnapshots(1);},
+  reclaim:function(){return _pruneRecoverySnapshots(1)+_reclaimDuplicateRecoverySnapshot();},
   instanceId:typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():undefined,
   forkInstance:!!(performance.getEntriesByType&&performance.getEntriesByType('navigation')[0]&&performance.getEntriesByType('navigation')[0].type==='navigate'),
   owner:function(){return hasAdminSession()?_cfSession.principal:null;},

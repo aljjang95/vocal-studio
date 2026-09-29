@@ -11,6 +11,23 @@ function storage(){
   return{fail:false,getItem(k){return map.get(k)??null;},setItem(k,v){if(this.fail)throw Error('quota');map.set(k,v);},removeItem(k){map.delete(k);},key(i){return [...map.keys()][i]??null;},get length(){return map.size;}};
 }
 const tick=()=>new Promise(r=>setImmediate(r));
+test('quota-only snapshot reclaim removes exact duplicates only after preserving their bytes',()=>{
+  const index=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
+  const source=index.match(/function _reclaimDuplicateRecoverySnapshot\(\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(source,'quota-only recovery deduplication helper exists');
+  for(const mode of ['same','unique','no-rescue-space','concurrent']){
+    const values=new Map([['vsC_recovery_latest','same'],['vsC_recovery_123',mode==='unique'?'unique':'same'],['unrelated','keep']]);
+    const preserved=[];let reads=0;
+    const localStorage={get length(){return values.size},key:i=>[...values.keys()][i],getItem:k=>{if(mode==='concurrent'&&k==='vsC_recovery_latest'&&++reads===2)values.set(k,'newer');return values.get(k)??null;},removeItem:k=>values.delete(k)};
+    const _vsSync={preserveReclaimedBackup:raw=>{if(mode==='no-rescue-space')return false;preserved.push(raw);return true;}};
+    const context=vm.createContext({localStorage,_vsSync,RECOVERY_PREFIX:'vsC_recovery_'});
+    vm.runInContext(source,context);
+    const removed=vm.runInContext('_reclaimDuplicateRecoverySnapshot()',context);
+    assert.equal(removed,mode==='same'?1:0);
+    assert.equal(values.has('vsC_recovery_123'),mode!=='same');assert.equal(values.get('unrelated'),'keep');
+    if(mode==='same')assert.deepEqual(preserved,['same']);
+  }
+});
 async function settle(){for(let i=0;i<5;i++)await tick();}
 
 test('local state replacement needs no duplicate quota and keeps old value on failure',()=>{
@@ -35,6 +52,15 @@ test('local state replacement needs no duplicate quota and keeps old value on fa
   assert.deepEqual(writes,['vsC_s']);
   assert.throws(()=>vm.runInContext("_safeSetLS('vsC_s','12345678901')",context),/full/);
   assert.equal(values.get('vsC_s'),'1234567890');
+});
+test('a larger local data replacement reclaims a preserved duplicate once before retrying intact',()=>{
+  const index=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
+  const source=index.match(/function _safeSetLS\(key,val\)\{[\s\S]*?\n\}/)[0];
+  const values=new Map([['vsC_s','old'],['duplicate','123456']]);let reclaimed=0,attempts=0;
+  const localStorage={setItem(key,value){attempts++;const total=[...values].reduce((n,[k,v])=>n+(key===k?0:v.length),value.length);if(total>10)throw Error('quota');values.set(key,value);}};
+  const context=vm.createContext({localStorage,_reclaimDuplicateRecoverySnapshot:()=>{reclaimed++;values.delete('duplicate');return 1;}});
+  vm.runInContext(source,context);vm.runInContext("_safeSetLS('vsC_s','1234567890')",context);
+  assert.equal(reclaimed,1);assert.equal(attempts,2);assert.equal(values.get('vsC_s'),'1234567890');
 });
 function makeWorld(){
   const w={data:seed(),revision:0,writes:0,failNext:0,listeners:new Set()};

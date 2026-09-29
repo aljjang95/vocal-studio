@@ -171,6 +171,11 @@ test('lesson types map to stable color keys and cards expose them without contac
   assert.doesNotMatch(css.slice(css.indexOf('V2.1 design refresh')),/font-style:italic/);
 });
 test('sync backup quota falls back to pruning local recovery snapshots',()=>{
-  assert.match(html,/backupStore:localStorage,\s*\/\*[^*]*\*\/\s*reclaim:function\(\)\{return _pruneRecoverySnapshots\(1\);\}/);
-  assert.match(html,/vs-sync\.js\?v=20260928-quota1/);
+  const hook=html.match(/backupStore:localStorage,[\s\S]*?reclaim:(function\(\)\{[^}]*\})/);
+  assert.ok(hook,'backup adapter exposes a quota recovery hook');
+  const calls=[];
+  const context=vm.createContext({_pruneRecoverySnapshots:keep=>{calls.push(['prune',keep]);return 2;},_reclaimDuplicateRecoverySnapshot:()=>{calls.push(['duplicates']);return 1;}});
+  assert.equal(vm.runInContext('('+hook[1]+')()',context),3);
+  assert.deepEqual(calls,[['prune',1],['duplicates']]);
+  assert.match(html,/<script src="\.\/vs-sync\.js\?v=/);
 });
