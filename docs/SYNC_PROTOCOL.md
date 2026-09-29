@@ -51,3 +51,9 @@ These tests are local evidence. They do not prove production customer import, pr
 ## Reconstruction provenance
 
 This candidate was reconstructed in an isolated worktree from remote commit `692299743ffde2b362d5fd5589449a97d59290e9` because the previously described Cloudflare candidate branch/worktree was not present on the currently connected PC and had not been pushed to GitHub. The reconstruction follows the handoff contract and is re-verified from scratch; it must not be represented as byte-identical recovery of the inaccessible earlier local candidate.
+
+## Backup quota recovery
+
+On local backup quota failure, an older confirmed journal may be reclaimed only when another retained backup has identical metadata, base and local data and contains every recovery snapshot. A pending acknowledgement, unsent local change or any different metadata prevents this containment path. Comparisons preserve all own JSON properties, including reserved property names.
+
+Before removing a contained copy, its exact bytes must also be written and read back in the current tab's session journal. If that fails, both local backups stay untouched. These `reclaimedBackups` are included in the device export, survive reloads, are never automatically overwritten or pruned, and protect against an anchor being changed between Web Storage operations. Session journals have the browser's normal tab lifetime; they are not permanent archival storage. Export a device copy before closing a tab whose recovery matters. The local retained anchor remains the persistent copy, and the original backup is restored if the replacement write still fails.

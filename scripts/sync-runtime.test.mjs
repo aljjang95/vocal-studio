@@ -192,6 +192,99 @@ function boundBackup(w,limit){
   return write;
 }
 function journal(base,local,recovery=[],extra={}){return {version:1,namespace:'demo/studio/data',owner:'admin-A',revision:0,base,local,recovery,...extra};}
+function oldContainedBackups(w,extra={}){
+  w.data._vsSyncRevision=25;
+  const old=sync.normalize(w.data);old.students[1].name='Earlier confirmed name';
+  const recovery=copy(old);recovery.consults.push({id:'old-recovery',name:'Synthetic retained consultation'});
+  const small=JSON.stringify(journal(old,old,[],{revision:9,...extra}));
+  const anchor=JSON.stringify(journal(old,old,[recovery],{revision:9,...extra}));
+  return {small,anchor};
+}
+test('quota can reclaim an older confirmed backup fully contained in another retained backup',()=>{
+  const w=world(),{small,anchor}=oldContainedBackups(w),write=boundBackup(w,small.length+anchor.length+100);
+  write(backupPrefix+'small',small);write(backupPrefix+'anchor',anchor);
+  const c=w.client();
+  assert.equal(c.mode,'synced');assert.equal(c.controller.blocked,false);assert.equal(w.writes,0);
+  assert.equal(w.backup.getItem(backupPrefix+'small'),null);
+  assert.equal(w.backup.getItem(backupPrefix+'anchor'),anchor);
+  assert.ok(w.backup.getItem(c.controller.key+':backup:'+c.controller.instance));
+});
+test('containment never merges different metadata, owners, namespaces, revisions, ack or unsynced intent',()=>{
+  for(const change of [
+    s=>s.owner='another-owner',s=>s.namespace='another-namespace',s=>s.revision++,
+    s=>s.unknownMetadata={keep:true},s=>s.resumeConflict=true,
+    s=>Object.defineProperty(s,'__proto__',{value:{unique:true},enumerable:true}),
+    s=>s.recovery.push({...copy(s.base),inquiries:[{id:'unique'}]}),
+    s=>s.local.students[0].name='Unsent change',s=>s.ack={revision:9,data:s.base}
+  ]){
+    const w=world(),pair=oldContainedBackups(w),small=JSON.parse(pair.small);change(small);
+    const raw=JSON.stringify(small),write=boundBackup(w,raw.length+pair.anchor.length+10);
+    write(backupPrefix+'small',raw);write(backupPrefix+'anchor',pair.anchor);
+    const c=w.client();assert.equal(c.mode,'storage-error');assert.equal(w.writes,0);
+    assert.equal(w.backup.getItem(backupPrefix+'small'),raw);assert.equal(w.backup.getItem(backupPrefix+'anchor'),pair.anchor);
+  }
+});
+test('even matching pending or acknowledged old journals are preserved',()=>{
+  for(const pending of [true,false]){
+    const w=world(),pair=oldContainedBackups(w),small=JSON.parse(pair.small),anchor=JSON.parse(pair.anchor);
+    for(const j of [small,anchor]){if(pending)j.local.students[0].name='Unsent';else j.ack={revision:9,data:j.base};}
+    const a=JSON.stringify(small),b=JSON.stringify(anchor),write=boundBackup(w,a.length+b.length+10);
+    write(backupPrefix+'small',a);write(backupPrefix+'anchor',b);
+    const c=w.client();assert.equal(c.mode,'storage-error');assert.equal(w.backup.getItem(backupPrefix+'small'),a);assert.equal(w.backup.getItem(backupPrefix+'anchor'),b);
+  }
+});
+test('equivalent old copies retain an anchor rather than deleting one another',()=>{
+  const w=world(),{anchor}=oldContainedBackups(w),write=boundBackup(w,anchor.length*3+10);
+  for(const key of ['one','two','three'])write(backupPrefix+key,anchor);
+  const c=w.client();assert.equal(c.mode,'synced');
+  const kept=['one','two','three'].filter(key=>w.backup.getItem(backupPrefix+key)===anchor);
+  assert.ok(kept.length>=1);assert.ok(kept.length<3);assert.equal(w.writes,0);
+});
+test('reclamation rechecks both anchor and removed candidate against concurrent changes',()=>{
+  for(const changed of ['small','anchor']){
+    const w=world(),{small,anchor}=oldContainedBackups(w),write=boundBackup(w,small.length+anchor.length+100);
+    write(backupPrefix+'small',small);write(backupPrefix+'anchor',anchor);
+    const get=w.backup.getItem.bind(w.backup);let reads=0;
+    const changedKey=backupPrefix+changed,updated=JSON.stringify({...JSON.parse(changed==='small'?small:anchor),unknownMetadata:'other-tab'});
+    // Quota calculation and inventory read first; mutate at the safety read before deletion.
+    w.backup.getItem=key=>{if(key===changedKey&&++reads===3)write(key,updated);return get(key);};
+    const c=w.client();assert.equal(c.mode,'storage-error');assert.equal(w.writes,0);
+    assert.equal(get(changedKey),updated);assert.ok(get(backupPrefix+(changed==='small'?'anchor':'small')));
+  }
+});
+test('failed write restores a contained backup when reclaim is insufficient',()=>{
+  const w=world(),{small,anchor}=oldContainedBackups(w),write=boundBackup(w,small.length+anchor.length+10);
+  write(backupPrefix+'small',small);write(backupPrefix+'anchor',anchor);
+  const ui=copy(w.data);ui.inquiries.push({id:'large-draft',note:'x'.repeat(small.length*3)});
+  const c=w.client({ui});assert.equal(c.mode,'storage-error');assert.equal(w.writes,0);
+  assert.equal(w.backup.getItem(backupPrefix+'small'),small);assert.equal(w.backup.getItem(backupPrefix+'anchor'),anchor);
+});
+test('an anchor changed at removal cannot destroy the last old copy; reload and export retain exact bytes',()=>{
+  const w=world(),{small,anchor}=oldContainedBackups(w),write=boundBackup(w,small.length+anchor.length+100);
+  write(backupPrefix+'small',small);write(backupPrefix+'anchor',anchor);
+  const remove=w.backup.removeItem.bind(w.backup);
+  w.backup.removeItem=key=>{if(key===backupPrefix+'small')write(backupPrefix+'anchor',JSON.stringify(journal(sync.normalize(w.data),sync.normalize(w.data),[],{revision:25})));remove(key);};
+  const c=w.client();assert.equal(c.controller.blocked,false);assert.equal(w.writes,0);
+  assert.ok([...Array(c.store.length)].some((_,i)=>c.store.getItem(c.store.key(i))===small));
+  assert.deepEqual(c.controller.exportData().reclaimedBackups,[JSON.parse(small)]);
+  c.controller.disconnect();const resumed=w.client({store:c.store,ui:copy(c.ui)});
+  assert.deepEqual(resumed.controller.exportData().reclaimedBackups,[JSON.parse(small)]);
+});
+test('full rescue journal refuses containment removal and keeps both original backups',()=>{
+  const w=world(),{small,anchor}=oldContainedBackups(w),write=boundBackup(w,small.length+anchor.length+100);
+  write(backupPrefix+'small',small);write(backupPrefix+'anchor',anchor);
+  const session=storage(),save=session.setItem.bind(session);
+  session.setItem=(key,value)=>{if(key.includes(':reclaimed:'))throw Error('rescue-quota');save(key,value);};
+  const c=w.client({store:session});assert.equal(c.mode,'storage-error');assert.equal(w.writes,0);
+  assert.equal(w.backup.getItem(backupPrefix+'small'),small);assert.equal(w.backup.getItem(backupPrefix+'anchor'),anchor);
+});
+test('rescue journals never overwrite earlier distinct copies',()=>{
+  const w=world(),c=w.client(),a=JSON.stringify({old:'first'}),b=JSON.stringify({old:'second'});
+  assert.equal(c.controller.preserveReclaimedBackup(a),true);
+  assert.equal(c.controller.preserveReclaimedBackup(b),true);
+  assert.equal(c.controller.preserveReclaimedBackup(a),true);
+  assert.deepEqual(c.controller.exportData().reclaimedBackups,[JSON.parse(a),JSON.parse(b)]);
+});
 test('a full backup store reclaims closed-tab copies that hold nothing unsynced',async()=>{
   const w=world(),confirmed=sync.normalize(w.data),older=copy(confirmed);older.students[1].name='Older server name';
   const same=JSON.stringify(journal(confirmed,confirmed)),superseded=JSON.stringify(journal(older,confirmed,[older],{resumeConflict:true}));
