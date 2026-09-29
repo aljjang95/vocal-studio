@@ -93,7 +93,20 @@ body#vocalAdmin .lw-l,body#vocalAdmin .wk-badge-l{color:#62695f!important;}
 body#vocalAdmin [style*="color:var(--tm)"],body#vocalAdmin .modal [style*="color:var(--tm)"],body#vocalAdmin .modal .fi-label{color:#62695f!important;}
 body#vocalAdmin [style*="color:var(--b)"]{color:#727c6e!important;}
 body#vocalAdmin [style*="background:var(--season-accent,var(--a));color:#fff"],body#vocalAdmin [style*="background:var(--a);color:#fff"],body#vocalAdmin button[onclick^=setTodayPrivacy][style*="background:var(--a)"]{background:#3c6554!important;color:white!important;}
-body#vocalAdmin .ui-line-icon{width:20px;height:20px;display:inline-block;vertical-align:middle;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+body#vocalAdmin .ui-line-icon{width:20px;height:20px;display:inline-block;vertical-align:middle;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+body#vocalAdmin .logo{display:flex!important;align-items:center;gap:12px;padding-right:72px!important;}
+body#vocalAdmin .logo-copy{min-width:0;}
+body#vocalAdmin .logo-mark{width:42px;height:42px;border-radius:13px;flex:0 0 42px;display:flex;align-items:center;justify-content:center;background:#2e4c3c;color:#f6f3ec;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);}
+body#vocalAdmin .logo-mark svg{width:24px;height:24px;display:block;}
+body#vocalAdmin .ni-ic{width:30px!important;height:30px;border-radius:9px;display:inline-flex!important;align-items:center;justify-content:center;background:#e5ece2;color:#2e4c3c!important;}
+body#vocalAdmin .ni.on .ni-ic{background:#2e4c3c!important;color:#f6f3ec!important;}
+body#vocalAdmin .ni .ui-line-icon{width:16px;height:16px;}
+body#vocalAdmin .mtab-ic{display:flex;align-items:center;justify-content:center;height:22px;}
+body#vocalAdmin .mtab-ic .ui-line-icon{width:20px;height:20px;}
+body#vocalAdmin .v2-action-icon .ui-line-icon{width:18px;height:18px;}
+body#vocalAdmin .sb-util-btn .ui-line-icon{width:16px;height:16px;flex-shrink:0;color:#3c6554;}
+body#vocalAdmin .sb-util-btn.danger .ui-line-icon{color:#a54759;}
+body#vocalAdmin .dash-lock{width:13px;height:13px;margin-left:2px;color:#805119;vertical-align:-1px;}
 /* Match the legacy selector specificity so every working surface uses daylight. */
 body#vocalAdmin .profile-photo:has(img[src*="portrait=daylight-v1"]){height:240px!important;max-height:240px!important;aspect-ratio:auto!important;background:#f4f1eb!important;}
 body#vocalAdmin .profile-photo img[src*="portrait=daylight-v1"]{object-fit:contain!important;}

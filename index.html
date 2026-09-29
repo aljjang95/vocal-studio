@@ -8,12 +8,13 @@
   <meta name="apple-mobile-web-app-title" content="보컬스튜디오">
   <meta name="theme-color" content="#f4f1eb">
   <link rel="manifest" href="/manifest.json" crossorigin="use-credentials">
+  <link rel="icon" href="/icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/icon-192.png">
   <meta name="mobile-web-app-capable" content="yes">
   <script src="./vs-sync.js?v=20260929-quota2"></script>
   <script src="./cf-transport.js?v=20260917-shared1"></script>
   <script src="./cf-migration.js?v=20260915-cf1"></script>
-  <script src="./v2-ui.js?v=20260928-v3"></script>
+  <script src="./v2-ui.js?v=20260929-icons"></script>
 <title>Vocal Studio · 관리자 스케줄</title>
 <!-- System fonts keep the administrator startup independent of external font requests. -->
 <style>
@@ -2638,7 +2639,7 @@ div.mwv .lb { font-size: 7px !important; padding: 0 !important; min-height: 0 !i
 </style>
 
   <link rel="stylesheet" href="./v2.css?v=20260928-v3">
-  <link rel="stylesheet" href="./v3-daylight.css?v=20260929-1">
+  <link rel="stylesheet" href="./v3-daylight.css?v=20260929-icons">
 </head>
 <body id="vocalAdmin">
 
@@ -2652,8 +2653,11 @@ div.mwv .lb { font-size: 7px !important; padding: 0 !important; min-height: 0 !i
       <button id="adminLogoutBtn" onclick="signOutAdmin()" style="display:none;font-size:10.5px;border:1px solid var(--b);background:rgba(200,114,114,.08);color:var(--r);border-radius:7px;padding:4px 8px;cursor:pointer">로그아웃</button>
     </div>
   <div class="logo">
-    <div class="logo-t">Vocal Studio</div>
-    <div class="logo-s">레슨 관리 시스템</div>
+    <div class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="8" y="3.2" width="8" height="10.2" rx="4" fill="currentColor"/><path d="M6.2 11.2a5.8 5.8 0 0 0 11.6 0M12 17v2.6M8.6 19.8h6.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+    <div class="logo-copy">
+      <div class="logo-t">Vocal Studio</div>
+      <div class="logo-s">레슨 관리 시스템</div>
+    </div>
     <button class="logo-add-btn" onclick="openSModal()" title="레슨생 추가">＋</button>
   </div>
   <div class="nav">
@@ -2665,12 +2669,12 @@ div.mwv .lb { font-size: 7px !important; padding: 0 !important; min-height: 0 !i
     <div class="ni on" data-p="today"    onclick="go('today')"><span class="ni-ic">&#x23F0;</span>오늘 스케줄</div>
     <div class="ni-sep"></div>
     <div class="ni"    data-p="schedule" onclick="go('schedule')"><span class="ni-ic">&#x25A6;</span>주간 스케줄</div>
-    <div class="ni"    data-p="dashboard" onclick="go('dashboard')"><span class="ni-ic">&#x1F4CA;</span>대시보드 🔒</div>
+    <div class="ni"    data-p="dashboard" onclick="go('dashboard')"><span class="ni-ic">&#x1F4CA;</span>대시보드 <svg class="ui-line-icon dash-lock" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="11" width="12" height="9" rx="2"/><path d="M8.5 11V8.5a3.5 3.5 0 0 1 7 0V11"/></svg></div>
   </div>
   <div class="sb-bottom">
-    <button class="sb-util-btn" onclick="toggleMonOff()">📅 월요일 휴무 ON/OFF</button>
-    <button class="sb-util-btn" onclick="openHolidayMgr()">🎌 휴무일 관리</button>
-    <button class="sb-util-btn danger" onclick="resetAllData()">🗑 데이터 초기화</button>
+    <button class="sb-util-btn" onclick="toggleMonOff()"><svg class="ui-line-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9.5h16M8 3.5v3M16 3.5v3M8 14.2h8"/></svg>월요일 휴무 ON/OFF</button>
+    <button class="sb-util-btn" onclick="openHolidayMgr()"><svg class="ui-line-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9.5h16M8 3.5v3M16 3.5v3M9.2 13l5.6 4.6M14.8 13l-5.6 4.6"/></svg>휴무일 관리</button>
+    <button class="sb-util-btn danger" onclick="resetAllData()"><svg class="ui-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M9 7V5h6v2M7.5 7l.8 13h7.4l.8-13"/></svg>데이터 초기화</button>
   </div>
   <div class="sb-today">
     <div class="sb-today-hd">오늘 레슨</div>
