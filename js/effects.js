@@ -139,12 +139,12 @@
   /* ── 탭바 DOM 버그 수정 ── */
   function buildTabBar(){
     var tabs=[
-      {id:'consult',  icon:'📋', label:'상담'},
-      {id:'students', icon:'🎵', label:'레슨생'},
-      {id:'logs',     icon:'✏️',  label:'기록'},
-      {id:'payment',  icon:'💰', label:'입금'},
-      {id:'today',    icon:'⏰', label:'오늘'},
-      {id:'schedule', icon:'📅', label:'스케줄'}
+      {id:'consult',  label:'상담'},
+      {id:'students', label:'레슨생'},
+      {id:'logs',     label:'기록'},
+      {id:'payment',  label:'입금'},
+      {id:'today',    label:'오늘'},
+      {id:'schedule', label:'스케줄'}
     ];
     var bar=document.getElementById('mobileTabBar');
     if(!bar||bar.children.length>0)return;
@@ -152,7 +152,7 @@
       var el=document.createElement('div');
       el.id='mTab_'+t.id;
       el.className='mtab-item';
-      el.innerHTML='<span class="mtab-ic">'+t.icon+'</span><span class="mtab-lb">'+t.label+'</span>';
+      el.innerHTML='<span class="mtab-ic studio-glyph" data-glyph="'+t.id+'"></span><span class="mtab-lb">'+t.label+'</span>';
       el.addEventListener('click',function(){go(t.id);});
       bar.appendChild(el);
     });

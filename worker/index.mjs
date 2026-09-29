@@ -7,7 +7,7 @@ const ASSETS = new Set([
   '/index.html', '/vs-sync.js', '/cf-transport.js', '/cf-migration.js',
   '/v2-ui.js', '/v2.css',
   '/v3-daylight.css', '/studio-daylight.png',
-  '/sw.js', '/manifest.json', '/icon-192.png', '/icon-512.png',
+  '/sw.js', '/manifest.json', '/icon-192.png', '/icon-512.png', '/icons-group.png',
 ]);
 const CSP = "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; " +
   "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; " +
