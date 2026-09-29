@@ -30,6 +30,7 @@ function world(){
   }};
   w.client=(options={})=>{
     const c={ui:sync.normalize(options.ui||w.data),owner:'admin-A',editing:false,frozen:false,renders:0,store:options.store||storage()};
+    if(options.requireBackup)c.ui.students[0].name+=' retained local recovery';
     c.controller=sync.create({namespace:'demo/studio/data',instanceId:'client-'+(++w.clients),forkInstance:!!options.forkInstance,store:c.store,backupStore:w.backup,reclaim:options.reclaim,
       owner:()=>c.owner,database:()=>w.db,timestamp:()=> 'synthetic-timestamp',frozen:()=>c.frozen,editing:()=>c.editing,
       getData:()=>c.ui,setData:data=>{c.ui=data;},render:()=>{c.renders++;},status:(mode,detail)=>{c.mode=mode;c.detail=detail;},later:fn=>queueMicrotask(fn)});
@@ -132,8 +133,9 @@ test('failed journal write followed by reload retains newer app data before rest
 test('reloading unchanged data keeps backup space bounded and permits saving',async()=>{
   const w=world();let c=w.client();const store=c.store;
   for(let i=0;i<20;i++){const ui=copy(c.ui);c.controller.disconnect();c=w.client({store,ui});}
-  assert.equal(w.backup.length,1);c.ui.weekOvr.w1.s1.time='11:00';await c.controller.save();await settle();
+  assert.equal(w.backup.length,0);c.ui.weekOvr.w1.s1.time='11:00';await c.controller.save();await settle();
   assert.equal(w.data.weekOvr.w1.s1.time,'11:00');assert.equal(w.backup.length,1);
+  assert.deepEqual(JSON.parse(c.store.getItem(c.controller.key)),c.controller.state);
 });
 test('a new tab cloned from session storage forks its backup identity',async()=>{
   const w=world(),a=w.client(),cloned=storage();
@@ -200,14 +202,14 @@ function oldContainedBackups(w,extra={}){
   const anchor=JSON.stringify(journal(old,old,[recovery],{revision:9,...extra}));
   return {small,anchor};
 }
-test('quota can reclaim an older confirmed backup fully contained in another retained backup',()=>{
+test('quota preserves every foreign contained backup and blocks when no own copy fits',()=>{
   const w=world(),{small,anchor}=oldContainedBackups(w),write=boundBackup(w,small.length+anchor.length+100);
   write(backupPrefix+'small',small);write(backupPrefix+'anchor',anchor);
-  const c=w.client();
-  assert.equal(c.mode,'synced');assert.equal(c.controller.blocked,false);assert.equal(w.writes,0);
-  assert.equal(w.backup.getItem(backupPrefix+'small'),null);
+  const c=w.client({requireBackup:true});
+  assert.equal(c.mode,'storage-error');assert.equal(c.controller.blocked,true);assert.equal(w.writes,0);
+  assert.equal(w.backup.getItem(backupPrefix+'small'),small);
   assert.equal(w.backup.getItem(backupPrefix+'anchor'),anchor);
-  assert.ok(w.backup.getItem(c.controller.key+':backup:'+c.controller.instance));
+  assert.ok(c.store.getItem(c.controller.key));
 });
 test('containment never merges different metadata, owners, namespaces, revisions, ack or unsynced intent',()=>{
   for(const change of [
@@ -220,7 +222,7 @@ test('containment never merges different metadata, owners, namespaces, revisions
     const w=world(),pair=oldContainedBackups(w),small=JSON.parse(pair.small);change(small);
     const raw=JSON.stringify(small),write=boundBackup(w,raw.length+pair.anchor.length+10);
     write(backupPrefix+'small',raw);write(backupPrefix+'anchor',pair.anchor);
-    const c=w.client();assert.equal(c.mode,'storage-error');assert.equal(w.writes,0);
+    const c=w.client({requireBackup:true});assert.equal(c.mode,'storage-error');assert.equal(w.writes,0);
     assert.equal(w.backup.getItem(backupPrefix+'small'),raw);assert.equal(w.backup.getItem(backupPrefix+'anchor'),pair.anchor);
   }
 });
@@ -230,52 +232,48 @@ test('even matching pending or acknowledged old journals are preserved',()=>{
     for(const j of [small,anchor]){if(pending)j.local.students[0].name='Unsent';else j.ack={revision:9,data:j.base};}
     const a=JSON.stringify(small),b=JSON.stringify(anchor),write=boundBackup(w,a.length+b.length+10);
     write(backupPrefix+'small',a);write(backupPrefix+'anchor',b);
-    const c=w.client();assert.equal(c.mode,'storage-error');assert.equal(w.backup.getItem(backupPrefix+'small'),a);assert.equal(w.backup.getItem(backupPrefix+'anchor'),b);
+    const c=w.client({requireBackup:true});assert.equal(c.mode,'storage-error');assert.equal(w.backup.getItem(backupPrefix+'small'),a);assert.equal(w.backup.getItem(backupPrefix+'anchor'),b);
   }
 });
-test('equivalent old copies retain an anchor rather than deleting one another',()=>{
+test('equivalent foreign copies all remain intact under quota',()=>{
   const w=world(),{anchor}=oldContainedBackups(w),write=boundBackup(w,anchor.length*3+10);
   for(const key of ['one','two','three'])write(backupPrefix+key,anchor);
-  const c=w.client();assert.equal(c.mode,'synced');
-  const kept=['one','two','three'].filter(key=>w.backup.getItem(backupPrefix+key)===anchor);
-  assert.ok(kept.length>=1);assert.ok(kept.length<3);assert.equal(w.writes,0);
+  const c=w.client({requireBackup:true});assert.equal(c.mode,'storage-error');
+  for(const key of ['one','two','three'])assert.equal(w.backup.getItem(backupPrefix+key),anchor);
+  assert.equal(w.writes,0);
 });
-test('reclamation rechecks both anchor and removed candidate against concurrent changes',()=>{
-  for(const changed of ['small','anchor']){
-    const w=world(),{small,anchor}=oldContainedBackups(w),write=boundBackup(w,small.length+anchor.length+100);
-    write(backupPrefix+'small',small);write(backupPrefix+'anchor',anchor);
-    const get=w.backup.getItem.bind(w.backup);let reads=0;
-    const changedKey=backupPrefix+changed,updated=JSON.stringify({...JSON.parse(changed==='small'?small:anchor),unknownMetadata:'other-tab'});
-    // Quota calculation and inventory read first; mutate at the safety read before deletion.
-    w.backup.getItem=key=>{if(key===changedKey&&++reads===3)write(key,updated);return get(key);};
-    const c=w.client();assert.equal(c.mode,'storage-error');assert.equal(w.writes,0);
-    assert.equal(get(changedKey),updated);assert.ok(get(backupPrefix+(changed==='small'?'anchor':'small')));
-  }
+test('a peer update during a quota write survives every retry',()=>{
+  const w=world(),{small,anchor}=oldContainedBackups(w);
+  const write=w.backup.setItem.bind(w.backup);
+  write(backupPrefix+'small',small);write(backupPrefix+'anchor',anchor);
+  const updated=JSON.stringify({...JSON.parse(small),unknownMetadata:'new peer intent'});
+  let attempts=0,removals=0;
+  w.backup.setItem=(key,value)=>{if(key===backupPrefix+'client-1'){attempts++;write(backupPrefix+'small',updated);throw Error('quota');}write(key,value);};
+  w.backup.removeItem=()=>{removals++;};
+  const c=w.client({requireBackup:true});assert.ok(attempts>0);assert.equal(c.mode,'storage-error');assert.equal(w.writes,0);
+  assert.equal(removals,0);assert.equal(w.backup.getItem(backupPrefix+'small'),updated);
+  assert.equal(w.backup.getItem(backupPrefix+'anchor'),anchor);
 });
-test('failed write restores a contained backup when reclaim is insufficient',()=>{
+test('failed write leaves contained foreign backups untouched',()=>{
   const w=world(),{small,anchor}=oldContainedBackups(w),write=boundBackup(w,small.length+anchor.length+10);
   write(backupPrefix+'small',small);write(backupPrefix+'anchor',anchor);
   const ui=copy(w.data);ui.inquiries.push({id:'large-draft',note:'x'.repeat(small.length*3)});
   const c=w.client({ui});assert.equal(c.mode,'storage-error');assert.equal(w.writes,0);
   assert.equal(w.backup.getItem(backupPrefix+'small'),small);assert.equal(w.backup.getItem(backupPrefix+'anchor'),anchor);
 });
-test('an anchor changed at removal cannot destroy the last old copy; reload and export retain exact bytes',()=>{
-  const w=world(),{small,anchor}=oldContainedBackups(w),write=boundBackup(w,small.length+anchor.length+100);
-  write(backupPrefix+'small',small);write(backupPrefix+'anchor',anchor);
-  const remove=w.backup.removeItem.bind(w.backup);
-  w.backup.removeItem=key=>{if(key===backupPrefix+'small')write(backupPrefix+'anchor',JSON.stringify(journal(sync.normalize(w.data),sync.normalize(w.data),[],{revision:25})));remove(key);};
-  const c=w.client();assert.equal(c.controller.blocked,false);assert.equal(w.writes,0);
-  assert.ok([...Array(c.store.length)].some((_,i)=>c.store.getItem(c.store.key(i))===small));
-  assert.deepEqual(c.controller.exportData().reclaimedBackups,[JSON.parse(small)]);
+test('legacy session rescue copies remain exportable after reload',()=>{
+  const w=world(),c=w.client(),legacy=JSON.stringify({retained:'legacy exact recovery'});
+  c.store.setItem(c.controller.key+':reclaimed:0',legacy);
+  assert.deepEqual(c.controller.exportData().reclaimedBackups,[JSON.parse(legacy)]);
   c.controller.disconnect();const resumed=w.client({store:c.store,ui:copy(c.ui)});
-  assert.deepEqual(resumed.controller.exportData().reclaimedBackups,[JSON.parse(small)]);
+  assert.deepEqual(resumed.controller.exportData().reclaimedBackups,[JSON.parse(legacy)]);
 });
 test('full rescue journal refuses containment removal and keeps both original backups',()=>{
   const w=world(),{small,anchor}=oldContainedBackups(w),write=boundBackup(w,small.length+anchor.length+100);
   write(backupPrefix+'small',small);write(backupPrefix+'anchor',anchor);
   const session=storage(),save=session.setItem.bind(session);
   session.setItem=(key,value)=>{if(key.includes(':reclaimed:'))throw Error('rescue-quota');save(key,value);};
-  const c=w.client({store:session});assert.equal(c.mode,'storage-error');assert.equal(w.writes,0);
+  const c=w.client({store:session,requireBackup:true});assert.equal(c.mode,'storage-error');assert.equal(w.writes,0);
   assert.equal(w.backup.getItem(backupPrefix+'small'),small);assert.equal(w.backup.getItem(backupPrefix+'anchor'),anchor);
 });
 test('rescue journals never overwrite earlier distinct copies',()=>{
@@ -310,23 +308,22 @@ test('server view does not report recovery success when applying its local data 
   assert.equal(c.controller.useServer(),false);assert.equal(c.mode,'apply-error');
   assert.equal(c.controller.blocked,true);assert.equal(w.writes,0);
 });
-test('a full backup store reclaims closed-tab copies that hold nothing unsynced',async()=>{
+test('a full backup store preserves foreign confirmed copies even if a tab appears closed',async()=>{
   const w=world(),confirmed=sync.normalize(w.data),older=copy(confirmed);older.students[1].name='Older server name';
   const same=JSON.stringify(journal(confirmed,confirmed)),superseded=JSON.stringify(journal(older,confirmed,[older],{resumeConflict:true}));
   const write=boundBackup(w,same.length+superseded.length+50);
   write(backupPrefix+'closed-same',same);write(backupPrefix+'closed-superseded',superseded);
-  const c=w.client();
-  assert.equal(c.controller.blocked,false);assert.equal(c.mode,'synced');
-  assert.equal(w.backup.getItem(backupPrefix+'closed-same'),null);assert.equal(w.backup.getItem(backupPrefix+'closed-superseded'),null);
-  assert.ok(w.backup.getItem(c.controller.key+':backup:'+c.controller.instance));
+  const c=w.client({requireBackup:true});assert.equal(c.controller.blocked,true);assert.equal(c.mode,'storage-error');
+  assert.equal(w.backup.getItem(backupPrefix+'closed-same'),same);assert.equal(w.backup.getItem(backupPrefix+'closed-superseded'),superseded);
   c.ui.weekOvr.w1.s1.time='11:00';await c.controller.save();await settle();
-  assert.equal(w.data.weekOvr.w1.s1.time,'11:00');assert.equal(c.controller.pending(),0);
+  assert.equal(w.writes,0);assert.equal(c.ui.weekOvr.w1.s1.time,'11:00');
+  assert.equal(c.controller.ready,false);assert.ok(c.store.getItem(c.controller.key));
 });
 test('a closed-tab backup with unsynced edits is never reclaimed and sync stops safely instead',async()=>{
   const w=world(),confirmed=sync.normalize(w.data),edited=copy(confirmed);edited.weekOvr.w1.s1.time='09:00';
   const pending=JSON.stringify(journal(confirmed,edited));
   const write=boundBackup(w,pending.length+50);write(backupPrefix+'closed-pending',pending);
-  const c=w.client();
+  const c=w.client({requireBackup:true});
   assert.equal(w.backup.getItem(backupPrefix+'closed-pending'),pending);
   assert.equal(c.mode,'storage-error');assert.equal(c.controller.blocked,true);assert.equal(w.writes,0);
 });
@@ -334,7 +331,7 @@ test('a closed-tab recovery copy that differs from confirmed data is kept',async
   const w=world(),confirmed=sync.normalize(w.data),offline=copy(confirmed);offline.students.push({id:'offline-row',name:'Offline only'});
   const kept=JSON.stringify(journal(confirmed,confirmed,[offline]));
   const write=boundBackup(w,kept.length+50);write(backupPrefix+'closed-recovery',kept);
-  const c=w.client();
+  const c=w.client({requireBackup:true});
   assert.equal(w.backup.getItem(backupPrefix+'closed-recovery'),kept);assert.equal(c.mode,'storage-error');
 });
 test('adapter reclaim frees app cache space as a last resort and preserves unsynced backups',async()=>{
@@ -343,11 +340,11 @@ test('adapter reclaim frees app cache space as a last resort and preserves unsyn
   const write=boundBackup(w,pending.length+cache.length+JSON.stringify(journal(confirmed,confirmed)).length-500);
   write(backupPrefix+'closed-pending',pending);write('app-recovery-snapshot',cache);
   let calls=0;
-  const c=w.client({reclaim:()=>{calls++;const had=w.backup.getItem('app-recovery-snapshot')!==null;w.backup.removeItem('app-recovery-snapshot');return had?1:0;}});
-  assert.equal(calls,1);assert.equal(c.controller.blocked,false);assert.equal(c.mode,'synced');
+  const c=w.client({requireBackup:true,reclaim:()=>{calls++;const had=w.backup.getItem('app-recovery-snapshot')!==null;w.backup.removeItem('app-recovery-snapshot');return had?1:0;}});
+  assert.equal(calls,1);assert.equal(c.controller.blocked,false);assert.equal(c.mode,'recovery');
   assert.equal(w.backup.getItem(backupPrefix+'closed-pending'),pending);
 });
-test('when every reclaim still falls short, removed closed-tab backups are restored',async()=>{
+test('when app-cache reclaim falls short, foreign backups remain untouched',async()=>{
   const w=world(),confirmed=sync.normalize(w.data),divergent=copy(w.data);divergent.students.push({id:'local-only',name:'Local only row'});
   const superseded=JSON.stringify(journal(confirmed,confirmed)),cache='X'.repeat(2000);
   const write=boundBackup(w,cache.length+superseded.length+10+20);
@@ -355,7 +352,7 @@ test('when every reclaim still falls short, removed closed-tab backups are resto
   let calls=0;
   const c=w.client({ui:divergent,reclaim:()=>{calls++;const had=w.backup.getItem('tiny-cache')!==null;w.backup.removeItem('tiny-cache');return had?1:0;}});
   assert.equal(calls,1);assert.equal(c.mode,'storage-error');assert.equal(c.controller.blocked,true);assert.equal(w.writes,0);
-  assert.equal(w.backup.getItem(backupPrefix+'closed-superseded'),superseded,'superseded backup is put back when the write still fails');
+  assert.equal(w.backup.getItem(backupPrefix+'closed-superseded'),superseded,'foreign backup remains when the write still fails');
   assert.equal(w.backup.getItem('app-cache'),cache);
 });
 test('a closed-tab recovery copy shared only with the current tab is still kept',async()=>{
@@ -365,20 +362,193 @@ test('a closed-tab recovery copy shared only with the current tab is still kept'
   const c=w.client({ui:divergent});
   assert.equal(w.backup.getItem(backupPrefix+'closed-shared'),shared);assert.equal(c.mode,'storage-error');
 });
-test('a byte-identical closed-tab backup is replaced only by an equal copy in the current tab',async()=>{
+test('a byte-identical foreign backup is preserved when the current tab cannot fit',()=>{
   const w=world(),confirmed=sync.normalize(w.data),divergent=copy(w.data);divergent.students.push({id:'shared-local',name:'Shared local row'});
   const same=JSON.stringify(journal(confirmed,confirmed,[sync.normalize(divergent)]));
   const write=boundBackup(w,same.length+50);write(backupPrefix+'closed-same-recovery',same);
   const c=w.client({ui:divergent});
-  assert.equal(w.backup.getItem(backupPrefix+'closed-same-recovery'),null);
-  assert.equal(w.backup.getItem(c.controller.key+':backup:'+c.controller.instance),same,'the recovery copy survives in the current tab backup');
+  assert.equal(w.backup.getItem(backupPrefix+'closed-same-recovery'),same);
+  assert.equal(c.mode,'storage-error');assert.equal(w.writes,0);
+  assert.equal(c.store.getItem(c.controller.key),same);
 });
 test('closed-tab backups with a newer revision or a saved ack are never reclaimed',async()=>{
   const w=world(),confirmed=sync.normalize(w.data);
   const newer=JSON.stringify(journal(confirmed,confirmed,[],{revision:5}));
   const acked=JSON.stringify(journal(confirmed,confirmed,[],{ack:{sent:confirmed,value:confirmed,revision:0}}));
   const write=boundBackup(w,newer.length+acked.length+50);write(backupPrefix+'closed-newer',newer);write(backupPrefix+'closed-acked',acked);
-  const c=w.client();
+  const c=w.client({requireBackup:true});
   assert.equal(w.backup.getItem(backupPrefix+'closed-newer'),newer);assert.equal(w.backup.getItem(backupPrefix+'closed-acked'),acked);
   assert.equal(c.mode,'storage-error');assert.equal(w.writes,0);
+});
+
+function fullHistoricalStorage(){
+  const w=world();
+  w.data.students[0].notes='합성 🎵 / unicode \ud800 / '.repeat(6000);
+  w.data._vsSyncRevision=26;
+  const originals=[];
+  for(const rev of [9,13,25]){
+    const base=sync.normalize(w.data);base.students[0].name='Historical '+rev;
+    const local=copy(base);local.logs.push({id:'retained-offline-'+rev,note:'Do not discard'});
+    originals.push([backupPrefix+'historic-'+rev,JSON.stringify(journal(base,base,[local],{revision:rev,unknownMetadata:{keep:rev}}))]);
+  }
+  const size=originals.reduce((sum,p)=>sum+p[1].length,0);
+  const current=JSON.stringify(journal(sync.normalize(w.data),sync.normalize(w.data),[],{revision:26}));
+  const headroom=24000;
+  assert.ok(current.length>headroom*5);
+  const write=boundBackup(w,size+headroom);
+  for(const [key,raw]of originals)write(key,raw);
+  return {w,originals,headroom};
+}
+
+test('full durable history permits a fresh tab and reload by compressing only its own new backup',()=>{
+  const {w,originals,headroom}=fullHistoricalStorage();
+  const write=w.backup.setItem.bind(w.backup);let stored;
+  w.backup.setItem=(key,value)=>{write(key,value);stored=value;};
+  const c=w.client({requireBackup:true});
+  assert.equal(c.mode,'recovery');assert.equal(c.controller.blocked,false);assert.equal(w.writes,0);
+  const key=c.controller.key+':backup:'+c.controller.instance;
+  assert.equal(JSON.parse(stored).encoding,'vs-lz-utf16-1');assert.ok(stored.length<headroom);
+  assert.equal(w.backup.getItem(key),stored,'recovery requires durable storage');
+  assert.deepEqual(JSON.parse(c.store.getItem(c.controller.key)),c.controller.state);
+  for(const [key,raw]of originals)assert.equal(w.backup.getItem(key),raw,'distinct historical bytes remain untouched');
+  c.controller.disconnect();
+  const reloaded=w.client({store:c.store});
+  assert.equal(reloaded.controller.ready,true);assert.equal(reloaded.controller.blocked,false);
+  const second=w.client({forkInstance:true});
+  assert.equal(second.controller.ready,true);assert.equal(second.controller.blocked,false);
+  assert.deepEqual(second.ui,sync.normalize(w.data));
+  for(const [key,raw]of originals)assert.equal(w.backup.getItem(key),raw);
+  assert.equal(second.controller.exportData().backups.filter(b=>b.recovery?.length).length,4);
+  assert.equal(w.writes,0);
+});
+
+test('compressed backup exports Unicode and unsent changes exactly through failed write and reload',async()=>{
+  const {w,originals}=fullHistoricalStorage(),c=w.client();
+  c.ui.inquiries.push({id:'offline-unicode',name:'한글 🎼 \ud800',note:'retained intent'});
+  w.failNext=1;await c.controller.save();await settle();
+  assert.equal(w.writes,0);assert.equal(c.controller.pending(),1);
+  const saved=copy(c.controller.state),key=c.controller.key+':backup:'+c.controller.instance;
+  assert.equal(JSON.parse(w.backup.getItem(key)).encoding,'vs-lz-utf16-1');
+  assert.ok(c.controller.exportData().backups.some(b=>JSON.stringify(b)===JSON.stringify(saved)));
+  c.controller.disconnect();
+  const reloaded=w.client({store:c.store,ui:saved.local});
+  assert.equal(reloaded.controller.pending(),1);assert.equal(reloaded.ui.inquiries.at(-1).name,'한글 🎼 \ud800');
+  await reloaded.controller.retry();await settle();
+  assert.equal(w.writes,1);assert.equal(reloaded.controller.pending(),0);
+  assert.equal(w.data.inquiries.filter(q=>q.id==='offline-unicode').length,1);
+  for(const [key,raw]of originals)assert.equal(w.backup.getItem(key),raw);
+});
+
+test('compressed durable readback corruption fails closed without sending or altering historical backups',()=>{
+  const {w,originals}=fullHistoricalStorage(),originalSet=w.backup.setItem.bind(w.backup);
+  w.backup.setItem=(key,value)=>{
+    const parsed=JSON.parse(value);
+    if(parsed.encoding==='vs-lz-utf16-1')value=JSON.stringify({...parsed,checksum:'corrupt'});
+    originalSet(key,value);
+  };
+  const c=w.client({requireBackup:true});
+  assert.equal(c.mode,'storage-error');assert.equal(c.controller.blocked,true);assert.equal(w.writes,0);
+  assert.ok(c.controller.exportData().backups.some(b=>b.unreadable===true));
+  for(const [key,raw]of originals)assert.equal(w.backup.getItem(key),raw);
+});
+
+function variedHistoricalStorage(){
+  const w=world();let random=0x12345678;
+  const bytes=Buffer.alloc(90000);
+  for(let i=0;i<bytes.length;i++){random^=random<<13;random^=random>>>17;random^=random<<5;bytes[i]=random&255;}
+  w.data.students[0].notes=bytes.toString('base64');w.data._vsSyncRevision=26;
+  const originals=[];
+  for(const rev of [9,13,25]){
+    const base=sync.normalize(w.data),local=copy(base);local.students[0].name='Unsent '+rev;
+    originals.push([backupPrefix+'varied-'+rev,JSON.stringify(journal(base,local,[local],{revision:rev}))]);
+  }
+  const size=originals.reduce((n,[,v])=>n+v.length,0),headroom=90000;
+  const write=boundBackup(w,size+headroom);for(const [k,v]of originals)write(k,v);
+  return {w,originals,headroom};
+}
+
+test('near-full varied history supports ordinary edit, ACK, new tab and reload without backup size doubling',async()=>{
+  const {w,originals,headroom}=variedHistoricalStorage();
+  const write=w.backup.setItem.bind(w.backup);let stored;
+  w.backup.setItem=(key,value)=>{write(key,value);stored=value;};
+  const c=w.client({requireBackup:true});
+  assert.equal(c.controller.blocked,false);
+  const key=c.controller.key+':backup:'+c.controller.instance,initial=stored.length;
+  c.ui.students[0].name='Edited name 한글 🎵';w.failNext=1;
+  await c.controller.save();await settle();
+  assert.equal(c.controller.blocked,false,'ordinary edit must still fit durable quota');
+  assert.equal(c.controller.pending(),1);assert.equal(w.writes,0);
+  const edited=w.backup.getItem(key).length;
+  assert.ok(edited<initial+5000,`small edit grew backup ${initial} -> ${edited}`);
+  assert.ok(edited<headroom);
+  assert.deepEqual(c.controller.exportData().backups.at(-1),c.controller.state);
+  c.controller.disconnect();const reloaded=w.client({store:c.store,ui:c.ui});
+  assert.equal(reloaded.controller.pending(),1);
+  await reloaded.controller.retry();await settle();
+  assert.equal(w.writes,1);assert.equal(reloaded.controller.pending(),0);
+  assert.equal(reloaded.controller.blocked,false);assert.equal(w.data.students[0].name,'Edited name 한글 🎵');
+  reloaded.controller.disconnect();
+  const fresh=w.client({forkInstance:true});
+  assert.equal(fresh.controller.ready,true);assert.equal(fresh.controller.blocked,false);
+  assert.equal(fresh.ui.students[0].name,'Edited name 한글 🎵');
+  fresh.ui.students[1].name='Fresh tab edit';await fresh.controller.save();await settle();
+  assert.equal(fresh.controller.blocked,true);assert.equal(w.writes,1);
+  assert.equal(JSON.parse(fresh.store.getItem(fresh.controller.key)).local.students[1].name,'Fresh tab edit');
+  assert.ok(fresh.controller.exportData().backups.some(b=>b.local?.students[0]?.name==='Edited name 한글 🎵'));
+  for(const [k,v]of originals)assert.equal(w.backup.getItem(k),v);
+});
+
+test('varied backup preserves differing recovery snapshots and deferred acknowledgement exactly',()=>{
+  const {w,originals}=variedHistoricalStorage(),c=w.client(),next=copy(c.controller.state);
+  next.local.students[0].name='Pending edit';
+  next.local.inquiries.push({id:'pending-inquiry',name:'Distant field edit'});
+  const recovery=copy(next.base);recovery.students[0].name='Recovery variant';next.recovery=[recovery];
+  next.ack={sent:copy(next.local),value:copy(next.local),revision:27};
+  Object.defineProperty(next,'__proto__',{value:{preserve:true},enumerable:true});
+  assert.equal(c.controller.persist(next),true);
+  assert.equal(JSON.stringify(c.controller.exportData().backups.at(-1)),JSON.stringify(next));
+  for(const [k,v]of originals)assert.equal(w.backup.getItem(k),v);
+  assert.equal(w.writes,0);
+});
+
+test('successful persistence never removes a peer key even when it appears byte-identical',()=>{
+  const w=world(),c=w.client(),raw=JSON.stringify(c.controller.state),peer=backupPrefix+'peer';
+  w.backup.setItem(peer,raw);
+  const get=w.backup.getItem.bind(w.backup),write=w.backup.setItem.bind(w.backup),remove=w.backup.removeItem.bind(w.backup);
+  const newer=JSON.parse(raw);newer.local.students[0].name='Newest peer offline edit';const updated=JSON.stringify(newer);
+  let removals=0;
+  w.backup.getItem=key=>{const result=get(key);if(key===peer)write(peer,updated);return result;};
+  w.backup.removeItem=key=>{if(key===peer){removals++;write(peer,updated);}remove(key);};
+  assert.equal(c.controller.persist(JSON.parse(raw)),true);
+  assert.equal(removals,0);assert.ok([raw,updated].includes(get(peer)));
+});
+
+test('new clean allocation exception requires exact confirmed state and preserves every unique journal field',()=>{
+  for(const change of [
+    (n,c)=>n.local.students[0].name='pending',
+    n=>n.recovery.push(copy(n.base)),
+    n=>n.ack={sent:copy(n.local),value:copy(n.local),revision:n.revision},
+    n=>n.resumeConflict=false,n=>n.unknownMetadata={keep:true},
+    n=>Object.defineProperty(n,'__proto__',{value:{keep:true},enumerable:true}),
+    n=>n.version=2,n=>n.owner='other',n=>n.namespace='other',
+    (n,c)=>c.latest=null,(n,c)=>c.latest._vsSyncRevision++,
+    (n,c)=>c.latest.students[0].name='different confirmed data'
+  ]){
+    const w=world(),c=w.client(),next=copy(c.controller.state);
+    // base/local must not alias in a pending-intent case.
+    next.local=copy(next.local);change(next,c.controller);
+    const key=c.controller.key+':backup:'+c.controller.instance,raw=JSON.stringify(next);
+    assert.equal(c.controller.persist(next),true);
+    assert.equal(w.backup.getItem(key),raw);
+    assert.equal(c.store.getItem(c.controller.key),raw);
+  }
+});
+
+test('existing own backup cannot use the clean allocation exception',()=>{
+  const w=world(),c=w.client(),next=copy(c.controller.state);
+  w.backup.setItem(c.controller.key+':backup:'+c.controller.instance,JSON.stringify(next));
+  w.backup.fail=true;
+  assert.equal(c.controller.persist(next),false);assert.equal(c.controller.blocked,true);
+  assert.equal(c.store.getItem(c.controller.key),JSON.stringify(next));
+  assert.equal(w.writes,0);
 });

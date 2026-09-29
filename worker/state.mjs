@@ -1,4 +1,5 @@
 ﻿const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'private, no-store' };
+import { initIntakeTables, acceptIntake, drainIntakeOutbox, notificationStatus, intakeError } from './intake.mjs';
 const READBACK_TTL_MS = 10 * 60 * 1000;
 function json(data, status = 200, headers = {}) {
   return new Response(JSON.stringify(data), { status, headers: { ...JSON_HEADERS, ...headers } });
@@ -20,11 +21,12 @@ function cleanIncomingState(input) {
   const state = structuredClone(input); delete state._vsSyncRevision; return state;
 }
 export class StudioState {
-  constructor(ctx) {
-    this.ctx = ctx; this.sql = ctx.storage.sql;
+  constructor(ctx, env = {}) {
+    this.ctx = ctx; this.sql = ctx.storage.sql; this.env = env;
     ctx.blockConcurrencyWhile(async () => {
       this.sql.exec('CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
       this.sql.exec('CREATE TABLE IF NOT EXISTS requests (id TEXT PRIMARY KEY, payload_sha TEXT NOT NULL, response_json TEXT NOT NULL, created_at INTEGER NOT NULL)');
+      initIntakeTables(this.sql);
     });
   }
   getKV(key) {
@@ -35,10 +37,13 @@ export class StudioState {
     this.sql.exec('INSERT INTO kv(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', key, JSON.stringify(value));
   }
   record() { return this.getKV('record'); }
+  async alarm() { return drainIntakeOutbox(this); }
   async fetch(request) {
     const url = new URL(request.url);
     return this.ctx.blockConcurrencyWhile(async () => {
       try {
+        if (request.method === 'POST' && url.pathname === '/booking') return await acceptIntake(this, await request.json());
+        if (request.method === 'GET' && url.pathname === '/intake/notifications') return notificationStatus(this);
         if (request.method === 'GET' && url.pathname === '/api/events') return this.eventSocket(request);
         if (request.method === 'GET' && url.pathname === '/state') return await this.getState();
         if (request.method === 'GET' && url.pathname === '/export') return await this.exportState(request);
@@ -46,7 +51,10 @@ export class StudioState {
         if (request.method === 'POST' && url.pathname === '/activate') return await this.activate(request);
         if (request.method === 'POST' && url.pathname === '/commit') return await this.commit(request);
         return json({ error: 'not-found' }, 404);
-      } catch (error) { return json({ error: error?.message || 'state-error' }, 400); }
+      } catch (error) {
+        if (url.pathname === '/booking') return intakeError('STUDIO_UNAVAILABLE', 503, '접수 결과를 확인하지 못했습니다. 잠시 뒤 다시 시도해주세요.');
+        return json({ error: error?.message || 'state-error' }, 400);
+      }
     });
   }
   eventSocket(request) {
