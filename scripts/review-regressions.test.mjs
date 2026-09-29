@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import vm from 'node:vm';
 import sync from '../vs-sync.js';
 
 const copy=structuredClone;
@@ -11,6 +12,30 @@ function storage(){
 }
 const tick=()=>new Promise(r=>setImmediate(r));
 async function settle(){for(let i=0;i<5;i++)await tick();}
+
+test('local state replacement needs no duplicate quota and keeps old value on failure',()=>{
+  const index=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
+  const source=index.match(/function _safeSetLS\(key,val\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(source,'local storage writer exists');
+  const values=new Map([['vsC_s','old']]);
+  const writes=[];
+  const localStorage={
+    setItem(key,value){
+      writes.push(key);
+      const other=[...values].reduce((sum,[k,v])=>sum+(k===key?0:v.length),0);
+      if(other+value.length>10)throw new DOMException('full','QuotaExceededError');
+      values.set(key,value);
+    },
+    getItem:key=>values.get(key)??null
+  };
+  const context=vm.createContext({localStorage});
+  vm.runInContext(source,context);
+  vm.runInContext("_safeSetLS('vsC_s','1234567890')",context);
+  assert.equal(values.get('vsC_s'),'1234567890');
+  assert.deepEqual(writes,['vsC_s']);
+  assert.throws(()=>vm.runInContext("_safeSetLS('vsC_s','12345678901')",context),/full/);
+  assert.equal(values.get('vsC_s'),'1234567890');
+});
 function makeWorld(){
   const w={data:seed(),revision:0,writes:0,failNext:0,listeners:new Set()};
   w.snapshot=()=>({
