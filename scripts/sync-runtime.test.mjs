@@ -382,3 +382,123 @@ test('closed-tab backups with a newer revision or a saved ack are never reclaime
   assert.equal(w.backup.getItem(backupPrefix+'closed-newer'),newer);assert.equal(w.backup.getItem(backupPrefix+'closed-acked'),acked);
   assert.equal(c.mode,'storage-error');assert.equal(w.writes,0);
 });
+
+function fullHistoricalStorage(){
+  const w=world();
+  w.data.students[0].notes='합성 🎵 / unicode \ud800 / '.repeat(6000);
+  w.data._vsSyncRevision=26;
+  const originals=[];
+  for(const rev of [9,13,25]){
+    const base=sync.normalize(w.data);base.students[0].name='Historical '+rev;
+    const local=copy(base);local.logs.push({id:'retained-offline-'+rev,note:'Do not discard'});
+    originals.push([backupPrefix+'historic-'+rev,JSON.stringify(journal(base,base,[local],{revision:rev,unknownMetadata:{keep:rev}}))]);
+  }
+  const size=originals.reduce((sum,p)=>sum+p[1].length,0);
+  const current=JSON.stringify(journal(sync.normalize(w.data),sync.normalize(w.data),[],{revision:26}));
+  const headroom=24000;
+  assert.ok(current.length>headroom*5);
+  const write=boundBackup(w,size+headroom);
+  for(const [key,raw]of originals)write(key,raw);
+  return {w,originals,headroom};
+}
+
+test('full durable history permits a fresh tab and reload by compressing only its own new backup',()=>{
+  const {w,originals,headroom}=fullHistoricalStorage(),c=w.client();
+  assert.equal(c.mode,'synced');assert.equal(c.controller.blocked,false);assert.equal(w.writes,0);
+  const key=c.controller.key+':backup:'+c.controller.instance;
+  const stored=w.backup.getItem(key);
+  assert.equal(JSON.parse(stored).encoding,'vs-lz-utf16-1');assert.ok(stored.length<headroom);
+  assert.deepEqual(c.controller.exportData().backups.at(-1),c.controller.state);
+  for(const [key,raw]of originals)assert.equal(w.backup.getItem(key),raw,'distinct historical bytes remain untouched');
+  c.controller.disconnect();
+  const reloaded=w.client({store:c.store});
+  assert.equal(reloaded.controller.ready,true);assert.equal(reloaded.controller.blocked,false);
+  const second=w.client({forkInstance:true});
+  assert.equal(second.controller.ready,true);assert.equal(second.controller.blocked,false);
+  assert.deepEqual(second.ui,sync.normalize(w.data));
+  for(const [key,raw]of originals)assert.equal(w.backup.getItem(key),raw);
+  assert.equal(second.controller.exportData().backups.filter(b=>b.recovery?.length).length,3);
+  assert.equal(w.writes,0);
+});
+
+test('compressed backup exports Unicode and unsent changes exactly through failed write and reload',async()=>{
+  const {w,originals}=fullHistoricalStorage(),c=w.client();
+  c.ui.inquiries.push({id:'offline-unicode',name:'한글 🎼 \ud800',note:'retained intent'});
+  w.failNext=1;await c.controller.save();await settle();
+  assert.equal(w.writes,0);assert.equal(c.controller.pending(),1);
+  const saved=copy(c.controller.state),key=c.controller.key+':backup:'+c.controller.instance;
+  assert.equal(JSON.parse(w.backup.getItem(key)).encoding,'vs-lz-utf16-1');
+  assert.ok(c.controller.exportData().backups.some(b=>JSON.stringify(b)===JSON.stringify(saved)));
+  c.controller.disconnect();
+  const reloaded=w.client({store:c.store,ui:saved.local});
+  assert.equal(reloaded.controller.pending(),1);assert.equal(reloaded.ui.inquiries.at(-1).name,'한글 🎼 \ud800');
+  await reloaded.controller.retry();await settle();
+  assert.equal(w.writes,1);assert.equal(reloaded.controller.pending(),0);
+  assert.equal(w.data.inquiries.filter(q=>q.id==='offline-unicode').length,1);
+  for(const [key,raw]of originals)assert.equal(w.backup.getItem(key),raw);
+});
+
+test('compressed durable readback corruption fails closed without sending or altering historical backups',()=>{
+  const {w,originals}=fullHistoricalStorage(),originalSet=w.backup.setItem.bind(w.backup);
+  w.backup.setItem=(key,value)=>{
+    const parsed=JSON.parse(value);
+    if(parsed.encoding==='vs-lz-utf16-1')value=JSON.stringify({...parsed,checksum:'corrupt'});
+    originalSet(key,value);
+  };
+  const c=w.client();
+  assert.equal(c.mode,'storage-error');assert.equal(c.controller.blocked,true);assert.equal(w.writes,0);
+  assert.ok(c.controller.exportData().backups.some(b=>b.unreadable===true));
+  for(const [key,raw]of originals)assert.equal(w.backup.getItem(key),raw);
+});
+
+function variedHistoricalStorage(){
+  const w=world();let random=0x12345678;
+  const bytes=Buffer.alloc(90000);
+  for(let i=0;i<bytes.length;i++){random^=random<<13;random^=random>>>17;random^=random<<5;bytes[i]=random&255;}
+  w.data.students[0].notes=bytes.toString('base64');w.data._vsSyncRevision=26;
+  const originals=[];
+  for(const rev of [9,13,25]){
+    const base=sync.normalize(w.data),local=copy(base);local.students[0].name='Unsent '+rev;
+    originals.push([backupPrefix+'varied-'+rev,JSON.stringify(journal(base,local,[local],{revision:rev}))]);
+  }
+  const size=originals.reduce((n,[,v])=>n+v.length,0),headroom=90000;
+  const write=boundBackup(w,size+headroom);for(const [k,v]of originals)write(k,v);
+  return {w,originals,headroom};
+}
+
+test('near-full varied history supports ordinary edit, ACK, new tab and reload without backup size doubling',async()=>{
+  const {w,originals,headroom}=variedHistoricalStorage(),c=w.client();
+  assert.equal(c.controller.blocked,false);
+  const key=c.controller.key+':backup:'+c.controller.instance,initial=w.backup.getItem(key).length;
+  c.ui.students[0].name='Edited name 한글 🎵';w.failNext=1;
+  await c.controller.save();await settle();
+  assert.equal(c.controller.blocked,false,'ordinary edit must still fit durable quota');
+  assert.equal(c.controller.pending(),1);assert.equal(w.writes,0);
+  const edited=w.backup.getItem(key).length;
+  assert.ok(edited<initial+5000,`small edit grew backup ${initial} -> ${edited}`);
+  assert.ok(edited<headroom);
+  assert.deepEqual(c.controller.exportData().backups.at(-1),c.controller.state);
+  c.controller.disconnect();const reloaded=w.client({store:c.store,ui:c.ui});
+  assert.equal(reloaded.controller.pending(),1);
+  await reloaded.controller.retry();await settle();
+  assert.equal(w.writes,1);assert.equal(reloaded.controller.pending(),0);
+  assert.equal(reloaded.controller.blocked,false);assert.equal(w.data.students[0].name,'Edited name 한글 🎵');
+  reloaded.controller.disconnect();
+  const fresh=w.client({forkInstance:true});
+  assert.equal(fresh.controller.ready,true);assert.equal(fresh.controller.blocked,false);
+  assert.equal(fresh.ui.students[0].name,'Edited name 한글 🎵');
+  for(const [k,v]of originals)assert.equal(w.backup.getItem(k),v);
+});
+
+test('varied backup preserves differing recovery snapshots and deferred acknowledgement exactly',()=>{
+  const {w,originals}=variedHistoricalStorage(),c=w.client(),next=copy(c.controller.state);
+  next.local.students[0].name='Pending edit';
+  next.local.inquiries.push({id:'pending-inquiry',name:'Distant field edit'});
+  const recovery=copy(next.base);recovery.students[0].name='Recovery variant';next.recovery=[recovery];
+  next.ack={sent:copy(next.local),value:copy(next.local),revision:27};
+  Object.defineProperty(next,'__proto__',{value:{preserve:true},enumerable:true});
+  assert.equal(c.controller.persist(next),true);
+  assert.equal(JSON.stringify(c.controller.exportData().backups.at(-1)),JSON.stringify(next));
+  for(const [k,v]of originals)assert.equal(w.backup.getItem(k),v);
+  assert.equal(w.writes,0);
+});

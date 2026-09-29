@@ -5,6 +5,32 @@
   else root.VSSync=api;
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
+  /* lz-string 1.5.0, unmodified npm libs/lz-string.min.js, isolated UMD scope.
+   * MIT License
+   *
+   * Copyright (c) 2013 pieroxy
+   *
+   * Permission is hereby granted, free of charge, to any person obtaining a copy
+   * of this software and associated documentation files (the "Software"), to deal
+   * in the Software without restriction, including without limitation the rights
+   * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   * copies of the Software, and to permit persons to whom the Software is
+   * furnished to do so, subject to the following conditions:
+   *
+   * The above copyright notice and this permission notice shall be included in all
+   * copies or substantial portions of the Software.
+   *
+   * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   * SOFTWARE.
+   */
+  var backupCompression=(function(){var module={exports:{}},define,angular;
+var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compressToUint8Array:function(r){for(var o=i.compress(r),n=new Uint8Array(2*o.length),e=0,t=o.length;e<t;e++){var s=o.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null==o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;e<t;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(r){return null==r?"":i._compress(r,6,function(r){return n.charAt(r)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(o){return t(n,r.charAt(o))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();"function"==typeof define&&define.amd?define(function(){return LZString}):"undefined"!=typeof module&&null!=module?module.exports=LZString:"undefined"!=typeof angular&&null!=angular&&angular.module("LZString",[]).factory("LZString",function(){return LZString});
+    return module.exports;})();
   var LISTS=['students','logs','consults','payments','inquiries'];
   var own=function(object,key){return Object.prototype.hasOwnProperty.call(object,key);};
   function clone(value){return JSON.parse(JSON.stringify(value));}
@@ -116,6 +142,86 @@
     var value=data._vsSyncRevision==null?0:data._vsSyncRevision;
     if(!Number.isSafeInteger(value)||value<0)throw Error('invalid-revision');return value;
   }
+  function backupChecksum(text){
+    var hash=2166136261;
+    for(var i=0;i<text.length;i++){hash^=text.charCodeAt(i);hash=Math.imul(hash,16777619);}
+    return (hash>>>0).toString(16);
+  }
+  function decodeBackup(raw){
+    if(raw===null)return raw;
+    var packed;try{packed=JSON.parse(raw);}catch(error){return raw;}
+    if(!packed||packed.encoding!=='vs-lz-utf16-1')return raw;
+    if(packed.version!==2||!Number.isSafeInteger(packed.length)||packed.length<0||
+       typeof packed.data!=='string'||typeof packed.checksum!=='string')throw Error('invalid-backup-envelope');
+    var text=backupCompression.decompressFromUTF16(packed.data);
+    if(packed.layout==='repeat-base'){
+      var split=JSON.parse(text);
+      if(!split||typeof split.piece!=='string'||!Array.isArray(split.parts)||split.parts.length<3||
+         !split.parts.every(function(part){return typeof part==='string';}))throw Error('invalid-backup-parts');
+      text=split.parts.join(split.piece);
+    }else if(packed.layout==='json-tree'){text=expandBackupTree(JSON.parse(text),packed.length);
+    }else if(packed.layout!=='raw')throw Error('invalid-backup-layout');
+    if(typeof text!=='string'||text.length!==packed.length||backupChecksum(text)!==packed.checksum)throw Error('backup-integrity');
+    return text;
+  }
+  /* Share identical JSON subtrees, not just whole snapshots. Editing multiple fields
+     leaves unchanged rows/media/metadata stored once across base, local, recovery and ACK.
+     Every node is tagged, so user data can never be mistaken for a dictionary reference. */
+  function backupTree(value){
+    var table=[],seen=new Map();
+    function visit(value){
+      var raw=JSON.stringify(value),shared=raw.length>=256;
+      if(shared&&seen.has(raw))return [3,seen.get(raw)];
+      var index=table.length;
+      if(shared){seen.set(raw,index);table.push(null);}
+      var node;
+      if(Array.isArray(value))node=[1,value.map(visit)];
+      else if(value&&typeof value==='object')node=[2,Object.keys(value).map(function(key){return [key,visit(value[key])];})];
+      else node=[0,value];
+      if(shared){table[index]=node;return [3,index];}return node;
+    }
+    var root=visit(value);return {table:table,root:root};
+  }
+  function expandBackupTree(tree,length){
+    if(!tree||!Array.isArray(tree.table))throw Error('invalid-backup-tree');
+    var visiting=new Set(),cache=new Map(),cost=new Map();
+    function visit(node){
+      if(!Array.isArray(node)||node.length!==2)throw Error('invalid-backup-node');
+      var type=node[0],value=node[1],result,size;
+      if(type===3){
+        if(!Number.isSafeInteger(value)||value<0||value>=tree.table.length||visiting.has(value))throw Error('invalid-backup-reference');
+        if(cache.has(value))return {value:cache.get(value),size:cost.get(value)};
+        visiting.add(value);var item=visit(tree.table[value]);visiting.delete(value);
+        cache.set(value,item.value);cost.set(value,item.size);return item;
+      }
+      if(type===0){
+        if(value!==null&&typeof value!=='string'&&typeof value!=='number'&&typeof value!=='boolean')throw Error('invalid-backup-value');
+        result=value;size=JSON.stringify(value).length;
+      }else if(type===1||type===2){
+        if(!Array.isArray(value))throw Error('invalid-backup-collection');
+        result=type===1?[]:Object.create(null);size=2;
+        value.forEach(function(entry,i){
+          if(type===2&&(!Array.isArray(entry)||entry.length!==2||typeof entry[0]!=='string'||own(result,entry[0])))throw Error('invalid-backup-property');
+          var item=visit(type===1?entry:entry[1]);
+          size+=item.size+(i?1:0)+(type===2?JSON.stringify(entry[0]).length+1:0);
+          if(size>length)throw Error('invalid-backup-length');
+          if(type===1)result.push(item.value);else put(result,entry[0],item.value);
+        });
+      }else throw Error('invalid-backup-tag');
+      if(size>length)throw Error('invalid-backup-length');return {value:result,size:size};
+    }
+    return JSON.stringify(visit(tree.root).value);
+  }
+  function encodeBackup(text){
+    // Only a quota fallback for large journals. Historical backups are not rewritten.
+    if(text.length<65536)return text;
+    var layout='raw',payload=text,candidate=JSON.stringify(backupTree(JSON.parse(text)));
+    if(candidate.length<payload.length){layout='json-tree';payload=candidate;}
+    var packed=JSON.stringify({version:2,encoding:'vs-lz-utf16-1',layout:layout,length:text.length,
+      checksum:backupChecksum(text),data:backupCompression.compressToUTF16(payload)});
+    if(packed.length>=text.length||decodeBackup(packed)!==text)return text;
+    return packed;
+  }
   function Controller(adapter){
     this.a=adapter;this.epoch=0;this.state=null;this.owner=null;this.unsubscribe=null;
     this.flight=null;this.deferred=null;this.latest=null;this.ready=false;this.blocked=false;this.hold=null;
@@ -179,12 +285,13 @@
       var key=store.key(i);
       if(!key||key===backupKey||key.indexOf(prefix)!==0)continue;
       var raw=store.getItem(key);
-      var entry={key:key,raw:raw,remove:raw===text||supersededBackup(raw,next),anchor:null,retain:false};
+      var decoded;try{decoded=decodeBackup(raw);}catch(error){continue;}
+      var entry={key:key,raw:raw,decoded:decoded,remove:decoded===text||supersededBackup(decoded,next),anchor:null,retain:false};
       entries.push(entry);if(entry.remove)candidates.push(entry);
     }
     entries.forEach(function(entry){
       if(entry.remove||entry.retain)return;
-      var anchor=entries.find(function(other){return other!==entry&&!other.remove&&containedBackup(entry.raw,other.raw,next);});
+      var anchor=entries.find(function(other){return other!==entry&&!other.remove&&containedBackup(entry.decoded,other.decoded,next);});
       if(anchor){anchor.retain=true;entry.remove=true;entry.anchor=anchor;candidates.push(entry);}
     });
     /* Keep anchors out of the removal set. Re-read both copies immediately before deleting; another
@@ -204,11 +311,15 @@
   Controller.prototype.writeBackup=function(next,text,backupKey){
     var store=this.a.backupStore,self=this;
     try{store.setItem(backupKey,text);return;}catch(error){}
+    // Compress only this tab's own new write. Historical/unsent backups stay in place byte for byte;
+    // there is no cross-tab migration or compare-and-replace of another writer's journal.
+    var stored=encodeBackup(text);
+    if(stored!==text){try{store.setItem(backupKey,stored);return;}catch(error){}}
     var removed=this.reclaimBackups(next,text,backupKey);
     function restore(){removed.forEach(function(entry){try{if(store.getItem(entry[0])===null)store.setItem(entry[0],entry[1]);}catch(error){if(typeof console!=='undefined'&&console.error)console.error('vs-sync: could not restore backup',entry[0],error);}});removed=[];}
-    if(removed.length){try{store.setItem(backupKey,text);return;}catch(error){}}
+    if(removed.length){try{store.setItem(backupKey,stored);return;}catch(error){}}
     var freed=0;try{freed=self.a.reclaim?Number(self.a.reclaim())||0:0;}catch(error){freed=0;}
-    if(freed||removed.length){try{store.setItem(backupKey,text);return;}catch(error){}}
+    if(freed||removed.length){try{store.setItem(backupKey,stored);return;}catch(error){}}
     restore();
     throw Error('backup-quota');
   };
@@ -220,11 +331,14 @@
       if(this.a.backupStore){
         var store=this.a.backupStore,backupKey=this.key+':backup:'+this.instance;
         this.writeBackup(next,text,backupKey);
+        if(decodeBackup(store.getItem(backupKey))!==text)throw Error('backup-readback');
         if(!next.ack&&!diff(next.base,next.local).length){
           var duplicates=[];
           for(var i=0;i<store.length&&duplicates.length<64;i++){
             var key=store.key(i);
-            if(key!==backupKey&&key&&key.indexOf(this.key+':backup:')===0&&store.getItem(key)===text)duplicates.push(key);
+            if(key!==backupKey&&key&&key.indexOf(this.key+':backup:')===0){
+              try{if(decodeBackup(store.getItem(key))===text)duplicates.push(key);}catch(error){}
+            }
           }
           duplicates.forEach(function(key){try{store.removeItem(key);}catch(error){}});
         }
@@ -402,13 +516,13 @@
     var result={version:1,current:this.state,backups:[],reclaimedBackups:[]},store=this.a.backupStore;
     if(store&&this.key)for(var i=0;i<store.length;i++){
       var key=store.key(i);if(key&&key.indexOf(this.key+':backup:')===0){
-        try{result.backups.push(JSON.parse(store.getItem(key)));}catch(error){result.backups.push({unreadable:true});}
+        try{result.backups.push(JSON.parse(decodeBackup(store.getItem(key))));}catch(error){result.backups.push({unreadable:true});}
       }
     }
     store=this.a.store;
     if(store&&this.key)for(var j=0;j<store.length;j++){
       var savedKey=store.key(j);if(savedKey&&savedKey.indexOf(this.key+':reclaimed:')===0){
-        try{result.reclaimedBackups.push(JSON.parse(store.getItem(savedKey)));}catch(error){result.reclaimedBackups.push({unreadable:true});}
+        try{result.reclaimedBackups.push(JSON.parse(decodeBackup(store.getItem(savedKey))));}catch(error){result.reclaimedBackups.push({unreadable:true});}
       }
     }
     return clone(result);
