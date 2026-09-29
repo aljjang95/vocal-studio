@@ -1,6 +1,6 @@
 """Actual Vocal Studio app against local Cloudflare Worker/SQLite DO/R2."""
 import json
-import shutil
+import os
 import subprocess
 import time
 import urllib.error
@@ -8,12 +8,13 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 from playwright.sync_api import sync_playwright
+from browser_state_dir import create_browser_state
 
 ROOT=Path(__file__).resolve().parents[1]
-PORT=8799
+PORT=int(os.environ.get('VS_BROWSER_PORT','8799'))
 ORIGIN=f'http://127.0.0.1:{PORT}'
-PERSIST=ROOT/'tmp'/'cf-browser-state'
-EVIDENCE=ROOT/'tmp'/'cf-evidence'
+PERSIST=create_browser_state(ROOT,os.environ.get('VS_BROWSER_PERSIST'))
+EVIDENCE=Path(os.environ.get('VS_BROWSER_EVIDENCE',str(ROOT/'tmp'/'cf-evidence')))
 PROTO='vs-cf-1'
 checks=[]
 errors=[]
@@ -120,7 +121,6 @@ LIGHT_SURFACE_JS="""() => {
   return found;
 }"""
 
-shutil.rmtree(PERSIST,ignore_errors=True)
 EVIDENCE.mkdir(parents=True,exist_ok=True)
 subprocess.run(['node','scripts/build-worker.mjs'],cwd=ROOT,check=True)
 command=['node',str(ROOT/'node_modules/wrangler/bin/wrangler.js'),'dev','--config','wrangler.local.jsonc','--ip','127.0.0.1','--port',str(PORT),'--local','--persist-to',str(PERSIST)]
@@ -170,6 +170,7 @@ try:
         page.goto(ORIGIN+'/',wait_until='domcontentloaded',timeout=60000)
         wait_js(page,"window._cfSession && window._vsSync && window._vsSync.ready")
         check('desktop actual app hydrated',page.evaluate("weekOvr.w1.s1.time==='10:00'"))
+        check('desktop opens today view',page.evaluate("page==='today'&&document.getElementById('pt').textContent==='오늘 스케줄'"))
         check('desktop Cloudflare principal bound',page.evaluate("_cfSession.principal.length>0"))
         page.screenshot(path=str(EVIDENCE/'browser-desktop.png'),full_page=True)
         page.evaluate("go('students')")
@@ -476,6 +477,7 @@ try:
             dismiss_today_alert(phone)
             phone.locator('#pwaGoschedule').click()
             wait_js(phone,"page==='schedule'&&getComputedStyle(document.getElementById('content')).opacity==='1'")
+            check('mobile schedule action opens weekly agenda '+str(width),phone.evaluate("mobileSchedView==='week'&&document.querySelectorAll('.mobile-week-day').length===7"))
             phone.locator('div[onclick="mSchedWeek()"]',).click()
             wait_js(phone,"document.querySelector('.mobile-week-agenda')&&document.querySelectorAll('.mobile-week-day').length===7")
             check('mobile weekly agenda '+str(width)+' fits viewport',phone.evaluate("document.documentElement.scrollWidth<=innerWidth+1&&document.querySelector('.mobile-week-agenda').scrollWidth<=innerWidth"))
@@ -513,6 +515,8 @@ try:
             mobile_page.goto(ORIGIN+'/',wait_until='domcontentloaded')
             wait_js(mobile_page,"window._cfSession && window._vsSync && window._vsSync.ready")
             check(label+' actual app hydrated',mobile_page.evaluate("weekOvr.w1.s1.time==='10:00'"))
+            wait_js(mobile_page,"page==='schedule'&&mobileSchedView==='week'&&document.querySelectorAll('.mobile-week-day').length===7")
+            check(label+' opens weekly schedule with selected navigation',mobile_page.evaluate("document.getElementById('pt').textContent==='주간 스케줄'&&document.body.dataset.activePage==='schedule'&&document.querySelector('.ni[data-p=schedule]').classList.contains('on')"))
             check(label+' document fits viewport',mobile_page.evaluate("document.documentElement.scrollWidth<=window.innerWidth+1"))
             mobile_page.screenshot(path=str(EVIDENCE/(f'browser-{label}.png')),full_page=True)
             mobile.close()
@@ -656,10 +660,7 @@ try:
             visual_phone.goto(ORIGIN+'/',wait_until='domcontentloaded')
             wait_js(visual_phone,"window._cfSession&&window._vsSync&&window._vsSync.ready")
             dismiss_today_alert(visual_phone)
-            visual_phone.locator('#pwaGoschedule').click()
-            wait_js(visual_phone,"page==='schedule'&&document.querySelector('.mobile-tab-bar')")
-            visual_phone.locator('div[onclick="mSchedWeek()"]',).click()
-            wait_js(visual_phone,"document.querySelector('.mobile-week-agenda')&&document.querySelectorAll('.mobile-week-day').length===7")
+            wait_js(visual_phone,"page==='schedule'&&mobileSchedView==='week'&&document.querySelectorAll('.mobile-week-day').length===7")
             wait_js(visual_phone,"window._vsSync&&_vsSync.ready&&_vsSync.mode==='synced'")
             wait_js(visual_phone,"getComputedStyle(document.getElementById('content')).opacity==='1'")
             dismiss_today_alert(visual_phone)

@@ -4780,6 +4780,8 @@ document.addEventListener('DOMContentLoaded',function(){
   }
   applyMobileClass();
   window.addEventListener('resize', applyMobileClass);
+  document.body.setAttribute('data-active-page',page);
+  document.querySelectorAll('.ni[data-p]').forEach(function(n){n.classList.toggle('on',n.dataset.p===page);});
   /* 동기화 이전에도 끊긴 사진 참조를 먼저 복구해 첫 화면부터 사진이 보이게 한다 */
   try{if(_relinkOrphanPhotos()>0)saveAll();}catch(e){}
   initCloudflare();
@@ -5336,7 +5338,8 @@ function sbLessonClick(el){
 }
 
 /* NAV */
-var page='today',wkOfs=0;
+/* Phones open straight to the schedule; desktop keeps the today view. */
+var page=(typeof window!=='undefined'&&window.matchMedia&&window.matchMedia('(max-width: 768px)').matches)?'schedule':'today',wkOfs=0;
 var _ciDraftTimer=null;
 var _consultTab='consult';
 var PT={dashboard:'대시보드',consult:'신규 상담',students:'레슨생 관리',logs:'레슨 기록',payment:'입금 관리',today:'오늘 스케줄',schedule:'주간 스케줄',timeline:'진도 타임라인'};
@@ -5378,7 +5381,7 @@ function go(p){
   /* 모바일 스케줄 선택 요일 오늘로 리셋 */
   if(p==='schedule'){
     mobileSchedDay=(new Date().getDay()===0)?6:(new Date().getDay()-1);
-    mobileSchedView='day';
+    mobileSchedView=isMobile()?'week':'day';
   }
   document.querySelectorAll('.ni[data-p]').forEach(function(n){n.classList.toggle('on',n.dataset.p===p);});
   if(ge('pt'))ge('pt').textContent=PT[p]||'';
@@ -6579,7 +6582,7 @@ window.vsScheduleEngine={version:SCHEDULE_ENGINE_VERSION,build:buildScheduleEngi
 
 
 var mobileSchedDay=(new Date().getDay()===0)?6:(new Date().getDay()-1);
-var mobileSchedView='day';
+var mobileSchedView=page==='schedule'?'week':'day';
 function isMobile(){
   /* _forceView 우선: 마스터가 토글로 강제 모드를 지정한 경우 그대로 따른다 */
   if(typeof _forceView!=='undefined'){
