@@ -113,8 +113,7 @@ LIGHT_SURFACE_JS="""() => {
       const bg=parse(s.backgroundColor);if(!bg||bg.a<.5)continue;
       const ownText=[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim());
       const fg=parse(s.color);
-      if(lum(bg)>.35&&r.width*r.height>8000)found.push({kind:'light-panel',tag:e.tagName,id:e.id,cls:String(e.className).slice(0,60),bg:s.backgroundColor,text:(e.textContent||'').trim().slice(0,30)});
-      else if(ownText&&fg&&ratio(fg,bg)<3)found.push({kind:'low-contrast',tag:e.tagName,id:e.id,cls:String(e.className).slice(0,60),bg:s.backgroundColor,color:s.color,text:(e.textContent||'').trim().slice(0,30)});
+      if(ownText&&fg&&ratio(fg,bg)<3)found.push({kind:'low-contrast',tag:e.tagName,id:e.id,cls:String(e.className).slice(0,60),bg:s.backgroundColor,color:s.color,text:(e.textContent||'').trim().slice(0,30)});
       if(found.length>=12)return found;
     }
   }
@@ -183,7 +182,7 @@ try:
           return {photo:info('Photo QA'),legacy:info('Legacy QA'),remote:info('Remote QA')};}""")
         print('portrait diagnostics: '+json.dumps(portrait,ensure_ascii=False))
         check('stored /api/media portrait loads and fills its avatar',portrait['photo']['loaded'] and portrait['photo']['fill'] and not portrait['photo']['fallbackVisible'])
-        check('legacy Firebase portrait displays from same-origin R2',portrait['legacy']['loaded'] and portrait['legacy']['src']==QA_PHOTO_PATH and not portrait['legacy']['fallbackVisible'])
+        check('legacy Firebase portrait displays from same-origin R2',portrait['legacy']['loaded'] and portrait['legacy']['src']==QA_PHOTO_PATH+'?portrait=daylight-v1' and not portrait['legacy']['fallbackVisible'])
         check('unknown remote portrait falls back to initial without an image request',portrait['remote']['src'] is None and portrait['remote']['fallbackVisible'] and portrait['remote']['initial']=='R')
         check('stored legacy reference is unchanged in canonical state',page.evaluate("students.find(s=>s.id==='s-legacy').photo")==QA_LEGACY_URL)
         # Opening and saving the edit form must keep each stored photo reference exactly.
@@ -399,11 +398,11 @@ try:
                     dismiss_today_alert(client)
                     light=client.evaluate(LIGHT_SURFACE_JS)
                     if light:print(label+' '+tab+' light/low-contrast surfaces: '+json.dumps(light,ensure_ascii=False))
-                    check(label+' '+tab+' has no washed-out light panels or low-contrast text',not light)
+                    check(label+' '+tab+' has no low-contrast text on daylight surfaces',not light)
                     page_bottom=client.evaluate("""async()=>{window.scrollTo(0,document.documentElement.scrollHeight);await new Promise(r=>setTimeout(r,80));
                       const probe=document.elementFromPoint(innerWidth-4,innerHeight-4);const rootBg=getComputedStyle(document.documentElement).backgroundColor;window.scrollTo(0,0);
                       return {rootBg};}""")
-                    check(label+' '+tab+' page root stays dark below the fold',page_bottom['rootBg'] in ('rgb(6, 9, 16)',))
+                    check(label+' '+tab+' page root retains daylight surface below the fold',page_bottom['rootBg']=='rgb(244, 241, 235)')
                 if tab=='today':
                     ops=client.evaluate("""()=>{const w=document.getElementById('pwaWorkspace');if(!w||getComputedStyle(w).display==='none')return {shown:false};
                       const wr=w.getBoundingClientRect(),tiles=[...w.querySelectorAll('.v2-kpi,.v2-action-card')].map(e=>e.getBoundingClientRect());
@@ -588,11 +587,11 @@ try:
           return {normalHeader:{background:normalLabel&&style(normalLabel.parentElement).backgroundColor,color:normal&&normal.color},todayHeader:{background:todayStyle&&todayStyle.backgroundColor,labelColor:today&&style(today.querySelector('.dn')).color,dateColor:todayDate&&todayDate.color,holidayLabelColor:holidayLabel&&style(holidayLabel).color},todayCell:cell&&cell.backgroundColor,cardHeader:{background:head&&head.backgroundColor,titleColor:title&&title.color},desktopLabels:{name:name&&name.fontSize,time:time&&time.fontSize,kind:kind&&kind.fontSize,status:status&&status.fontSize}};
         }""")
         print('desktop weekly style diagnostics: '+json.dumps(weekly_style_diagnostics,ensure_ascii=False))
-        check('weekday header uses dark V2 surface and readable text',weekly_style_diagnostics['normalHeader']['background']=='rgb(16, 24, 38)' and weekly_style_diagnostics['normalHeader']['color']=='rgb(237, 240, 255)')
-        check('today and holiday remain distinct on the dark schedule',weekly_style_diagnostics['todayHeader']['background'].startswith('rgba(127, 134, 255,') and weekly_style_diagnostics['todayHeader']['labelColor']=='rgb(227, 229, 255)' and weekly_style_diagnostics['todayHeader']['dateColor']=='rgb(227, 229, 255)' and weekly_style_diagnostics['todayHeader']['holidayLabelColor'] in (None,'rgb(255, 158, 174)') and '127, 134, 255' in weekly_style_diagnostics['todayCell'])
+        check('weekday header uses daylight surface and dark text',weekly_style_diagnostics['normalHeader']['background']=='rgb(240, 237, 229)' and weekly_style_diagnostics['normalHeader']['color']=='rgb(52, 73, 59)')
+        check('today and holiday remain distinct on daylight schedule',weekly_style_diagnostics['todayHeader']['background']=='rgb(225, 235, 223)' and weekly_style_diagnostics['todayHeader']['labelColor']=='rgb(44, 85, 59)' and weekly_style_diagnostics['todayHeader']['dateColor']=='rgb(44, 85, 59)' and weekly_style_diagnostics['todayHeader']['holidayLabelColor'] in (None,'rgb(165, 71, 89)') and '223, 235, 217' in weekly_style_diagnostics['todayCell'])
         holiday_labels=visual_page.evaluate("()=>[...document.querySelectorAll('.sg-hd.off-day > div[style*=\"font-size:9px\"][style*=\"color:var(--r)\"]')].map(e=>getComputedStyle(e).color)")
-        check('holiday labels on the weekly header stay readable rose',len(holiday_labels)>0 and all(c=='rgb(255, 158, 174)' for c in holiday_labels))
-        check('schedule card header uses dark V2 surface and readable title',weekly_style_diagnostics['cardHeader']['background']=='rgb(16, 24, 38)' and weekly_style_diagnostics['cardHeader']['titleColor']=='rgb(245, 247, 255)')
+        check('holiday labels on weekly header stay readable rose',len(holiday_labels)>0 and all(c=='rgb(165, 71, 89)' for c in holiday_labels))
+        check('schedule card header uses daylight surface and dark title',weekly_style_diagnostics['cardHeader']['background']=='rgb(240, 237, 229)' and weekly_style_diagnostics['cardHeader']['titleColor']=='rgb(38, 55, 47)')
         check('desktop schedule card labels use readable sizes',weekly_style_diagnostics['desktopLabels']=={'name':'13px','time':'11.5px','kind':'11.5px','status':'11px'})
         check('clean desktop visual sync state settled',visual_page.evaluate("_vsSync.ready&&_vsSync.mode==='synced'&&document.getElementById('vsSyncPanel').dataset.mode==='synced'"))
         check('clean desktop visual capture has no alert',visual_page.locator('#mTodayAlert').count()==0)
@@ -603,7 +602,7 @@ try:
         print('desktop grid diagnostics: '+json.dumps(grid))
         check('desktop weekly grid has no inner horizontal overflow at 1440',grid['scroll']<=grid['client']+1)
         check('desktop weekly day columns share equal width',max(grid['cols'][1:6])-min(grid['cols'][1:6])<=2)
-        check('desktop weekly title has readable V2 contrast',visual_page.evaluate("getComputedStyle(document.getElementById('pt')).color==='rgb(245, 247, 255)'"))
+        check('desktop weekly title has daylight contrast',visual_page.evaluate("getComputedStyle(document.getElementById('pt')).color==='rgb(38, 55, 47)'"))
         check('desktop weekly work area hides clipped launcher',visual_page.locator('#pwaWorkspace').evaluate("e=>getComputedStyle(e).display==='none'"))
         visual_page.evaluate('window.scrollTo(0,0)')
         check('desktop visual capture starts at top',visual_page.evaluate('window.scrollY===0'))
@@ -671,7 +670,7 @@ try:
             check('clean weekly visual '+label+' has no alert',visual_phone.locator('#mTodayAlert').count()==0)
             check('clean weekly visual '+label+' has no open modal',visual_phone.locator('.ov.open').count()==0)
             check('clean weekly visual '+label+' fits viewport',visual_phone.evaluate('document.documentElement.scrollWidth<=innerWidth+1&&document.querySelector(".mobile-week-agenda").scrollWidth<=innerWidth'))
-            check('weekly title '+label+' has readable V2 contrast',visual_phone.evaluate("getComputedStyle(document.getElementById('pt')).color==='rgb(245, 247, 255)'"))
+            check('weekly title '+label+' has daylight contrast',visual_phone.evaluate("getComputedStyle(document.getElementById('pt')).color==='rgb(38, 55, 47)'"))
             check('weekly work area '+label+' hides clipped launcher',visual_phone.locator('#pwaWorkspace').evaluate("e=>getComputedStyle(e).display==='none'"))
             check('weekly visual '+label+' shows today marker and schedule card',visual_phone.locator('.mobile-week-day.is-today').count()==1 and visual_phone.locator('.mobile-week-slot .schedule-card-name').count()>0)
             check('week actions stay above agenda '+label,visual_phone.evaluate("()=>{const a=document.querySelector('.mobile-week-actions'),g=document.querySelector('.mobile-week-agenda'),q=document.querySelector('.mobile-week-quick-add');if(!a||!g||!q||document.querySelector('.mobile-week-fab'))return false;const ar=a.getBoundingClientRect(),gr=g.getBoundingClientRect();return getComputedStyle(a).position==='static'&&ar.bottom<=gr.top+1}"))

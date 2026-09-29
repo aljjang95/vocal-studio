@@ -6,6 +6,7 @@ const MAX_MEDIA_BYTES = 20 * 1024 * 1024;
 const ASSETS = new Set([
   '/index.html', '/vs-sync.js', '/cf-transport.js', '/cf-migration.js',
   '/v2-ui.js', '/v2.css',
+  '/v3-daylight.css', '/studio-daylight.png',
   '/sw.js', '/manifest.json', '/icon-192.png', '/icon-512.png',
 ]);
 const CSP = "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; " +
@@ -102,7 +103,17 @@ async function mediaResponse(request, env, url) {
     return mediaSuccess(key);
   }
   if (!['GET', 'HEAD'].includes(request.method)) return json({ error: 'method-not-allowed' }, 405);
-  const head = await env.MEDIA.head(key); if (!head) return json({ error: 'media-not-found' }, 404);
+  // Derived portraits are private, optional media. The original pointer and stored record stay intact.
+  let readKey = key;
+  let head;
+  if (url.searchParams.get('portrait') === 'daylight-v1' && /^studio\/photos\/[A-Za-z0-9._-]+$/.test(key)) {
+    const candidate = key.replace('studio/photos/', 'studio/portraits/daylight-v1/') + '.png';
+    head = await env.MEDIA.head(candidate);
+    if (head && head.httpMetadata?.contentType === 'image/png') readKey = candidate;
+    else head = null;
+  }
+  if (!head) head = await env.MEDIA.head(key);
+  if (!head) return json({ error: 'media-not-found' }, 404);
   const headers = new Headers(); head.writeHttpMetadata(headers);
   headers.set('Accept-Ranges', 'bytes'); headers.set('Cache-Control', 'private, no-store'); headers.set('ETag', head.httpEtag);
   const range = parseRange(request.headers.get('Range'), head.size);
@@ -112,7 +123,7 @@ async function mediaResponse(request, env, url) {
     if (range) headers.set('Content-Range', `bytes ${range.start}-${range.end}/${head.size}`);
     return new Response(null, { status: range ? 206 : 200, headers });
   }
-  const object = await env.MEDIA.get(key, range ? { range: { offset: range.start, length: range.length } } : undefined);
+  const object = await env.MEDIA.get(readKey, range ? { range: { offset: range.start, length: range.length } } : undefined);
   if (!object) return json({ error: 'media-not-found' }, 404);
   if (range) headers.set('Content-Range', `bytes ${range.start}-${range.end}/${head.size}`);
   headers.set('Content-Length', String(range ? range.length : head.size));

@@ -1,0 +1,129 @@
+/* Daylight studio: quiet imagery, warm paper surfaces, readable schedules. */
+html:has(body#vocalAdmin){background:#f4f1eb!important;color-scheme:light;}
+body#vocalAdmin{
+  --v2-bg:#f4f1eb;--v2-panel:#fffdf9;--v2-panel-2:#f0ede5;
+  --v2-line:#ddd8cc;--v2-line-strong:#9baba1;--v2-text:#26372f;
+  --v2-muted:#62695f;--v2-violet:#3c6554;--v2-blue:#376578;
+  --v2-mint:#346652;--v2-rose:#a54759;
+  --bg:#f4f1eb;--s1:#fffdf9;--s2:#f0ede5;--s3:#e7e8dd;
+  --b:#ddd8cc;--b2:#9baba1;--a:#3c6554;--a2:#2d5142;
+  --ag:#e6eee6;--ag2:#d7e5da;--t:#26372f;--ts:#465649;--tm:#62695f!important;
+  --g:#346652;--r:#a54759;--bl:#376578;--pu:#77516f;
+  background:#f4f1eb!important;color:#26372f!important;
+}
+body#vocalAdmin{--bg:#f4f1eb!important;--s1:#fffdf9!important;--s2:#f0ede5!important;--s3:#e7e8dd!important;--b:#ddd8cc!important;--b2:#9baba1!important;--a:#3c6554!important;--a2:#2d5142!important;--ag:#e6eee6!important;--ag2:#d7e5da!important;--t:#26372f!important;--ts:#465649!important;--g:#346652!important;--r:#a54759!important;--season-accent:#3c6554!important;--season-gold:#805119!important;}
+body#vocalAdmin::before{display:block!important;position:fixed;inset:0;background:linear-gradient(90deg,rgba(249,247,241,.9),rgba(249,247,241,.74)),url('/studio-daylight.png') center/cover no-repeat!important;opacity:1!important;}
+body#vocalAdmin::after,body#vocalAdmin #vs-particles{display:none!important;}
+body#vocalAdmin .sb{background:rgba(250,248,242,.98)!important;border-color:#ddd8cc!important;box-shadow:none!important;}
+body#vocalAdmin .sb::before{background:none!important;}
+body#vocalAdmin .logo-t,body#vocalAdmin .logo-t::after{color:#2e4c3c!important;}
+body#vocalAdmin .logo-s,body#vocalAdmin .ni,body#vocalAdmin .sb-today-date,body#vocalAdmin .sb-lesson-time{color:#62695f!important;}
+body#vocalAdmin .ni:hover,body#vocalAdmin .ni.on{background:#e5ece2!important;color:#2e4c3c!important;box-shadow:none!important;}
+body#vocalAdmin .ni-ic{color:#3c6554!important;}
+body#vocalAdmin .topbar,body#vocalAdmin #vsSyncPanel{background:rgba(255,253,249,.96)!important;color:#465649!important;box-shadow:none!important;border-color:#ddd8cc!important;backdrop-filter:blur(12px)!important;}
+body#vocalAdmin .pt,body#vocalAdmin .sb-today-hd,body#vocalAdmin .sb-lesson-name{color:#26372f!important;}
+body#vocalAdmin #topSyncStatus{color:#465649!important;}
+body#vocalAdmin .card,body#vocalAdmin .modal,body#vocalAdmin .wk-card,body#vocalAdmin .lc,body#vocalAdmin .ci,body#vocalAdmin .pay-card,body#vocalAdmin .admin-lesson-card{
+  background:rgba(255,253,249,.97)!important;color:#26372f!important;border:1px solid #ddd8cc!important;box-shadow:0 4px 20px rgba(64,57,39,.05)!important;
+}
+body#vocalAdmin .card:hover,body#vocalAdmin .lc:hover,body#vocalAdmin .ci:hover{border-color:#9baba1!important;}
+body#vocalAdmin .ch,body#vocalAdmin .card-hd,body#vocalAdmin .pay-card-hd,body#vocalAdmin .mh,body#vocalAdmin .mf,body#vocalAdmin .tab-bar,body#vocalAdmin thead th{background:#f0ede5!important;color:#34493b!important;border-color:#ddd8cc!important;}
+body#vocalAdmin .card .ch{background:#f0ede5!important;color:#34493b!important;}
+body#vocalAdmin .card .ch .ct{color:#26372f!important;}
+body#vocalAdmin .ct,body#vocalAdmin .mt,body#vocalAdmin .fi-value{color:#26372f!important;}
+body#vocalAdmin input,body#vocalAdmin textarea,body#vocalAdmin select,body#vocalAdmin select option,body#vocalAdmin .fi-value{background:#fffdf9!important;color:#26372f!important;border-color:#c9cbbf!important;}
+body#vocalAdmin input::placeholder,body#vocalAdmin textarea::placeholder{color:#71796d!important;}
+body#vocalAdmin input:focus,body#vocalAdmin textarea:focus,body#vocalAdmin select:focus{border-color:#3c6554!important;box-shadow:0 0 0 3px rgba(60,101,84,.13)!important;}
+body#vocalAdmin .btn.bp,body#vocalAdmin .btn.bm,body#vocalAdmin .bp,body#vocalAdmin .logo-add-btn,body#vocalAdmin .mobile-week-quick-add,body#vocalAdmin #pwaGoschedule{background:#3c6554!important;color:white!important;border-color:#3c6554!important;box-shadow:none!important;}
+body#vocalAdmin .bg2,body#vocalAdmin .bm,body#vocalAdmin .mc{background:#f0ede5!important;color:#34493b!important;border-color:#c9cbbf!important;}
+body#vocalAdmin .bg2:hover,body#vocalAdmin .bm:hover{background:#e5ece2!important;border-color:#9baba1!important;}
+body#vocalAdmin .v2-ops-center{background:linear-gradient(90deg,rgba(255,253,249,.97),rgba(255,253,249,.9)),url('/studio-daylight.png') right center/cover!important;border-color:#ddd8cc!important;box-shadow:0 6px 26px rgba(64,57,39,.06)!important;}
+body#vocalAdmin .v2-ops-center::before{display:none;}
+body#vocalAdmin .v2-ops-head h2{font-size:25px!important;color:#26372f!important;}
+body#vocalAdmin .v2-eyebrow,body#vocalAdmin .v2-ops-head p,body#vocalAdmin .v2-kpi span,body#vocalAdmin .v2-kpi small,body#vocalAdmin .v2-action-card span:not(.v2-action-icon){color:#62695f!important;}
+body#vocalAdmin .v2-kpi,body#vocalAdmin .v2-action-card{background:rgba(255,253,249,.94)!important;border-color:#ddd8cc!important;box-shadow:none!important;}
+body#vocalAdmin .v2-action-card.primary{background:#e5ece2!important;border-color:#9baba1!important;}
+body#vocalAdmin .v2-kpi strong,body#vocalAdmin .v2-action-card strong,body#vocalAdmin .v2-phone-hero strong{color:#26372f!important;}
+body#vocalAdmin .v2-action-card:hover{background:#edf1e8!important;border-color:#9baba1!important;}
+body#vocalAdmin .v2-action-icon{background:#e5ece2!important;color:#3c6554!important;}
+body#vocalAdmin .v2-live{background:#e5ece2!important;color:#28523d!important;border-color:#9baba1!important;}
+body#vocalAdmin .v2-live-dot{background:#3c6554!important;box-shadow:none!important;}
+body#vocalAdmin .v2-live[data-state=busy]{background:#fff1d7!important;color:#805119!important;border-color:#d8b984!important;}
+body#vocalAdmin .v2-live[data-state=warn]{background:#fae9e7!important;color:#973e39!important;border-color:#d7aaa4!important;}
+body#vocalAdmin .v2-initial-sync-state{background:#fffdf9!important;color:#26372f!important;border-color:#ddd8cc!important;}
+body#vocalAdmin .v2-initial-sync-state strong{color:#26372f!important;}
+body#vocalAdmin .v2-initial-sync-state p{color:#62695f!important;}
+body#vocalAdmin #pwaInstallHelp,body#vocalAdmin .week-edit-block,body#vocalAdmin .v2-phone-hero{background:#f0ede5!important;color:#465649!important;border-color:#ddd8cc!important;}
+body#vocalAdmin #pwaInstallHelp summary,body#vocalAdmin .v2-phone-hero p,body#vocalAdmin .v2-mini-note{color:#62695f!important;}
+body#vocalAdmin .sg-hd{background:#f0ede5!important;color:#34493b!important;border-color:#ddd8cc!important;}
+body#vocalAdmin .sg-hd .dn,body#vocalAdmin .sg-hd .dd{color:#34493b!important;}
+body#vocalAdmin .sg-hd.td{background:#e1ebdf!important;}
+body#vocalAdmin .sg-hd.td .dn,body#vocalAdmin .sg-hd.td .dd,body#vocalAdmin .mobile-week-day-badge{color:#2c553b!important;}
+body#vocalAdmin .sg-hd.off-day *,body#vocalAdmin .mobile-week-day-badge.is-holiday{color:#a54759!important;}
+body#vocalAdmin .sg-hd.off-day{background:#f7eeea!important;}
+body#vocalAdmin .sg-hd.off-day .dn{color:#a54759!important;}
+body#vocalAdmin .sg-hd.off-day > div[style*="font-size:9px"][style*="color:var(--r)"]{color:#a54759!important;}
+body#vocalAdmin .sg-hd.td.off-day{background:#e1ebdf!important;}
+body#vocalAdmin .sg-hd.td.off-day .dn{color:#2c553b!important;}
+body#vocalAdmin .sg-cell{border-color:#ddd8cc!important;background:rgba(255,253,249,.84)!important;}
+body#vocalAdmin .sg-cell.td-col{background:rgba(223,235,217,.7)!important;}
+body#vocalAdmin .sg-tm,body#vocalAdmin .sg-time{color:#62695f!important;}
+body#vocalAdmin .schedule-card,body#vocalAdmin .lb{background:#fffdf9!important;border-color:#d2d8ca!important;color:#26372f!important;box-shadow:0 2px 8px rgba(60,65,44,.04)!important;}
+body#vocalAdmin .schedule-card-name{color:#26372f!important;}
+body#vocalAdmin .schedule-card-kind,body#vocalAdmin .schedule-card-time{color:#55624f!important;}
+body#vocalAdmin .schedule-card .person-avatar{box-shadow:0 0 0 2px #fffdf9,0 0 0 3px var(--student-color,#3c6554)!important;}
+body#vocalAdmin .mobile-week-day{background:#fffdf9!important;border:1px solid #ddd8cc!important;box-shadow:0 3px 12px rgba(64,57,39,.04)!important;}
+body#vocalAdmin .mobile-week-day-head{background:#f0ede5!important;color:#34493b!important;border-color:#ddd8cc!important;}
+body#vocalAdmin .mobile-week-day.is-today .mobile-week-day-head{background:#e1ebdf!important;}
+body#vocalAdmin .mobile-week-day-name{color:#34493b!important;}
+body#vocalAdmin .mobile-week-day-badge{background:#e1ebdf!important;}
+body#vocalAdmin .mobile-week-day-badge.is-holiday{background:#fae9e7!important;}
+body#vocalAdmin .mobile-tab-bar{background:rgba(255,253,249,.98)!important;border-color:#ddd8cc!important;box-shadow:0 -2px 14px rgba(64,57,39,.06)!important;}
+body#vocalAdmin .mtab-lb,body#vocalAdmin .mtab-ic{color:#62695f!important;}
+body#vocalAdmin .mtab-item.on{background:#e1ebdf!important;}
+body#vocalAdmin .mtab-item.on .mtab-lb,body#vocalAdmin .mtab-item.on .mtab-ic{color:#2c553b!important;}
+body#vocalAdmin .toast{background:#263f30!important;color:white!important;border-color:#3c6554!important;}
+body#vocalAdmin .ov{background:rgba(37,48,37,.35)!important;}
+body#vocalAdmin .pay-ok{background:#e1ebdf!important;color:#28523d!important;border-color:#9baba1!important;}
+body#vocalAdmin .pay-no{background:#fae9e7!important;color:#973e39!important;border-color:#d7aaa4!important;}
+body#vocalAdmin .pay-partial{background:#fff1d7!important;color:#805119!important;border-color:#d8b984!important;}
+body#vocalAdmin .lw,body#vocalAdmin .wk-badge,body#vocalAdmin .ci-av{background:#e5ece2!important;color:#34493b!important;border-color:#9baba1!important;}
+body#vocalAdmin .lw-n,body#vocalAdmin .wk-badge-n{color:#34493b!important;}
+body#vocalAdmin .lw-l,body#vocalAdmin .wk-badge-l{color:#62695f!important;}
+body#vocalAdmin [style*="color:var(--tm)"],body#vocalAdmin .modal [style*="color:var(--tm)"],body#vocalAdmin .modal .fi-label{color:#62695f!important;}
+body#vocalAdmin [style*="color:var(--b)"]{color:#727c6e!important;}
+body#vocalAdmin [style*="background:var(--season-accent,var(--a));color:#fff"],body#vocalAdmin [style*="background:var(--a);color:#fff"],body#vocalAdmin button[onclick^=setTodayPrivacy][style*="background:var(--a)"]{background:#3c6554!important;color:white!important;}
+body#vocalAdmin .ui-line-icon{width:20px;height:20px;display:inline-block;vertical-align:middle;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+/* Match the legacy selector specificity so every working surface uses daylight. */
+body#vocalAdmin{--season-card-bg:#fffdf9!important;--season-modal-bg:#fffdf9!important;--season-topbar:#fffdf9!important;--season-text:#26372f!important;--season-text-sub:#465649!important;--season-text-muted:#62695f!important;--season-hover:#e5ece2!important;--season-hover2:#d7e5da!important;--season-border:#ddd8cc!important;--season-border2:#9baba1!important;--season-glow:transparent!important;--kind-hob:#3c7964;--kind-chuk:#a45170;--kind-voice:#976b23;--kind-consult:#377193;}
+body#vocalAdmin .main{background:transparent!important;}
+body#vocalAdmin #pwaWorkspace{background:linear-gradient(90deg,rgba(255,253,249,.96) 35%,rgba(255,253,249,.70)),url('/studio-daylight.png') right center/cover!important;border-color:#ddd8cc!important;box-shadow:0 6px 26px rgba(64,57,39,.06)!important;}
+body#vocalAdmin .btn.bg2,body#vocalAdmin .btn.bg2:hover,body#vocalAdmin .wn-btn,body#vocalAdmin .mobile-week-nav button,body#vocalAdmin .mobile-week-today,body#vocalAdmin .mobile-week-add{background:#f0ede5!important;color:#34493b!important;border-color:#c9cbbf!important;}
+body#vocalAdmin .wn-lbl,body#vocalAdmin .mobile-week-range,body#vocalAdmin .admin-day-hero > div > div > div:nth-child(2){color:#26372f!important;}
+body#vocalAdmin .admin-day-hero{background:linear-gradient(120deg,#e5ece2,#faf8f2)!important;border-color:#c9d4c6!important;}
+body#vocalAdmin .admin-day-hero *,body#vocalAdmin .admin-today .empty .et{color:#34493b!important;}
+body#vocalAdmin .admin-today .empty{background:#fffdf9!important;border-color:#c9cbbf!important;}
+body#vocalAdmin .admin-today button[onclick^="om('mManual')"]{background:#e5ece2!important;color:#2e4c3c!important;border-color:#c9d4c6!important;}
+body#vocalAdmin .admin-today button[onclick^="setTodayPrivacy"]:not([style*="background:var(--a)"]){color:#465649!important;}
+body#vocalAdmin .sg-tm,body#vocalAdmin .sg-time{background:rgba(250,248,242,.95)!important;}
+body#vocalAdmin .sg-hd.td{box-shadow:inset 0 3px 0 #3c6554!important;}
+body#vocalAdmin .sg-cell.td-col{box-shadow:inset 1px 0 0 #c9d4c6,inset -1px 0 0 #c9d4c6!important;}
+body#vocalAdmin .sg-cell.off-col{background:#f7eeea!important;}
+body#vocalAdmin .sg-cell.td-col.off-col{background:#e5ece2!important;}
+body#vocalAdmin .schedule-card.lb,body#vocalAdmin .schedule-card.lb:has([data-kind]){background:#fffdf9!important;color:#26372f!important;border-color:#d2d8ca!important;border-left-color:var(--kind-color,#3c6554)!important;box-shadow:0 2px 8px rgba(60,65,44,.06)!important;}
+body#vocalAdmin .schedule-card-details,body#vocalAdmin .mobile-week-day-date,body#vocalAdmin .mobile-week-empty{color:#62695f!important;}
+body#vocalAdmin .schedule-card-time,body#vocalAdmin .schedule-status{background:#e5ece2!important;color:#34493b!important;border-color:#c9d4c6!important;}
+body#vocalAdmin .schedule-status.is-pending{background:#fff1d7!important;color:#805119!important;border-color:#d8b984!important;}
+body#vocalAdmin .schedule-status.is-cancel{background:#fae9e7!important;color:#973e39!important;border-color:#d7aaa4!important;}
+body#vocalAdmin .mobile-week-nav{background:#f0ede5!important;border-color:#c9cbbf!important;}
+body#vocalAdmin .mobile-week-day.is-today{border-color:#3c6554!important;box-shadow:0 0 0 1px #3c6554 inset!important;}
+body#vocalAdmin .mtab-ic{filter:none!important;}
+body#vocalAdmin .mtab-item.on::after{background:#3c6554!important;box-shadow:none!important;}
+body#vocalAdmin .lc:hover,body#vocalAdmin .ci:hover{background:#f4f6ef!important;}
+body#vocalAdmin .bdg.bg-a,body#vocalAdmin .bdg.bg-g{background:#e1ebdf!important;color:#28523d!important;border-color:#9baba1!important;}
+body#vocalAdmin .bdg.bg-r{background:#fae9e7!important;color:#973e39!important;border-color:#d7aaa4!important;}
+body#vocalAdmin .bdg.bg-b{background:#e8eff2!important;color:#315c6f!important;border-color:#a5c0cb!important;}
+body#vocalAdmin [style*="background:var(--season-accent,var(--a))"][style*="color:#fff"],body#vocalAdmin [style*="background:var(--a)"][style*="color:#08080d"]{background:#3c6554!important;color:#fff!important;}
+body#vocalAdmin #vsSyncPanel[data-mode=conflict],body#vocalAdmin #vsSyncPanel[data-mode=write-error],body#vocalAdmin #vsSyncPanel[data-mode=offline],body#vocalAdmin #vsSyncPanel[data-mode=auth-required]{background:#fae9e7!important;}
+@media(max-width:768px){body#vocalAdmin::before{background:linear-gradient(rgba(249,247,241,.83),rgba(249,247,241,.96)),url('/studio-daylight.png') 70% top/auto 100vh no-repeat!important;}body#vocalAdmin .v2-ops-head h2{font-size:21px!important;}}
+@media(prefers-reduced-motion:reduce){body#vocalAdmin *{scroll-behavior:auto!important;}}

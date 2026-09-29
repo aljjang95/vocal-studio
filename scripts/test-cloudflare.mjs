@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
-import { rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync } from 'node:fs';
 import path from 'node:path';
 
 const root=path.resolve(import.meta.dirname,'..');
-const port=8798;
+const port=Number(process.env.VS_API_TEST_PORT||8798);
 const origin=`http://127.0.0.1:${port}`;
-const persist=path.join(root,'tmp','cf-test-state');
-rmSync(persist,{recursive:true,force:true});
+mkdirSync(path.join(root,'tmp'),{recursive:true});
+const persist=mkdtempSync(path.join(root,'tmp','cf-test-state-'));
 execFileSync(process.execPath,['scripts/build-worker.mjs'],{cwd:root,stdio:'inherit'});
 const worker=spawn(process.execPath,[path.join(root,'node_modules/wrangler/bin/wrangler.js'),'dev','--config','wrangler.local.jsonc','--ip','127.0.0.1','--port',String(port),'--local','--persist-to',persist],{cwd:root,stdio:['ignore','pipe','pipe']});
 let logs='';worker.stdout.on('data',d=>{logs+=d});worker.stderr.on('data',d=>{logs+=d});
@@ -82,12 +82,31 @@ try{
   r=await api(mediaPath,{method:'HEAD'});check('media HEAD works',r.status===200&&r.headers.get('Content-Length')==='16');
   r=await api(mediaPath,{headers:{Range:'bytes=99-120'}});check('invalid range returns 416',r.status===416);
   r=await api(mediaPath,{method:'DELETE'});check('media delete API is absent',r.status===405);
+  const photoPath='/api/media/'+encodeURIComponent('studio/photos/qa-identity.jpg');
+  const portraitPath='/api/media/'+encodeURIComponent('studio/portraits/daylight-v1/qa-identity.jpg.png');
+  const portraitBytes=new Uint8Array([137,80,78,71,13,10,26,10]);
+  r=await api(photoPath,{method:'PUT',headers:{'Content-Type':'image/jpeg'},body:bytes});
+  check('original photo preserved at its own pointer',r.status===201);
+  r=await api(photoPath+'?portrait=daylight-v1');
+  check('missing portrait falls back to original',r.status===200&&(await r.arrayBuffer()).byteLength===16);
+  r=await api(portraitPath,{method:'PUT',headers:{'Content-Type':'image/png'},body:portraitBytes});
+  check('derived portrait stores independently',r.status===201);
+  r=await api(photoPath+'?portrait=daylight-v1');
+  check('derived portrait is private and selected',r.status===200&&r.headers.get('Content-Type')==='image/png'&&r.headers.get('Cache-Control')==='private, no-store'&&(await r.arrayBuffer()).byteLength===8);
+  r=await api(photoPath);
+  check('original photo remains byte-identical',r.status===200&&Buffer.from(await r.arrayBuffer()).equals(Buffer.from(bytes)));
+  r=await api(photoPath+'?portrait=unknown');
+  check('unknown portrait version preserves original',r.status===200&&(await r.arrayBuffer()).byteLength===16);
+  r=await api(photoPath+'?portrait=daylight-v1',{method:'HEAD'});
+  check('portrait HEAD uses derived length',r.status===200&&r.headers.get('Content-Length')==='8');
+  r=await api(photoPath+'?portrait=daylight-v1',{headers:{Range:'bytes=2-4'}});
+  check('portrait ranges use derived bytes',r.status===206&&Buffer.from(await r.arrayBuffer()).equals(Buffer.from([78,71,13])));
   const oversize=new Uint8Array(20*1024*1024+1);
   r=await api('/api/media/'+encodeURIComponent('studios/default/media/qa/too-large.bin'),{
     method:'PUT',headers:{'Content-Type':'application/octet-stream'},body:oversize
   });
   check('oversize media rejected',r.status===413);
-  const assets=['/','/index.html','/vs-sync.js','/cf-transport.js','/cf-migration.js','/v2-ui.js','/v2.css','/sw.js','/manifest.json','/icon-192.png','/icon-512.png'];
+  const assets=['/','/index.html','/vs-sync.js','/cf-transport.js','/cf-migration.js','/v2-ui.js','/v2.css','/v3-daylight.css','/studio-daylight.png','/sw.js','/manifest.json','/icon-192.png','/icon-512.png'];
   for(const asset of assets){r=await fetch(origin+asset,{redirect:'manual'});check('asset '+asset,r.status===200);}
   r=await fetch(origin+'/not-allowlisted.txt');check('unknown asset is hidden',r.status===404);
   console.log(JSON.stringify({ok:true,checks:checks.length,names:checks},null,2));

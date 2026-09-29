@@ -97,7 +97,25 @@ window.v2UpdateOps=function(){
   if(live)live.dataset.state=(mode==='synced'||mode==='recovery'||!mode)?'ok':(mode==='saving'||mode==='pending'||mode==='deferred'||mode==='checking-server'||mode==='checking-session'||mode==='unconfirmed')?'busy':'warn';
   var warn=el('v2ConflictCard');if(warn)warn.classList.toggle('v2-has-conflict',cf>0);
 };
+function applyStudioIcons(){
+  var shapes={
+    consult:'<path d="M8 3h8v4H8zM6 5H4v16h16V5h-2M8 11h8M8 15h5"/>',
+    students:'<circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6M18 15a5 5 0 0 1 3 5"/>',
+    logs:'<path d="M4 4h12v16H4zM8 8h5M8 12h3M14 14l6-6 2 2-6 6-3 1z"/>',
+    timeline:'<path d="M4 3v17h17M7 15l4-5 4 2 5-7"/>',
+    payment:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/>',
+    today:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    schedule:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 11h18M7 15h2M12 15h2M7 18h2"/>',
+    phone:'<path d="M5 3h4l2 5-3 2a15 15 0 0 0 6 6l2-3 5 2v4a2 2 0 0 1-2 2A18 18 0 0 1 3 5a2 2 0 0 1 2-2z"/>'
+  };
+  function put(node,key){if(!node||node.dataset.studioIcon===key)return;node.innerHTML='<svg class="ui-line-icon" viewBox="0 0 24 24" aria-hidden="true">'+shapes[key]+'</svg>';node.dataset.studioIcon=key;}
+  document.querySelectorAll('.ni[data-p]').forEach(function(n){var key=n.dataset.p;if(shapes[key])put(n.querySelector('.ni-ic'),key);});
+  [['v2CallCapture','phone'],['v2ConsultIntake','consult'],['v2FixedSchedule','schedule'],['v2FlexSchedule','today']].forEach(function(pair){var n=el(pair[0]);if(n)put(n.querySelector('.v2-action-icon'),pair[1]);});
+  document.querySelectorAll('.mtab-item').forEach(function(n){var key=(n.id||'').replace(/^mTab_/,'');if(shapes[key])put(n.querySelector('.mtab-ic'),key);});
+}
 function initV2(){
+  applyStudioIcons();
+  var iconRoot=el('content');if(iconRoot&&typeof MutationObserver!=='undefined')new MutationObserver(applyStudioIcons).observe(iconRoot,{childList:true,subtree:true});
   v2UpdateOps();setInterval(v2UpdateOps,10000);
   var pwa=el('pwaInstallBtn');if(pwa&&typeof _pwaStandalone==='function'&&_pwaStandalone())pwa.style.display='none';
   document.addEventListener('visibilitychange',function(){if(!document.hidden)v2UpdateOps();});

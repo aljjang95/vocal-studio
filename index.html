@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="보컬스튜디오">
-  <meta name="theme-color" content="#080d15">
+  <meta name="theme-color" content="#f4f1eb">
   <link rel="manifest" href="/manifest.json" crossorigin="use-credentials">
   <link rel="apple-touch-icon" href="/icon-192.png">
   <meta name="mobile-web-app-capable" content="yes">
@@ -2633,6 +2633,7 @@ div.mwv .lb { font-size: 7px !important; padding: 0 !important; min-height: 0 !i
 </style>
 
   <link rel="stylesheet" href="./v2.css?v=20260928-v3">
+  <link rel="stylesheet" href="./v3-daylight.css?v=20260929-1">
 </head>
 <body id="vocalAdmin">
 
@@ -3282,7 +3283,14 @@ function storedOwnerPhoto(owner){
 /* Save paths keep an existing remote or same-origin media reference unchanged. */
 function isKeptPhotoReference(value){return !!value&&(value.indexOf('http')===0||value.indexOf('/api/media/')===0);}
 function resolveOwnerPhoto(owner){return displayablePhotoSrc(storedOwnerPhoto(owner));}
-function getStudentPhoto(s){return resolveOwnerPhoto(s);}
+function getStudentPhoto(s){
+  var photo=resolveOwnerPhoto(s);
+  if(photo.indexOf('/api/media/')===0){
+    var url=new URL(photo,location.origin);url.searchParams.set('portrait','daylight-v1');
+    return url.pathname+url.search;
+  }
+  return photo;
+}
 /* Edit-form preview with a visible camera placeholder when the image cannot load. */
 function photoPreviewHtml(src,lightbox){
   var shown=displayablePhotoSrc(src);
@@ -9819,7 +9827,7 @@ function openProfile(data,mode){
     ?'<img src="'+esc(photo)+'" alt="" style="cursor:zoom-in" onclick="openLightbox(this.src)" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><div class="no-photo" style="color:#fff;opacity:.9" hidden>'+esc(Array.from(name)[0]||'?')+'</div>'
     :'<div class="no-photo" style="color:#fff;opacity:.9">'+esc(Array.from(name)[0]||'?')+'</div>';
   left+='<div class="profile-photo-overlay" style="background:linear-gradient(0deg,var(--s1) 0%,rgba(255,255,255,.0) 65%)"><div><div class="profile-name-big" style="color:var(--t)">'+esc(name)+'</div>';
-  if(isC)left+='<div style="font-size:11.5px;color:rgba(255,255,255,.45);margin-top:3px">접수 '+esc(data.date||'')+'</div>';
+  if(isC)left+='<div class="profile-received-date" style="display:inline-block;font-size:11.5px;color:#404c3b;background:#f8faf5;padding:3px 6px;border-radius:4px;margin-top:3px">접수 '+esc(data.date||'')+'</div>';
   left+='</div></div></div>';
   left+='<div class="profile-info-list">';
   left+=pRow('성별',data.gd||data.gender||'');

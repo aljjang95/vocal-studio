@@ -58,9 +58,9 @@ test('legacy Firebase portraits display from same-origin R2 while stored values 
     localStorage:{getItem:key=>store.get(key)||null},esc:s=>String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')});
   vm.runInContext(html.slice(start,end),context);
   const legacy='https://firebasestorage.googleapis.com/v0/b/hlbvocalstudio-72481.firebasestorage.app/o/studio%2Fphotos%2Fabc_123.jpg?alt=media&token=secret';
-  assert.equal(context.getStudentPhoto({photo:legacy}),'/api/media/studio%2Fphotos%2Fabc_123.jpg');
+  assert.equal(context.getStudentPhoto({photo:legacy}),'/api/media/studio%2Fphotos%2Fabc_123.jpg?portrait=daylight-v1');
   assert.equal(context.storedOwnerPhoto({photo:legacy}),legacy,'edit forms keep the stored reference');
-  assert.equal(context.getStudentPhoto({photo:'/api/media/studio%2Fphotos%2Fx.jpg'}),'/api/media/studio%2Fphotos%2Fx.jpg');
+  assert.equal(context.getStudentPhoto({photo:'/api/media/studio%2Fphotos%2Fx.jpg'}),'/api/media/studio%2Fphotos%2Fx.jpg?portrait=daylight-v1');
   assert.equal(context.getStudentPhoto({photo:'data:image/png;base64,AAAA'}),'data:image/png;base64,AAAA');
   assert.equal(context.getStudentPhoto({photo:'',_photoKey:'vsC_ph_local'}),'data:image/jpeg;base64,AAAA');
   for(const blocked of ['https://evil.example/a.jpg','https://firebasestorage.googleapis.com/v0/b/other-bucket/o/studio%2Fphotos%2Fa.jpg',
