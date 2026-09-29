@@ -388,11 +388,15 @@
   };
   Controller.prototype.useServer=function(){
     if(!this.latest||!this.guard(this.epoch)||(this.flight&&!this.state.ack)||(this.a.editing&&this.a.editing()))return false;
-    var remote=normalize(this.latest),recovery=this.state?(this.state.recovery||[]).slice():[];
-    if(this.state&&!equal(this.state.local,remote))recovery.push(clone(this.state.local));
+    var remote=normalize(this.latest),recovery=this.state?(this.state.recovery||[]).filter(function(data){return !equal(data,remote);}):[];
+    /* The selected server data is stored in both base and local. Retain each different local variant
+       once, without a third full-size copy of that same confirmed server data. */
+    if(this.state&&!equal(this.state.local,remote)&&!recovery.some(function(data){return equal(data,this.state.local);},this))recovery.push(clone(this.state.local));
     var next={version:1,namespace:this.a.namespace,owner:this.owner,revision:revision(this.latest),base:remote,local:remote,recovery:recovery};
     if(!this.persist(next))return false;
-    this.flight=null;this.deferred=null;this.ready=true;this.display();this.status('recovery');return true;
+    this.flight=null;this.deferred=null;this.ready=true;this.display();
+    if(this.blocked)return false;
+    this.status('recovery');return true;
   };
   Controller.prototype.exportData=function(){
     var result={version:1,current:this.state,backups:[],reclaimedBackups:[]},store=this.a.backupStore;

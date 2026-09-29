@@ -285,6 +285,31 @@ test('rescue journals never overwrite earlier distinct copies',()=>{
   assert.equal(c.controller.preserveReclaimedBackup(a),true);
   assert.deepEqual(c.controller.exportData().reclaimedBackups,[JSON.parse(a),JSON.parse(b)]);
 });
+test('server view retains unique local recovery without duplicating the selected server base',()=>{
+  const w=world(),c=w.client(),remote=copy(c.controller.state.base),local=copy(remote);
+  local.students.splice(0,1);local.weekOvr.w1.s1.time='09:00';
+  c.controller.state={...c.controller.state,local,recovery:[copy(remote)],resumeConflict:true};
+  c.controller.blocked=true;
+  const compactSize=JSON.stringify(journal(remote,remote,[local])).length;
+  boundBackup(w,compactSize+10);
+  assert.equal(c.controller.useServer(),true);
+  assert.equal(c.controller.pending(),0);assert.equal(w.writes,0);
+  assert.deepEqual(c.controller.state.recovery,[local]);
+  assert.deepEqual(c.controller.state.base,remote);assert.deepEqual(c.controller.state.local,remote);
+});
+test('failed server-view persistence leaves all earlier recovery and pending changes intact',()=>{
+  const w=world(),c=w.client(),remote=copy(c.controller.state.base),local=copy(remote);
+  local.students.splice(0,1);
+  c.controller.state={...c.controller.state,local,recovery:[copy(remote)],resumeConflict:true};
+  const before=copy(c.controller.state);c.store.fail=true;
+  assert.equal(c.controller.useServer(),false);assert.equal(w.writes,0);
+  assert.deepEqual(c.controller.state,before);
+});
+test('server view does not report recovery success when applying its local data fails',()=>{
+  const w=world(),c=w.client();c.controller.a.setData=()=>{throw Error('local-data-quota');};
+  assert.equal(c.controller.useServer(),false);assert.equal(c.mode,'apply-error');
+  assert.equal(c.controller.blocked,true);assert.equal(w.writes,0);
+});
 test('a full backup store reclaims closed-tab copies that hold nothing unsynced',async()=>{
   const w=world(),confirmed=sync.normalize(w.data),older=copy(confirmed);older.students[1].name='Older server name';
   const same=JSON.stringify(journal(confirmed,confirmed)),superseded=JSON.stringify(journal(older,confirmed,[older],{resumeConflict:true}));
