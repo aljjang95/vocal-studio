@@ -1,69 +1,22 @@
-/* Vocal Studio Service Worker — offline-first cache shell
- * 전략 매핑 (PWA 2026 best practices):
- *  - HTML/navigate : Network-first + cached fallback  (최신 버전 우선)
- *  - 정적 자원      : Cache-first  + 백그라운드 갱신  (성능)
- *  - Firestore/Firebase : 항상 네트워크 (실시간 데이터)
- */
-const VERSION = 'vs-v2-2026-06-20-schedule-count-visibility';
-const CORE = [
-  './',
-  './index.html',
-  './manifest.json',
-  './icon-192.png',
-  './icon-512.png'
-];
-
-self.addEventListener('install', function(e){
-  e.waitUntil(
-    caches.open(VERSION).then(function(c){
-      return c.addAll(CORE).catch(function(){ /* 일부 누락 무시 */ });
-    }).then(function(){ return self.skipWaiting(); })
-  );
+/* Vocal Studio PWA. Network-only private data; generic offline navigation notice. */
+self.addEventListener('install',function(event){event.waitUntil(self.skipWaiting());});
+self.addEventListener('activate',function(event){
+  event.waitUntil(caches.keys().then(function(keys){
+    return Promise.all(keys.filter(function(key){return key.indexOf('vs-v2-')===0;}).map(function(key){return caches.delete(key);}));
+  }).then(function(){return self.clients.claim();}));
 });
-
-self.addEventListener('activate', function(e){
-  e.waitUntil(
-    caches.keys().then(function(keys){
-      return Promise.all(keys.filter(function(k){return k!==VERSION;}).map(function(k){return caches.delete(k);}));
-    }).then(function(){ return self.clients.claim(); })
-  );
-});
-
-self.addEventListener('fetch', function(e){
-  const req = e.request;
-  if (req.method !== 'GET') return;
-  const url = new URL(req.url);
-
-  /* Firestore / Firebase / Google API 는 항상 네트워크 (실시간 동기화) */
-  if (url.hostname.indexOf('firestore') >= 0 ||
-      url.hostname.indexOf('firebaseio') >= 0 ||
-      url.hostname.indexOf('googleapis.com') >= 0) {
-    return;
+function offlineNotice(){
+  return new Response(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#245f75"><title>연결 확인 · 보컬스튜디오</title>
+<style>body{margin:0;background:#f3f5f8;color:#18283b;font:16px/1.8 system-ui,sans-serif;padding:24px}main{max-width:480px;margin:12vh auto;background:white;border:1px solid #d8e2eb;border-radius:20px;padding:28px}small{color:#245f75;letter-spacing:2px}h1{font-size:25px;line-height:1.4}p{color:#43576c}a{display:inline-block;min-height:44px;box-sizing:border-box;padding:12px 20px;background:#245f75;border-radius:10px;color:white;text-decoration:none;font-weight:600}a:focus-visible{outline:3px solid #62a9cc;outline-offset:4px}</style></head>
+<body><main><small>VOCAL STUDIO</small><h1>인터넷 연결을 확인해 주세요</h1><p>고객 자료를 안전하게 불러오려면 연결이 필요합니다. 현재 화면은 저장된 고객 목록이나 최신 일정이 아닙니다.</p><p>이미 열려 있는 앱에서 기기 저장에 성공한 미전송 변경은 연결 복구 후 동기화 상태를 확인하세요. 앱을 삭제하거나 기기 저장소를 지우지 마세요.</p><a href="/index.html">연결 후 다시 열기</a></main></body></html>`,{
+    status:503,headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff',
+      'Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"}});
+}
+self.addEventListener('fetch',function(event){
+  var request=event.request,url=new URL(request.url);
+  if(request.method==='GET'&&request.mode==='navigate'&&url.origin===self.location.origin&&['/','/index.html'].includes(url.pathname)){
+    event.respondWith(fetch(request).catch(function(){return offlineNotice();}));return;
   }
-
-  /* HTML/내비게이션 — Network-first */
-  if (req.mode === 'navigate' || (req.headers.get('accept')||'').indexOf('text/html') >= 0) {
-    e.respondWith(
-      fetch(req).then(function(res){
-        const copy = res.clone();
-        caches.open(VERSION).then(function(c){ c.put(req, copy).catch(function(){}); });
-        return res;
-      }).catch(function(){ return caches.match(req).then(function(r){ return r || caches.match('./index.html'); }); })
-    );
-    return;
-  }
-
-  /* 정적 자원 — Cache-first + 백그라운드 갱신 (stale-while-revalidate) */
-  e.respondWith(
-    caches.match(req).then(function(cached){
-      const fetchPromise = fetch(req).then(function(res){
-        if (res && res.status === 200) {
-          const copy = res.clone();
-          caches.open(VERSION).then(function(c){ c.put(req, copy).catch(function(){}); });
-        }
-        return res;
-      }).catch(function(){ return cached; });
-      return cached || fetchPromise;
-    })
-  );
+  // Never turn an API/mutation error into an HTML success or queue writes here.
+  event.respondWith(fetch(event.request));
 });

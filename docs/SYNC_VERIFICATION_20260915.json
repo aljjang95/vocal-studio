@@ -1,0 +1,89 @@
+{
+  "schema": "vocal-studio.local-verification/v1",
+  "base": "607409a149bce61644a7c288bf6fb0c52179fcc0",
+  "checked_at": "2026-09-14T16:41:13.586761+00:00",
+  "runtime_sha256": {
+    "index.html": "c16b91cc186f96c310fbf6a0795900e9aecd0a0181e34f71686e8b210f8ca770",
+    "vs-sync.js": "1989d49f8ea26e742141278e60b1d29d780835a80358f7f5befa3e9470d2df5f",
+    "sw.js": "56bb7d8355ce67c45a49a28465013c2f992b32ca8996dcbf1211e7da447d1c78",
+    "vocal-studio.html": "c6e8ed671e26cc0804f6d137a4c7aa37d6efebc38851cd59c8c0e6597e5d9a46"
+  },
+  "node_tests": {
+    "passed": 41,
+    "failed": 0,
+    "surface": "actual protocol; synthetic Firestore transaction transport"
+  },
+  "existing_invariants": 60,
+  "browser": {
+    "passed": 43,
+    "failed": 0,
+    "viewports": [
+      "1440x900",
+      "390x844",
+      "360x740"
+    ],
+    "surface": "actual app in isolated Chrome, synthetic Firebase, real local IndexedDB and WAV decoding",
+    "physical_phone": false,
+    "production_requests": 0,
+    "scope": "populated schedule, actual assignment dialog clicks/save, both directions, input preservation, IndexedDB/WAV decoding, reload identity, mobile conflict controls",
+    "report_sha256": "6bccf8c97a574102bd43e607e908f8b1d43919ffbd8e4b9ff6eee1b879d06e39"
+  },
+  "commands": [
+    {
+      "command": "node scripts/sync-baseline-red.mjs",
+      "exit_code": 0,
+      "log_sha256": "d31cd573e1aaea85797d0c55fb4c4adfe281d9a3af7e95baa7f87f18f6341138"
+    },
+    {
+      "command": "node --test --test-reporter=tap scripts/sync-protocol.test.mjs scripts/sync-runtime.test.mjs",
+      "exit_code": 0,
+      "log_sha256": "dd347aefa7769b290f915836865cb8cf7f2b3c4600c4445d4a919c0734335876"
+    },
+    {
+      "command": "node scripts/regression-gates.mjs",
+      "exit_code": 0,
+      "log_sha256": "1913bfd0c35ecc8cb368d563cd3150c491e53f370ba2bbfd9f688206c4a43b0e"
+    },
+    {
+      "command": "node --check vs-sync.js",
+      "exit_code": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "independent_review": {
+    "initial_findings": {
+      "high": 2,
+      "medium": 1
+    },
+    "closure_verdict": "H1/H2/M1 CLOSED; final layout NO_ACTIONABLE_FINDINGS",
+    "source_bindings": {
+      "index.html": "c16b91cc186f96c310fbf6a0795900e9aecd0a0181e34f71686e8b210f8ca770",
+      "vs-sync.js": "1989d49f8ea26e742141278e60b1d29d780835a80358f7f5befa3e9470d2df5f"
+    },
+    "report_sha256": {
+      "sync-independent-review-20260915.txt": "83ce51c05adf5450c6876a60d53a3c7f3bdf0799f5014874254cd288e35a3075",
+      "sync-independent-closure-20260915.txt": "5fb2093a1644cb40502bb5cbfc18cdbe0b47396a413872df2e6ae729dd441d05",
+      "sync-independent-final-20260915.txt": "a2e371643033e861c72b9f23d20bfb979890d98bc9807dd4eacc096f509b6a8b",
+      "sync-independent-layout-final-20260915.txt": "1e225997e63a7b325c11eee546b8615e602ecd4d139e5281d7c609e822443ca3"
+    },
+    "reviewer_reran_node_tests": 41,
+    "reviewer_reran_invariants": 60,
+    "reviewer_browser_evidence": "inspected, not independently rerun",
+    "requested_model": "gpt-6-astra",
+    "requested_effort": "high",
+    "actual_model": "not independently reported by runtime"
+  },
+  "signed_proof": false,
+  "production_deployed": false,
+  "production_data_changed": false,
+  "auth_and_rules_changed": false,
+  "github_actions_used": false,
+  "release_status": "local code review accepted; signed proof, real Firebase/phone and permitted deployment route remain gated",
+  "weighted_promotion_score": null,
+  "promotion_score_note": "No complete target-SDK/physical-device or independent signed-proof evidence; no fabricated composite score or production promotion."
+}
