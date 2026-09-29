@@ -95,6 +95,8 @@ body#vocalAdmin [style*="color:var(--b)"]{color:#727c6e!important;}
 body#vocalAdmin [style*="background:var(--season-accent,var(--a));color:#fff"],body#vocalAdmin [style*="background:var(--a);color:#fff"],body#vocalAdmin button[onclick^=setTodayPrivacy][style*="background:var(--a)"]{background:#3c6554!important;color:white!important;}
 body#vocalAdmin .ui-line-icon{width:20px;height:20px;display:inline-block;vertical-align:middle;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
 /* Match the legacy selector specificity so every working surface uses daylight. */
+body#vocalAdmin .profile-photo:has(img[src*="portrait=daylight-v1"]){height:240px!important;max-height:240px!important;aspect-ratio:auto!important;background:#f4f1eb!important;}
+body#vocalAdmin .profile-photo img[src*="portrait=daylight-v1"]{object-fit:contain!important;}
 body#vocalAdmin{--season-card-bg:#fffdf9!important;--season-modal-bg:#fffdf9!important;--season-topbar:#fffdf9!important;--season-text:#26372f!important;--season-text-sub:#465649!important;--season-text-muted:#62695f!important;--season-hover:#e5ece2!important;--season-hover2:#d7e5da!important;--season-border:#ddd8cc!important;--season-border2:#9baba1!important;--season-glow:transparent!important;--kind-hob:#3c7964;--kind-chuk:#a45170;--kind-voice:#976b23;--kind-consult:#377193;}
 body#vocalAdmin .main{background:transparent!important;}
 body#vocalAdmin #pwaWorkspace{background:linear-gradient(90deg,rgba(255,253,249,.96) 35%,rgba(255,253,249,.70)),url('/studio-daylight.png') right center/cover!important;border-color:#ddd8cc!important;box-shadow:0 6px 26px rgba(64,57,39,.06)!important;}

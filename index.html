@@ -3395,8 +3395,9 @@ function _safeParseLS(key,fallback){
   }
 }
 function _safeSetLS(key,val){
-  try{localStorage.setItem(key+'__tmp',val);localStorage.setItem(key,val);localStorage.removeItem(key+'__tmp');}
-  catch(e){try{localStorage.removeItem(key+'__tmp');}catch(e2){}throw e;}
+  /* setItem replaces one value atomically. A second full-size __tmp copy can hit quota
+     before the replacement is attempted, even when the replacement itself would fit. */
+  localStorage.setItem(key,val);
 }
 function _persistableListForBackup(list){
   var stripA=function(arr){return (arr||[]).map(function(a){return (a&&a.data&&a.data.length>50000)?Object.assign({},a,{data:'[saved]'}):a;});};
