@@ -6688,11 +6688,21 @@ function isCompactViewport(){
   return window.innerWidth<=768 || document.body.classList.contains('is-mobile');
 }
 function mSR(){var c=ge('content');if(c){renderScheduleContent();c.scrollTop=0;}}
+var _scheduleRenderedMobile=null;
 function renderScheduleContent(){
   var c=ge('content');if(!c)return;
-  c.innerHTML=isMobile()?buildMobileSchedule():buildSchedule();
-  if(isMobile()){setTimeout(function(){attachMobileEvents();},50);}
+  _scheduleRenderedMobile=isMobile();
+  c.innerHTML=_scheduleRenderedMobile?buildMobileSchedule():buildSchedule();
+  if(_scheduleRenderedMobile){setTimeout(function(){attachMobileEvents();},50);}
 }
+window.addEventListener('resize',function(){
+  if(page!=='schedule'||_scheduleRenderedMobile===null||isMobile()===_scheduleRenderedMobile)return;
+  requestAnimationFrame(function(){
+    if(page!=='schedule'||isMobile()===_scheduleRenderedMobile)return;
+    if(isMobile())mobileSchedView='week';
+    render();
+  });
+});
 function mCellClick(el,e){
   if(e){e.stopPropagation();if(e.preventDefault)e.preventDefault();}
   if(!el)return;

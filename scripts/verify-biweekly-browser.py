@@ -150,8 +150,78 @@ try:
             if status==200 and any(s.get('id')==snapshot['id'] for s in remote['state']['students']):break
             time.sleep(.1)
         else:raise AssertionError('converted student was not saved to local Worker')
-        page.reload(wait_until='domcontentloaded')
-        wait_js(page,"window._vsSync&&_vsSync.ready&&students.some(s=>s.name==='격주 브라우저 QA')")
+
+        # Compare two independent browser stores after both have loaded the same canonical state.
+        # The mobile agenda and desktop grid use different renderers, so compare their visible
+        # cards as well as the schedule engine output for the exact same week.
+        desktop=browser.new_page(viewport={'width':1440,'height':900})
+        desktop.on('pageerror',lambda exc:errors.append('desktop: '+str(exc)))
+        desktop.goto(ORIGIN+'/',wait_until='domcontentloaded',timeout=60000)
+        wait_js(desktop,"window._vsSync&&_vsSync.ready&&students.some(s=>s.name==='격주 브라우저 QA')")
+        for client in (page,desktop):
+            client.evaluate("go('schedule');wkOfs=4;mobileSchedView='week';renderScheduleContent()")
+        wait_js(page,"document.querySelectorAll('.mobile-week-day').length===7")
+        wait_js(desktop,"document.querySelectorAll('.sg-hd').length===8")
+        for client in (page,desktop):
+            wait_js(client,"getComputedStyle(document.getElementById('content')).opacity==='1'&&!document.getElementById('content').classList.contains('fade')")
+        cross_device_js="""() => {
+          const engine=buildScheduleEngine(getViewMon());
+          const slots=Object.values(engine.slotsByKey).flat().map(x=>
+            [x.s.id,x.date,x.time,scheduleStatusLabel(x),scheduleKindKey(x)].join('|')).sort();
+          const rendered=[...document.querySelectorAll(isMobile()?'.mobile-week-slot.schedule-card':'.sg .schedule-card')].map(x=>
+            [x.dataset.sid,x.dataset.date,x.dataset.time,
+             x.querySelector('.schedule-status')?.textContent.trim(),
+             x.querySelector('.schedule-card-kind')?.dataset.kind].join('|')).sort();
+          return {weekStart:engine.weekStart,weekEnd:engine.weekEnd,mode:_vsSync.mode,
+            pending:_vsSync.pending(),blocked:_vsSync.blocked,revision:_vsSync.state.revision,
+            mobile:isMobile(),slots,rendered};
+        }"""
+        mobile_week=page.evaluate(cross_device_js)
+        desktop_week=desktop.evaluate(cross_device_js)
+        check('independent mobile and desktop load the same server revision',
+              mobile_week['revision']==desktop_week['revision'] and
+              mobile_week['pending']==desktop_week['pending']==0 and
+              not mobile_week['blocked'] and not desktop_week['blocked'])
+        check('mobile and desktop select the same calendar week',
+              mobile_week['weekStart']==desktop_week['weekStart'] and
+              mobile_week['weekEnd']==desktop_week['weekEnd'])
+        check('mobile and desktop engines agree on confirmed and recurring slots',
+              mobile_week['slots']==desktop_week['slots'] and len(mobile_week['slots'])>=2)
+        check('mobile and desktop show the same schedule cards',
+              mobile_week['rendered']==desktop_week['rendered']==mobile_week['slots'])
+        for client in (page,desktop):
+            alert=client.locator('#mTodayAlert')
+            if alert.count() and alert.is_visible():
+                alert.get_by_role('button',name='확인',exact=True).click()
+        check('paired schedule captures have no open dialog',
+              page.locator('.ov.open').count()==desktop.locator('.ov.open').count()==0)
+        wait_js(page,"!document.getElementById('toast').classList.contains('show')&&Number(getComputedStyle(document.getElementById('toast')).opacity)<.01")
+        page.screenshot(path=str(EVIDENCE/'parity-mobile-390.png'),full_page=True)
+        desktop.screenshot(path=str(EVIDENCE/'parity-desktop-1440.png'),full_page=True)
+        check('desktop grid is settled before resize',desktop.locator('.sg .schedule-card').count()==len(desktop_week['slots']))
+        desktop.set_viewport_size({'width':390,'height':844})
+        wait_js(desktop,"isMobile()&&document.querySelectorAll('.mobile-week-day').length===7")
+        resized_week=desktop.evaluate(cross_device_js)
+        check('resizing desktop to mobile keeps the same schedule cards',
+              resized_week['rendered']==mobile_week['rendered'])
+        desktop.screenshot(path=str(EVIDENCE/'parity-resized-mobile-390.png'),full_page=True)
+        desktop.set_viewport_size({'width':1440,'height':900})
+        wait_js(desktop,"!isMobile()&&document.querySelectorAll('.sg .schedule-card').length>0")
+        check('resizing back to desktop keeps the same schedule cards',
+              desktop.evaluate(cross_device_js)['rendered']==mobile_week['rendered'])
+        for client in (page,desktop):
+            client.reload(wait_until='domcontentloaded')
+            wait_js(client,"window._vsSync&&_vsSync.ready&&students.some(s=>s.name==='격주 브라우저 QA')")
+            client.evaluate("go('schedule');wkOfs=4;mobileSchedView='week';renderScheduleContent()")
+        wait_js(page,"document.querySelectorAll('.mobile-week-day').length===7")
+        wait_js(desktop,"document.querySelectorAll('.sg-hd').length===8")
+        reloaded_mobile=page.evaluate(cross_device_js)
+        reloaded_desktop=desktop.evaluate(cross_device_js)
+        check('reloaded mobile and desktop preserve the same confirmed week',
+              reloaded_mobile['revision']==reloaded_desktop['revision'] and
+              reloaded_mobile['slots']==reloaded_desktop['slots']==mobile_week['slots'] and
+              reloaded_mobile['rendered']==reloaded_desktop['rendered']==mobile_week['rendered'])
+        desktop.close()
         check('student and confirmed dates survive reload',page.evaluate("(()=>{let s=students.find(x=>x.name==='격주 브라우저 QA');return s&&s.confirmedDates.length===2&&consults.find(c=>c.id==='qa-biweekly-consult').converted})()"))
         page.evaluate("go('schedule')")
         wait_js(page,"page==='schedule'&&getComputedStyle(document.getElementById('content')).opacity==='1'")
