@@ -154,6 +154,7 @@ export default {
     const stateRoute = new Map([
       ['/api/state', '/state'], ['/api/commit', '/commit'], ['/api/import', '/import'],
       ['/api/export', '/export'], ['/api/activate', '/activate'],
+      ['/api/intake/notifications', '/intake/notifications'],
     ]).get(url.pathname);
     if (stateRoute) {
       if (!requireProtocol(request)) return json({ error: 'protocol-required' }, 400);
