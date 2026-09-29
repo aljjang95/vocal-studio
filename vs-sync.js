@@ -235,33 +235,6 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
   Controller.prototype.status=function(mode,detail){this.mode=mode;this.a.status(mode,detail);};
   Controller.prototype.unready=function(){this.ready=false;if(this.a.ready)this.a.ready(false);};
   Controller.prototype.guard=function(epoch){return epoch===this.epoch&&this.owner&&this.a.owner()===this.owner;};
-  /* A backup from another tab is superseded when everything it holds is already server-confirmed:
-     its local copy equals the current confirmed base and every recovery copy is a copy of server data
-     (its own base or the current base). Anything else, including unsynced edits, is kept. */
-  function supersededBackup(raw,next){
-    try{
-      var saved=JSON.parse(raw);
-      if(!saved||saved.version!==1||saved.owner!==next.owner||saved.namespace!==next.namespace||saved.ack)return false;
-      if(!Number.isSafeInteger(saved.revision)||saved.revision>next.revision||!Array.isArray(saved.recovery))return false;
-      if(!equal(normalize(saved.local),next.base))return false;
-      var base=normalize(saved.base);
-      return saved.recovery.every(function(data){return equal(data,base)||equal(data,next.base);});
-    }catch(error){return false;}
-  }
-  /* An older confirmed journal can still be useful recovery history. Reclaim its redundant copy only
-     when another retained backup contains every field and recovery snapshot, without normalization. */
-  function containedBackup(raw,anchorRaw,next){
-    try{
-      var saved=JSON.parse(raw),anchor=JSON.parse(anchorRaw);
-      if(!saved||!anchor||saved.version!==1||saved.owner!==next.owner||saved.namespace!==next.namespace||saved.ack||anchor.ack)return false;
-      if(!Number.isSafeInteger(saved.revision)||saved.revision<0||!Array.isArray(saved.recovery)||!Array.isArray(anchor.recovery))return false;
-      if(!saved.base||!saved.local||!equal(saved.base,saved.local))return false;
-      var savedMeta=Object.assign(Object.create(null),saved),anchorMeta=Object.assign(Object.create(null),anchor);
-      delete savedMeta.recovery;delete anchorMeta.recovery;
-      if(!equal(savedMeta,anchorMeta))return false;
-      return saved.recovery.every(function(data){return anchor.recovery.some(function(copy){return equal(data,copy);});});
-    }catch(error){return false;}
-  }
   /* A retained anchor can be rewritten by another tab: Web Storage has no compare-and-delete.
      Keep the exact removed bytes in this tab's journal storage before relying on that anchor.
      These copies survive reloads and are included in the device export; never overwrite one. */
@@ -277,37 +250,10 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     }catch(error){}
     return false;
   };
-  /* Remove other tabs' byte-identical, superseded or fully contained backups. Returns [key,raw] pairs so the
-     caller can put them back if the space still is not enough. */
-  Controller.prototype.reclaimBackups=function(next,text,backupKey){
-    var self=this,store=this.a.backupStore,prefix=this.key+':backup:',entries=[],candidates=[],removed=[];
-    for(var i=0;i<store.length;i++){
-      var key=store.key(i);
-      if(!key||key===backupKey||key.indexOf(prefix)!==0)continue;
-      var raw=store.getItem(key);
-      var decoded;try{decoded=decodeBackup(raw);}catch(error){continue;}
-      var entry={key:key,raw:raw,decoded:decoded,remove:decoded===text||supersededBackup(decoded,next),anchor:null,retain:false};
-      entries.push(entry);if(entry.remove)candidates.push(entry);
-    }
-    entries.forEach(function(entry){
-      if(entry.remove||entry.retain)return;
-      var anchor=entries.find(function(other){return other!==entry&&!other.remove&&containedBackup(entry.decoded,other.decoded,next);});
-      if(anchor){anchor.retain=true;entry.remove=true;entry.anchor=anchor;candidates.push(entry);}
-    });
-    /* Keep anchors out of the removal set. Re-read both copies immediately before deleting; another
-       tab changing either copy invalidates the containment evidence. */
-    candidates.forEach(function(entry){try{
-      if(entry.anchor&&!self.preserveReclaimedBackup(entry.raw))return;
-      if(entry.anchor&&store.getItem(entry.anchor.key)!==entry.anchor.raw)return;
-      if(store.getItem(entry.key)!==entry.raw)return;
-      if(entry.anchor&&store.getItem(entry.anchor.key)!==entry.anchor.raw)return;
-      store.removeItem(entry.key);removed.push([entry.key,entry.raw]);
-    }catch(error){}});
-    return removed;
-  };
-  /* Write this tab's backup. On quota failure, free superseded backups from other tabs and retry; the
-     removal is kept only if the write then succeeds, otherwise the removed backups are restored. The
-     adapter's reclaim hook (local cache pruning) is the last resort. */
+  /* Only replace this instance's backup. Another tab can update its key between any read and
+     removeItem: Web Storage has no atomic compare-and-delete. Preserve all foreign backups,
+     even apparent duplicates or confirmed copies. The adapter may prune its own app cache;
+     if this instance's compressed write still does not fit, fail closed. */
   Controller.prototype.writeBackup=function(next,text,backupKey){
     var store=this.a.backupStore,self=this;
     try{store.setItem(backupKey,text);return;}catch(error){}
@@ -315,12 +261,8 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     // there is no cross-tab migration or compare-and-replace of another writer's journal.
     var stored=encodeBackup(text);
     if(stored!==text){try{store.setItem(backupKey,stored);return;}catch(error){}}
-    var removed=this.reclaimBackups(next,text,backupKey);
-    function restore(){removed.forEach(function(entry){try{if(store.getItem(entry[0])===null)store.setItem(entry[0],entry[1]);}catch(error){if(typeof console!=='undefined'&&console.error)console.error('vs-sync: could not restore backup',entry[0],error);}});removed=[];}
-    if(removed.length){try{store.setItem(backupKey,stored);return;}catch(error){}}
     var freed=0;try{freed=self.a.reclaim?Number(self.a.reclaim())||0:0;}catch(error){freed=0;}
-    if(freed||removed.length){try{store.setItem(backupKey,stored);return;}catch(error){}}
-    restore();
+    if(freed){try{store.setItem(backupKey,stored);return;}catch(error){}}
     throw Error('backup-quota');
   };
   Controller.prototype.persist=function(next){
@@ -330,17 +272,18 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
       if(this.a.store.getItem(this.key)!==text)throw Error('journal-readback');
       if(this.a.backupStore){
         var store=this.a.backupStore,backupKey=this.key+':backup:'+this.instance;
-        this.writeBackup(next,text,backupKey);
-        if(decodeBackup(store.getItem(backupKey))!==text)throw Error('backup-readback');
-        if(!next.ack&&!diff(next.base,next.local).length){
-          var duplicates=[];
-          for(var i=0;i<store.length&&duplicates.length<64;i++){
-            var key=store.key(i);
-            if(key!==backupKey&&key&&key.indexOf(this.key+':backup:')===0){
-              try{if(decodeBackup(store.getItem(key))===text)duplicates.push(key);}catch(error){}
-            }
-          }
-          duplicates.forEach(function(key){try{store.removeItem(key);}catch(error){}});
+        // A new clean tab can use its verified session journal plus the confirmed server copy.
+        // Never remove or replace an existing backup through this exception. The first edit,
+        // ACK, recovery snapshot or unknown metadata still requires a full durable write.
+        var fields=['version','namespace','owner','revision','base','local','recovery'];
+        var confirmedOnly=next.version===1&&this.guard(this.epoch)&&next.owner===this.owner&&next.namespace===this.a.namespace&&
+           Number.isSafeInteger(next.revision)&&next.revision>=0&&
+           Object.keys(next).length===fields.length&&Object.keys(next).every(function(k){return fields.indexOf(k)>=0;})&&
+           Array.isArray(next.recovery)&&next.recovery.length===0&&equal(next.base,next.local)&&
+           this.latest&&revision(this.latest)===next.revision&&equal(normalize(this.latest),next.base);
+        if(!confirmedOnly||store.getItem(backupKey)!==null){
+          this.writeBackup(next,text,backupKey);
+          if(decodeBackup(store.getItem(backupKey))!==text)throw Error('backup-readback');
         }
       }
       this.state=next;this.blocked=false;this.hold=null;return true;
