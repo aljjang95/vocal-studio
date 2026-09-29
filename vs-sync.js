@@ -142,18 +142,60 @@
       return saved.recovery.every(function(data){return equal(data,base)||equal(data,next.base);});
     }catch(error){return false;}
   }
-  /* Remove other tabs' byte-identical or superseded backups. Returns the removed [key,raw] pairs so the
+  /* An older confirmed journal can still be useful recovery history. Reclaim its redundant copy only
+     when another retained backup contains every field and recovery snapshot, without normalization. */
+  function containedBackup(raw,anchorRaw,next){
+    try{
+      var saved=JSON.parse(raw),anchor=JSON.parse(anchorRaw);
+      if(!saved||!anchor||saved.version!==1||saved.owner!==next.owner||saved.namespace!==next.namespace||saved.ack||anchor.ack)return false;
+      if(!Number.isSafeInteger(saved.revision)||saved.revision<0||!Array.isArray(saved.recovery)||!Array.isArray(anchor.recovery))return false;
+      if(!saved.base||!saved.local||!equal(saved.base,saved.local))return false;
+      var savedMeta=Object.assign(Object.create(null),saved),anchorMeta=Object.assign(Object.create(null),anchor);
+      delete savedMeta.recovery;delete anchorMeta.recovery;
+      if(!equal(savedMeta,anchorMeta))return false;
+      return saved.recovery.every(function(data){return anchor.recovery.some(function(copy){return equal(data,copy);});});
+    }catch(error){return false;}
+  }
+  /* A retained anchor can be rewritten by another tab: Web Storage has no compare-and-delete.
+     Keep the exact removed bytes in this tab's journal storage before relying on that anchor.
+     These copies survive reloads and are included in the device export; never overwrite one. */
+  Controller.prototype.preserveReclaimedBackup=function(raw){
+    var store=this.a.store,prefix=this.key+':reclaimed:',limit=store?store.length+1:0;
+    if(!store||store===this.a.backupStore)return false;
+    try{
+      for(var i=0;i<limit;i++){
+        var key=prefix+i,saved=store.getItem(key);
+        if(saved===raw)return true;
+        if(saved===null){store.setItem(key,raw);return store.getItem(key)===raw;}
+      }
+    }catch(error){}
+    return false;
+  };
+  /* Remove other tabs' byte-identical, superseded or fully contained backups. Returns [key,raw] pairs so the
      caller can put them back if the space still is not enough. */
   Controller.prototype.reclaimBackups=function(next,text,backupKey){
-    var store=this.a.backupStore,prefix=this.key+':backup:',candidates=[],removed=[];
+    var self=this,store=this.a.backupStore,prefix=this.key+':backup:',entries=[],candidates=[],removed=[];
     for(var i=0;i<store.length;i++){
       var key=store.key(i);
       if(!key||key===backupKey||key.indexOf(prefix)!==0)continue;
       var raw=store.getItem(key);
-      if(raw===text||supersededBackup(raw,next))candidates.push([key,raw]);
+      var entry={key:key,raw:raw,remove:raw===text||supersededBackup(raw,next),anchor:null,retain:false};
+      entries.push(entry);if(entry.remove)candidates.push(entry);
     }
-    /* Re-read before removing so a copy another open tab rewrote meanwhile is kept. */
-    candidates.forEach(function(entry){try{if(store.getItem(entry[0])!==entry[1])return;store.removeItem(entry[0]);removed.push(entry);}catch(error){}});
+    entries.forEach(function(entry){
+      if(entry.remove||entry.retain)return;
+      var anchor=entries.find(function(other){return other!==entry&&!other.remove&&containedBackup(entry.raw,other.raw,next);});
+      if(anchor){anchor.retain=true;entry.remove=true;entry.anchor=anchor;candidates.push(entry);}
+    });
+    /* Keep anchors out of the removal set. Re-read both copies immediately before deleting; another
+       tab changing either copy invalidates the containment evidence. */
+    candidates.forEach(function(entry){try{
+      if(entry.anchor&&!self.preserveReclaimedBackup(entry.raw))return;
+      if(entry.anchor&&store.getItem(entry.anchor.key)!==entry.anchor.raw)return;
+      if(store.getItem(entry.key)!==entry.raw)return;
+      if(entry.anchor&&store.getItem(entry.anchor.key)!==entry.anchor.raw)return;
+      store.removeItem(entry.key);removed.push([entry.key,entry.raw]);
+    }catch(error){}});
     return removed;
   };
   /* Write this tab's backup. On quota failure, free superseded backups from other tabs and retry; the
@@ -353,10 +395,16 @@
     this.flight=null;this.deferred=null;this.ready=true;this.display();this.status('recovery');return true;
   };
   Controller.prototype.exportData=function(){
-    var result={version:1,current:this.state,backups:[]},store=this.a.backupStore;
+    var result={version:1,current:this.state,backups:[],reclaimedBackups:[]},store=this.a.backupStore;
     if(store&&this.key)for(var i=0;i<store.length;i++){
       var key=store.key(i);if(key&&key.indexOf(this.key+':backup:')===0){
         try{result.backups.push(JSON.parse(store.getItem(key)));}catch(error){result.backups.push({unreadable:true});}
+      }
+    }
+    store=this.a.store;
+    if(store&&this.key)for(var j=0;j<store.length;j++){
+      var savedKey=store.key(j);if(savedKey&&savedKey.indexOf(this.key+':reclaimed:')===0){
+        try{result.reclaimedBackups.push(JSON.parse(store.getItem(savedKey)));}catch(error){result.reclaimedBackups.push({unreadable:true});}
       }
     }
     return clone(result);
