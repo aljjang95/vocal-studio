@@ -62,6 +62,20 @@ test('two clients converge independent edits through transaction retry',async()=
   await Promise.all([a.controller.save(),b.controller.save()]);await settle();
   assert.equal(w.data.students[0].name,'A edit');assert.equal(w.data.students[1].name,'B edit');assert.ok(w.attempts>=3);
 });
+
+test('two clients converge distinct fields of the same student through transaction retry',async()=>{
+  const w=world(),a=w.client(),b=w.client();a.ui.students[0].name='PC name';b.ui.students[0].memo='Mobile note';
+  await Promise.all([a.controller.save(),b.controller.save()]);await settle();
+  assert.equal(w.data.students[0].name,'PC name');assert.equal(w.data.students[0].memo,'Mobile note');
+  for(const c of [a,b]){assert.equal(c.controller.pending(),0);assert.equal(c.controller.blocked,false);assert.deepEqual(c.ui.students,w.data.students);}
+});
+
+test('two clients converge different unique days within the same student week',async()=>{
+  const w=world();w.data.weekOvr.w1.s1=[{day:'화',time:'10:00'},{day:'목',time:'11:00'}];
+  const a=w.client(),b=w.client();a.ui.weekOvr.w1.s1[0].time='12:00';b.ui.weekOvr.w1.s1[1].time='13:00';
+  await Promise.all([a.controller.save(),b.controller.save()]);await settle();
+  for(const c of [a,b]){assert.equal(c.controller.pending(),0);assert.equal(c.controller.blocked,false);assert.deepEqual(c.ui.weekOvr.w1.s1,[{day:'화',time:'12:00'},{day:'목',time:'13:00'}]);}
+});
 test('same-item concurrent edits retain the losing local intent as a conflict',async()=>{
   const w=world(),a=w.client(),b=w.client();a.ui.weekOvr.w1.s1.time='11:00';b.ui.weekOvr.w1.s1.time='12:00';
   await Promise.all([a.controller.save(),b.controller.save()]);await settle();

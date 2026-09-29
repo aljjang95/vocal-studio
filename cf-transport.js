@@ -67,7 +67,7 @@
           if(stopped)return;var url=eventUrl();if(!url||!root.WebSocket){scheduleAudit();return;}
           try{socket=new root.WebSocket(url);}catch(error){scheduleReconnect();return;}
           socket.onopen=function(){retryMs=1000;scheduleAudit();};
-          socket.onmessage=function(event){try{var msg=JSON.parse(event.data);if(msg.type==='state-changed'&&msg.revision!==lastRevision)refresh();}catch(error){}};
+          socket.onmessage=function(event){try{var msg=JSON.parse(event.data);if((msg.type==='state-changed'||msg.type==='hello')&&msg.revision!==lastRevision)refresh();}catch(error){}};
           socket.onerror=function(){};
           socket.onclose=function(){socket=null;if(auditTimer){clearTimeout(auditTimer);auditTimer=null;}scheduleReconnect();};
         }

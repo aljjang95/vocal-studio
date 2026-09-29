@@ -108,9 +108,56 @@ test('auth-cleared unhydrated reload prefers latest principal-bound durable undo
   c.controller.disconnect();c.store.fail=false;
   const resumed=client(w,{store:c.store,ui:{},hydrated:false,durable,instanceId:'reload'});await settle();
   assert.equal(resumed.ui.weekOvr.w1.s1.time,'10:00');assert.equal(w.data.weekOvr.w1.s1.time,'10:00');
-  assert.equal(w.writes,0);assert.equal(resumed.controller.state.resumeConflict,true);assert.equal(resumed.mode,'conflict');
+  assert.equal(w.writes,0);assert.equal(resumed.controller.state.resumeConflict,undefined);assert.equal(resumed.mode,'recovery');
   assert.ok(resumed.controller.state.recovery.some(data=>data.weekOvr.w1.s1.time==='11:00'));
   await resumed.controller.retry();await settle();assert.equal(w.writes,0);
+});
+
+test('unversioned divergent durable cache is retained without inferred upload; subsequent explicit edit saves',async()=>{
+  const w=makeWorld(),c=client(w);
+  c.store.fail=true;c.ui.weekOvr.w1.s1.time='11:00';const durable=copy(c.ui);await c.controller.save();
+  assert.equal(w.writes,0);c.controller.disconnect();c.store.fail=false;
+  const resumed=client(w,{store:c.store,ui:{},hydrated:false,durable,instanceId:'reload'});await settle();
+  assert.equal(resumed.controller.blocked,false);assert.equal(resumed.controller.pending(),0);
+  assert.equal(w.data.weekOvr.w1.s1.time,'10:00');assert.equal(w.writes,0);
+  assert.ok(resumed.controller.state.recovery.some(data=>data.weekOvr.w1.s1.time==='11:00'));
+  resumed.ui.weekOvr.w1.s1.time='12:00';await resumed.controller.save();await settle();
+  assert.equal(w.data.weekOvr.w1.s1.time,'12:00');assert.equal(w.writes,1);
+});
+
+test('a confirmed stale journal and already-committed durable data do not block reload',async()=>{
+  const w=makeWorld(),c=client(w),durable=copy(c.ui);durable.weekOvr.w1.s1.time='11:00';
+  w.data=copy(durable);w.revision++;c.controller.disconnect();
+  const resumed=client(w,{store:c.store,ui:{},hydrated:false,durable,instanceId:'reload'});await settle();
+  assert.equal(resumed.controller.blocked,false);assert.equal(resumed.controller.pending(),0);
+  assert.equal(w.writes,0);assert.equal(resumed.ui.weekOvr.w1.s1.time,'11:00');
+});
+
+test('an unhydrated page without owner-bound cache does not treat its empty UI as an undo',async()=>{
+  const w=makeWorld(),c=client(w);w.failNext=1;c.ui.weekOvr.w1.s1.time='11:00';await c.controller.save();
+  c.controller.disconnect();
+  const resumed=client(w,{store:c.store,ui:{},hydrated:false,instanceId:'reload'});await settle();
+  assert.equal(resumed.controller.blocked,false);assert.equal(resumed.controller.pending(),0);
+  assert.equal(w.data.weekOvr.w1.s1.time,'11:00');assert.equal(w.writes,1);
+});
+
+test('obsolete resume hold clears only when current local value is exactly server-confirmed',async()=>{
+  const w=makeWorld(),c=client(w),local=copy(c.controller.state),alternate=copy(local.local);
+  alternate.weekOvr.w1.s1.time='09:00';local.resumeConflict=true;local.recovery=[alternate];
+  c.store.setItem(c.controller.key,JSON.stringify(local));c.controller.disconnect();
+  const resumed=client(w,{store:c.store});await settle();
+  assert.equal(resumed.controller.ready,true);assert.equal(resumed.controller.blocked,false);
+  assert.equal(resumed.controller.state.resumeConflict,undefined);assert.equal(w.writes,0);
+  assert.deepEqual(resumed.controller.state.recovery,[alternate]);assert.equal(resumed.mode,'recovery');
+});
+
+test('legacy resume hold with genuinely different local value is preserved',async()=>{
+  const w=makeWorld(),c=client(w),local=copy(c.controller.state);local.local=copy(local.local);
+  local.local.weekOvr.w1.s1.time='09:00';local.resumeConflict=true;
+  c.store.setItem(c.controller.key,JSON.stringify(local));c.controller.disconnect();
+  const resumed=client(w,{store:c.store,ui:local.local});await settle();
+  assert.equal(resumed.controller.blocked,true);assert.equal(resumed.mode,'conflict');
+  assert.equal(resumed.controller.state.local.weekOvr.w1.s1.time,'09:00');assert.equal(w.writes,0);
 });
 test('media retry action remains reachable while state mode is synced',()=>{
   const index=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
