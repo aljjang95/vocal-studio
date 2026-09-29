@@ -162,6 +162,8 @@ try:
             client.evaluate("go('schedule');wkOfs=4;mobileSchedView='week';renderScheduleContent()")
         wait_js(page,"document.querySelectorAll('.mobile-week-day').length===7")
         wait_js(desktop,"document.querySelectorAll('.sg-hd').length===8")
+        for client in (page,desktop):
+            wait_js(client,"getComputedStyle(document.getElementById('content')).opacity==='1'&&!document.getElementById('content').classList.contains('fade')")
         cross_device_js="""() => {
           const engine=buildScheduleEngine(getViewMon());
           const slots=Object.values(engine.slotsByKey).flat().map(x=>
@@ -187,13 +189,22 @@ try:
               mobile_week['slots']==desktop_week['slots'] and len(mobile_week['slots'])>=2)
         check('mobile and desktop show the same schedule cards',
               mobile_week['rendered']==desktop_week['rendered']==mobile_week['slots'])
-        desktop.wait_for_timeout(300)  # allow go()'s deferred render before testing resize
+        for client in (page,desktop):
+            alert=client.locator('#mTodayAlert')
+            if alert.count() and alert.is_visible():
+                alert.get_by_role('button',name='확인',exact=True).click()
+        check('paired schedule captures have no open dialog',
+              page.locator('.ov.open').count()==desktop.locator('.ov.open').count()==0)
+        wait_js(page,"!document.getElementById('toast').classList.contains('show')&&Number(getComputedStyle(document.getElementById('toast')).opacity)<.01")
+        page.screenshot(path=str(EVIDENCE/'parity-mobile-390.png'),full_page=True)
+        desktop.screenshot(path=str(EVIDENCE/'parity-desktop-1440.png'),full_page=True)
         check('desktop grid is settled before resize',desktop.locator('.sg .schedule-card').count()==len(desktop_week['slots']))
         desktop.set_viewport_size({'width':390,'height':844})
         wait_js(desktop,"isMobile()&&document.querySelectorAll('.mobile-week-day').length===7")
         resized_week=desktop.evaluate(cross_device_js)
         check('resizing desktop to mobile keeps the same schedule cards',
               resized_week['rendered']==mobile_week['rendered'])
+        desktop.screenshot(path=str(EVIDENCE/'parity-resized-mobile-390.png'),full_page=True)
         desktop.set_viewport_size({'width':1440,'height':900})
         wait_js(desktop,"!isMobile()&&document.querySelectorAll('.sg .schedule-card').length>0")
         check('resizing back to desktop keeps the same schedule cards',
