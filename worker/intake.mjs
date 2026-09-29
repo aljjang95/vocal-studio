@@ -79,7 +79,7 @@ export async function acceptIntake(owner,input) {
   owner.ctx.storage.transactionSync(()=>{
     owner.setKV('record',next);
     owner.sql.exec('INSERT INTO booking_receipts(id,payload_sha,response_json,created_at) VALUES(?,?,?,?)',submissionId,payloadSha,response,now);
-    owner.sql.exec('INSERT INTO booking_outbox(id,payload_json,status,next_at,updated_at) VALUES(?,?,?,?,?)',submissionId,JSON.stringify({...booking,submissionId}),'pending',now,now);
+    owner.sql.exec('INSERT INTO booking_outbox(id,payload_json,status,next_at,updated_at) VALUES(?,?,?,?,?)',submissionId,JSON.stringify({...booking,submissionId,createdAt:now}),'pending',now,now);
     for(const limit of limits)owner.sql.exec('INSERT INTO booking_limits(key,count,expires_at) VALUES(?,1,?) ON CONFLICT(key) DO UPDATE SET count=count+1',limit.key,limit.expires);
     owner.sql.exec('DELETE FROM booking_limits WHERE expires_at<=?',now);
   });
@@ -89,11 +89,25 @@ export async function acceptIntake(owner,input) {
 export async function deliverTelegram(env,booking,fetcher=fetch) {
   if(env.BOOKING_NOTIFICATIONS_ENABLED!=='true'||!env.BOOKING_TELEGRAM_TOKEN||!env.BOOKING_TELEGRAM_CHAT_ID)return {ok:false,code:'notification-not-configured'};
   // No parse_mode: applicant strings are untrusted text, never markup.
-  const lines=['HLB 공개 신청',`접수 ID: ${booking.submissionId}`,`이름: ${booking.name}`,`연락처: ${booking.phone}`,`성별: ${booking.gender==='male'?'남':'여'}`,booking.preferredDay&&`희망 시간대: ${booking.preferredDay}`,'관리 화면: https://hlb.tllhouse.com/'];
+  const text=`🔔 [HLB 보컬스튜디오] 1:1 정밀 진단 신청 접수!
+
+👤 이름: ${booking.name}
+📞 연락처: ${booking.phone}
+🌿 성별: ${booking.gender==='male'?'남':'여'}
+🎯 목표 트랙: ${booking.goal||'상담 후 결정'}
+⏳ 연령대: ${booking.ageGroup||'미입력'} | 가창 경력: ${booking.experience||'미입력'}
+📅 희망 시간: ${booking.preferredDay||'일정 상의 후 조율'}
+📝 상담 메모: ${booking.memo||'없음'}${Number.isSafeInteger(booking.createdAt)?`\n⏰ 신청 일시: ${new Date(booking.createdAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})}`:''}
+
+👉 원장님, 관리 화면에서 신청 내용을 확인해주세요.
+https://hlb.tllhouse.com/
+
+💬 신청 내용을 확인하신 뒤 상담 일정을 안내해주세요.
+접수번호: ${booking.submissionId}`;
   try{
     const response=await fetcher(`https://api.telegram.org/bot${env.BOOKING_TELEGRAM_TOKEN}/sendMessage`,{
       method:'POST',headers:{'content-type':'application/json'},
-      body:JSON.stringify({chat_id:env.BOOKING_TELEGRAM_CHAT_ID,text:lines.filter(Boolean).join('\n'),disable_web_page_preview:true}),signal:AbortSignal.timeout(8000),
+      body:JSON.stringify({chat_id:env.BOOKING_TELEGRAM_CHAT_ID,text,disable_web_page_preview:true}),signal:AbortSignal.timeout(8000),
     });
     const result=await response.json().catch(()=>null);
     if(response.ok&&result?.ok===true&&Number.isSafeInteger(result?.result?.message_id))return {ok:true,messageId:String(result.result.message_id)};
