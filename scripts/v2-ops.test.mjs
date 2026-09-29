@@ -121,7 +121,11 @@ test('weekly schedule separates student, exact time, lesson kind, and status wit
   const desktop=html.slice(html.indexOf('function buildSchedule(){'),html.indexOf('function removeSlotFromMenu'));
   const mobileStart=html.indexOf('function buildMobileWeekView');
   const mobile=html.slice(mobileStart,html.indexOf('function buildMobileSchedule(){',mobileStart));
-  assert.match(desktop,/schedule-card-name/);assert.match(desktop,/schedule-card-time/);
+  const timeControl=html.slice(html.indexOf('function scheduleTimeControl('),html.indexOf('function openScheduleTimeEditor('));
+  assert.match(desktop,/schedule-card-name/);assert.match(desktop,/scheduleTimeControl\(x,ddStr\)/);
+  assert.match(timeControl,/schedule-card-time/);assert.match(timeControl,/esc\(slot\.time\)/);
+  assert.match(timeControl,/aria-label=/);assert.match(timeControl,/openScheduleTimeEditor\(this\)/);
+  assert.doesNotMatch(timeControl,/slot\.s\.(?:ph|phone)/);
   assert.match(desktop,/scheduleLessonKind\(x\)/);assert.match(desktop,/scheduleStatusLabel\(x\)/);
   assert.doesNotMatch(desktop,/x\.s\.(?:ph|phone)/);
   assert.match(mobile,/mobile-week-nav/);assert.match(mobile,/aria-label="다음 주"/);
