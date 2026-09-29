@@ -52,6 +52,14 @@ These tests are local evidence. They do not prove production customer import, pr
 
 This candidate was reconstructed in an isolated worktree from remote commit `692299743ffde2b362d5fd5589449a97d59290e9` because the previously described Cloudflare candidate branch/worktree was not present on the currently connected PC and had not been pushed to GitHub. The reconstruction follows the handoff contract and is re-verified from scratch; it must not be represented as byte-identical recovery of the inaccessible earlier local candidate.
 
+## Concurrent changes and resumed tabs
+
+The WebSocket subscription's `hello` revision is compared with the latest confirmed read, just like a change notification. A mismatch refreshes immediately, closing the interval between the initial (or reconnect) GET and socket registration. A matching revision does not cause another GET; the five-minute audit remains a fallback.
+
+Existing record updates use a three-way comparison of the confirmed base, this tab's requested value and the current server value. Changes to different properties of the same record can merge, including nested properties and property deletion. Two different replacements for one property, deletion versus editing a record, and ambiguous record identities remain conflicts with the unsent value preserved. Arrays stay atomic except a weekly assignment list whose three versions each contain at most one entry per day; those lists can merge independent changes to different days. Multiple entries for the same day remain atomic because they lack stable slot identities.
+
+An unhydrated page without an owner-bound durable cache does not treat its temporary empty UI as a user edit. A versioned, confirmed session journal is more authoritative than an unversioned shared application cache: divergent cache data is retained in recovery, without inferred server writes or a fabricated conflict. A genuinely pending journal versus a different meaningful local value retains the existing ambiguity guard. A legacy resume hold can clear only when there is no pending ACK and its exact current local value is already confirmed by the server; all alternate recovery snapshots remain preserved.
+
 ## Backup quota recovery
 
 The controller never automatically deletes another tab's mutable sync backup, including byte-identical, server-confirmed or contained copies. Web Storage has no atomic compare-and-delete; another tab can write unsent intent after the final comparison and before removal. This restriction applies both after a successful write and during quota recovery. Reloads reuse their own instance key; separate tabs keep separate backups.

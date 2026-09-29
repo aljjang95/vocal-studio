@@ -51,6 +51,49 @@ test('prototype-like schedule keys remain own data, without prototype pollution'
 test('comparison and application do not mutate input snapshots',()=>{
   const b=base(),local=base(),remote=base(),saved=copy(b);local.students[0].name='Edited';merge(b,local,remote);assert.deepEqual(b,saved);assert.deepEqual(remote,saved);
 });
+
+test('different fields of the same student merge without reverting either client',()=>{
+  const b=base(),local=base(),remote=base();
+  local.students[0].name='PC name';remote.students[0].memo='Mobile memo';
+  const result=merge(b,local,remote);
+  assert.equal(result.conflicts.length,0);
+  assert.equal(result.value.students[0].name,'PC name');assert.equal(result.value.students[0].memo,'Mobile memo');
+});
+
+test('same field divergent values remain a real conflict',()=>{
+  const b=base(),local=base(),remote=base();local.students[0].name='PC';remote.students[0].name='Mobile';
+  const result=merge(b,local,remote);assert.equal(result.conflicts.length,1);assert.equal(result.value.students[0].name,'Mobile');
+  assert.equal(result.conflicts[0].after.name,'PC');
+});
+
+test('different nested fields and property deletion merge, including reserved own keys',()=>{
+  const b=base();b.students[0].settings=JSON.parse('{"a":1,"b":2,"__proto__":{"a":1,"b":2}}');
+  const local=copy(b),remote=copy(b);delete local.students[0].settings.a;
+  remote.students[0].settings.b=3;local.students[0].settings.__proto__.a=4;remote.students[0].settings.__proto__.b=5;
+  const result=merge(b,local,remote);assert.equal(result.conflicts.length,0);
+  assert.equal(Object.hasOwn(result.value.students[0].settings,'a'),false);
+  assert.equal(result.value.students[0].settings.b,3);
+  assert.deepEqual(result.value.students[0].settings.__proto__,{a:4,b:5});assert.equal(Object.prototype.a,undefined);
+});
+
+test('row deletion versus remote row edit remains a conflict',()=>{
+  const b=base(),local=base(),remote=base();local.students.shift();remote.students[0].memo='Retain this';
+  const result=merge(b,local,remote);assert.equal(result.conflicts.length,1);assert.equal(result.value.students[0].memo,'Retain this');
+});
+
+test('different unique days of one weekly assignment merge but same-day time conflicts remain',()=>{
+  const b=base();b.weekOvr.w1.s1=[{day:'화',time:'10:00'},{day:'목',time:'11:00'}];
+  const local=copy(b),remote=copy(b);local.weekOvr.w1.s1[0].time='12:00';remote.weekOvr.w1.s1[1].time='13:00';
+  const result=merge(b,local,remote);assert.equal(result.conflicts.length,0);
+  assert.deepEqual(result.value.weekOvr.w1.s1,[{day:'화',time:'12:00'},{day:'목',time:'13:00'}]);
+  remote.weekOvr.w1.s1[0].time='14:00';assert.equal(merge(b,local,remote).conflicts.length,1);
+});
+
+test('ambiguous same-day schedules and ordinary arrays remain atomic',()=>{
+  const b=base();b.weekOvr.w1.s1=[{day:'화',time:'10:00'},{day:'화',time:'11:00'}];b.students[0].days=['화','목'];
+  const local=copy(b),remote=copy(b);local.weekOvr.w1.s1[0].time='12:00';remote.weekOvr.w1.s1[1].time='13:00';
+  local.students[0].days=['화'];remote.students[0].days=['목'];assert.equal(merge(b,local,remote).conflicts.length,2);
+});
 test('media-safe projection retains local playback pointers only on surviving attachment identities',()=>{
   const original={id:'s1',_photoKey:'photo-local',photo:'data:image/jpeg;base64,'+'A'.repeat(6000),audios:[{id:'a1',_mediaKey:'audio-local',data:'data:audio/wav;base64,'+'B'.repeat(60000)}],videos:[{id:'v1',_mediaKey:'video-local',data:'data:video/mp4;base64,'+'C'.repeat(60000)}],consentRec:{id:'c1',_mediaKey:'consent-local',data:'D'.repeat(60000)}};
   const data={...base(),students:[original]},projected=sync.normalize(data).students[0];

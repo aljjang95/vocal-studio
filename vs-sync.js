@@ -113,6 +113,33 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     });
     return operations;
   }
+  /* Three-way merge only changes that do not disagree on the same property. Row identity,
+     deletion/edit disagreements and unkeyed arrays remain atomic. A weekly slot list can use
+     day identity only when all three lists contain at most one entry per day. */
+  function mergeMember(beforeExists,before,localExists,local,remoteExists,remote,weekDays){
+    if(localExists===beforeExists&&equal(local,before))return {exists:remoteExists,value:remote};
+    if((remoteExists===beforeExists&&equal(remote,before))||(localExists===remoteExists&&equal(local,remote)))return {exists:localExists,value:local};
+    if(!localExists||!remoteExists)return null;
+    function record(value){return value&&typeof value==='object'&&!Array.isArray(value);}
+    if(weekDays&&Array.isArray(local)&&Array.isArray(remote)&&(!beforeExists||Array.isArray(before))){
+      function byDay(list){var map=new Map();for(var i=0;i<list.length;i++){var item=list[i];if(!record(item)||typeof item.day!=='string'||!item.day||map.has(item.day))return null;map.set(item.day,item);}return map;}
+      var a=byDay(beforeExists?before:[]),b=byDay(local),c=byDay(remote),rows=[];
+      if(!a||!b||!c)return null;
+      var days=Array.from(new Set(Array.from(c.keys()).concat(Array.from(b.keys()),Array.from(a.keys()))));
+      for(var i=0;i<days.length;i++){
+        var day=days[i],slot=mergeMember(a.has(day),a.get(day),b.has(day),b.get(day),c.has(day),c.get(day),false);
+        if(!slot)return null;if(slot.exists)rows.push(slot.value);
+      }
+      return {exists:true,value:rows};
+    }
+    if(!beforeExists||!record(before)||!record(local)||!record(remote))return null;
+    var result=Object.create(null),keys=Array.from(new Set(Object.keys(remote).concat(Object.keys(local),Object.keys(before))));
+    for(var j=0;j<keys.length;j++){
+      var key=keys[j],member=mergeMember(own(before,key),before[key],own(local,key),local[key],own(remote,key),remote[key],false);
+      if(!member)return null;if(member.exists)put(result,key,member.value);
+    }
+    return {exists:true,value:result};
+  }
   function apply(remote,operations){
     var value=normalize(remote),conflicts=[];
     operations.forEach(function(op){
@@ -126,14 +153,19 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
         exists=own(target,key);current=target[key];
       }else current=target[key];
       if(exists===op.afterExists&&equal(current,op.after))return;
-      if(exists!==op.beforeExists||!equal(current,op.before)){conflicts.push(op);return;}
+      var after=op.after,afterExists=op.afterExists;
+      if(exists!==op.beforeExists||!equal(current,op.before)){
+        var merged=op.kind==='field'?null:mergeMember(op.beforeExists,op.before,op.afterExists,op.after,exists,current,op.kind==='week');
+        if(!merged){conflicts.push(op);return;}
+        after=merged.value;afterExists=merged.exists;
+      }
       if(op.kind==='row'){
-        if(!op.afterExists)target.splice(index,1);
-        else if(index<0)target.push(clone(op.after));
-        else target[index]=clone(op.after);
+        if(!afterExists)target.splice(index,1);
+        else if(index<0)target.push(clone(after));
+        else target[index]=clone(after);
       }else{
         if(op.kind==='week'&&!own(value.weekOvr,op.week))put(value.weekOvr,op.week,target);
-        if(op.afterExists)put(target,key,clone(op.after));else delete target[key];
+        if(afterExists)put(target,key,clone(after));else delete target[key];
       }
     });
     return {value:value,conflicts:conflicts};
@@ -318,10 +350,16 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
         if(!Number.isSafeInteger(saved.revision)||saved.revision<0)throw Error('invalid-journal-revision');
         if(!Array.isArray(saved.recovery))throw Error('invalid-recovery');
         if(resumeFromDurable&&!equal(startup,saved.local)){
-          if(!saved.recovery.some(function(data){return equal(data,saved.local);}))saved.recovery.push(clone(saved.local));
-          saved.local=startup;saved.resumeConflict=true;
+          if(saved.ack||diff(saved.base,saved.local).length){
+            if(!saved.recovery.some(function(data){return equal(data,saved.local);}))saved.recovery.push(clone(saved.local));
+            saved.local=startup;saved.resumeConflict=true;
+          }else{
+            // Shared app caches have no revision: this can be a stale cache or a newer save
+            // whose journal write failed. Keep it as recovery, never upload it as inferred intent.
+            if(!saved.recovery.some(function(data){return equal(data,startup);}))saved.recovery.push(startup);
+          }
           if(!this.persist(saved))return;
-        }else if(!equal(startup,saved.local)){
+        }else if(hydrated&&!equal(startup,saved.local)){
           if(!saved.recovery.some(function(data){return equal(data,startup);}))saved.recovery.push(startup);
           if(saved.ack||diff(saved.base,saved.local).length)saved.resumeConflict=true;
           if(!this.persist(saved))return;
@@ -349,7 +387,14 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     var rev=revision(data),remote=normalize(data),self=this;
     if(this.state&&rev<this.state.revision)return;
     this.latest=clone(data);
-    if(this.state&&this.state.resumeConflict){this.blocked=true;this.status('conflict');return;}
+    if(this.state&&this.state.resumeConflict){
+      if(!this.state.ack&&equal(remote,this.state.local)){
+        // This exact local value is already confirmed. Lift only the obsolete resume hold;
+        // every alternate recovery snapshot stays in the journal and durable backup.
+        var confirmed=Object.assign({},this.state,{revision:rev,base:remote});delete confirmed.resumeConflict;
+        if(!this.persist(confirmed))return;
+      }else{this.blocked=true;this.status('conflict');return;}
+    }
     if(this.hold){this.deferred=clone(data);return;}
     if(this.flight||(this.state&&this.state.ack)||(this.blocked&&(this.mode==='storage-error'||this.mode==='apply-error'))||(this.a.editing&&this.a.editing())){this.deferred=clone(data);this.status('deferred');return;}
     var next;
