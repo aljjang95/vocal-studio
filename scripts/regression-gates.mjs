@@ -88,7 +88,7 @@ has(sync,'this.state.resumeConflict','conflict blocks flush');
 
 const assetBlock=(worker.match(/const ASSETS = new Set\(\[([\s\S]*?)\]\);/)||[])[1]||'';
 const assetPaths=[...assetBlock.matchAll(/'([^']+)'/g)].map(m=>m[1]);
-ok(assetPaths.length===12&&new Set(assetPaths).size===12&&assetPaths.includes('/v3-daylight.css')&&assetPaths.includes('/studio-daylight.png'),'exactly twelve app assets including daylight theme');
+ok(assetPaths.length===13&&new Set(assetPaths).size===13&&assetPaths.includes('/v3-daylight.css')&&assetPaths.includes('/studio-daylight.png')&&assetPaths.includes('/icons-group.png'),'thirteen app assets including daylight theme and icon group');
 has(sw,"key.indexOf('vs-v2-')===0",'old service worker cache retirement');
 has(sw,'event.respondWith(fetch(event.request))','network-only service worker');
 lacks(sw,'caches.match(','service worker cache reads');

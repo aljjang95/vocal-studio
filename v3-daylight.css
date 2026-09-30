@@ -93,7 +93,29 @@ body#vocalAdmin .lw-l,body#vocalAdmin .wk-badge-l{color:#62695f!important;}
 body#vocalAdmin [style*="color:var(--tm)"],body#vocalAdmin .modal [style*="color:var(--tm)"],body#vocalAdmin .modal .fi-label{color:#62695f!important;}
 body#vocalAdmin [style*="color:var(--b)"]{color:#727c6e!important;}
 body#vocalAdmin [style*="background:var(--season-accent,var(--a));color:#fff"],body#vocalAdmin [style*="background:var(--a);color:#fff"],body#vocalAdmin button[onclick^=setTodayPrivacy][style*="background:var(--a)"]{background:#3c6554!important;color:white!important;}
-body#vocalAdmin .ui-line-icon{width:20px;height:20px;display:inline-block;vertical-align:middle;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+/* Navigation glyphs are slices of one group image, icons-group.png (4 columns × 3 rows). */
+body#vocalAdmin .studio-glyph{display:inline-block;width:20px;height:20px;flex:none;background:url('./icons-group.png') no-repeat;background-size:400% 300%;vertical-align:middle;color:transparent;font-size:0;line-height:0;overflow:hidden;}
+body#vocalAdmin .studio-glyph[data-glyph="consult"]{background-position:0 0;}
+body#vocalAdmin .studio-glyph[data-glyph="students"]{background-position:33.333% 0;}
+body#vocalAdmin .studio-glyph[data-glyph="logs"]{background-position:66.666% 0;}
+body#vocalAdmin .studio-glyph[data-glyph="timeline"]{background-position:100% 0;}
+body#vocalAdmin .studio-glyph[data-glyph="payment"]{background-position:0 50%;}
+body#vocalAdmin .studio-glyph[data-glyph="today"]{background-position:33.333% 50%;}
+body#vocalAdmin .studio-glyph[data-glyph="schedule"]{background-position:66.666% 50%;}
+body#vocalAdmin .studio-glyph[data-glyph="dashboard"]{background-position:100% 50%;}
+body#vocalAdmin .studio-glyph[data-glyph="phone"]{background-position:0 100%;}
+body#vocalAdmin .studio-glyph[data-glyph="holiday"]{background-position:33.333% 100%;}
+body#vocalAdmin .studio-glyph[data-glyph="monday"]{background-position:66.666% 100%;}
+body#vocalAdmin .studio-glyph[data-glyph="reset"]{background-position:100% 100%;}
+body#vocalAdmin .ni-ic.studio-glyph{opacity:1!important;width:20px!important;height:20px!important;}
+body#vocalAdmin .mtab-ic.studio-glyph{width:22px!important;height:22px!important;}
+body#vocalAdmin .v2-action-icon .studio-glyph{width:18px!important;height:18px!important;}
+body#vocalAdmin[data-active-page="today"] .v2-action-icon .studio-glyph{width:16px!important;height:16px!important;}
+body#vocalAdmin .sb-util-btn .studio-glyph{width:16px!important;height:16px!important;}
+body#vocalAdmin .logo-lockup{display:flex;align-items:center;gap:10px;min-width:0;}
+body#vocalAdmin .logo-mark{width:36px;height:36px;border-radius:11px;object-fit:cover;flex:none;display:block;box-shadow:0 1px 2px rgba(46,76,60,.18);}
+body#vocalAdmin .logo{padding:16px 58px 14px 16px!important;}
+body#vocalAdmin .logo-t{font-size:12px!important;letter-spacing:.045em!important;}
 /* Match the legacy selector specificity so every working surface uses daylight. */
 body#vocalAdmin .profile-photo:has(img[src*="portrait=daylight-v1"]){height:240px!important;max-height:240px!important;aspect-ratio:auto!important;background:#f4f1eb!important;}
 body#vocalAdmin .profile-photo img[src*="portrait=daylight-v1"]{object-fit:contain!important;}
