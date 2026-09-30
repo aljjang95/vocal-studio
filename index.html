@@ -2857,10 +2857,15 @@ div.mwv .lb { font-size: 7px !important; padding: 0 !important; min-height: 0 !i
 <!-- CAM MODAL -->
 <div class="ov" id="mCam" style="padding:12px">
   <div class="modal" style="width:min(96vw,820px);max-height:96vh">
-    <div class="mh" style="padding:14px 22px 12px"><div class="mt">&#x1F4F7; 사진 촬영</div><div class="mc" onclick="stopCam();cm('mCam')">&#x2715;</div></div>
+    <div class="mh" style="padding:14px 22px 12px"><div class="mt">&#x1F4F7; 사진 촬영</div><button type="button" class="mc" aria-label="촬영 닫기" onclick="cm('mCam')">&#x2715;</button></div>
     <div class="mb" style="padding:18px 22px">
+      <div id="camStatus" role="status" aria-live="polite" style="font-size:14px;line-height:1.6;margin-bottom:12px;white-space:pre-line"></div>
+      <div id="camDeviceWrap" style="display:none;margin-bottom:12px">
+        <label for="camDevice" style="display:block;margin-bottom:5px">사용할 카메라</label>
+        <select id="camDevice" style="width:100%;min-height:42px" onchange="ge('camRetryBtn').style.display='flex';camStatus('선택한 카메라를 열려면 카메라 다시 시도를 눌러주세요.',true)"><option value="">브라우저 기본 카메라</option></select>
+      </div>
       <div class="cam-wrap" id="camWrap" style="margin-bottom:14px;border-radius:14px;overflow:hidden;background:#000;max-height:65vh;display:flex;align-items:center;justify-content:center">
-        <video id="camVideo" autoplay playsinline style="width:100%;max-height:65vh;display:block;object-fit:cover;transform:scaleX(-1)"></video>
+        <video id="camVideo" autoplay muted playsinline style="width:100%;max-height:65vh;display:block;object-fit:cover;transform:scaleX(-1)"></video>
       </div>
       <div id="camPreviewWrap" style="display:none;margin-bottom:14px;border-radius:14px;overflow:hidden;max-height:65vh;display:none;align-items:center;justify-content:center;background:#000">
         <img id="camPreviewImg" style="width:100%;max-height:65vh;object-fit:contain;display:block;border-radius:14px">
@@ -2869,6 +2874,8 @@ div.mwv .lb { font-size: 7px !important; padding: 0 !important; min-height: 0 !i
         <button class="btn bp" id="camSnapBtn" onclick="snapPhoto()" style="padding:12px 28px;font-size:15px">&#x1F4F8; 촬영</button>
         <button class="btn bg2" id="camRetakeBtn" style="display:none;padding:12px 22px" onclick="retakeCam()">다시 찍기</button>
         <button class="btn bp" id="camUseBtn" style="display:none;padding:12px 28px;font-size:15px" onclick="useCamPhoto()">&#x2713; 사용</button>
+        <button type="button" class="btn bg2" id="camRetryBtn" style="display:none;padding:12px 22px" onclick="openCam(camTarget,ge('camDevice').value)">카메라 다시 시도</button>
+        <button type="button" class="btn bg2" id="camFileBtn" style="padding:12px 22px" onclick="camChooseFile()">📁 사진 파일 선택</button>
       </div>
     </div>
   </div>
@@ -5171,21 +5178,107 @@ function prevPhoto(input,previewId,dataId){
 }
 
 /* WEBCAM */
-var camStream=null,camTarget='s';
-function openCam(target){
+var camStream=null,camTarget='s',camRequest=0;
+function camStatus(message,retry){
+  ge('camStatus').textContent=message;
+  ge('camRetryBtn').style.display=retry?'flex':'none';
+}
+function camErrorMessage(error,permission){
+  var name=error&&error.name||'';
+  if(name==='NotAllowedError'||name==='PermissionDeniedError'){
+    if(/system|\bos\b/i.test(error.message||''))return '운영체제에서 카메라 접근을 차단했습니다. 기기의 카메라 개인정보 설정에서 이 브라우저의 접근 상태를 확인한 뒤 다시 시도하세요.';
+    if(permission==='denied')return '브라우저에서 이 사이트의 카메라 접근이 차단되어 있습니다. 주소창의 사이트 권한에서 카메라 허용 상태를 확인한 뒤 다시 시도하세요.';
+    return '카메라 권한이 허용되지 않았습니다. 주소창의 사이트 권한과 기기의 카메라 개인정보 설정을 확인한 뒤 다시 시도하세요.';
+  }
+  if(name==='NotFoundError'||name==='DevicesNotFoundError')return '연결된 카메라를 찾을 수 없습니다. 카메라 연결을 확인하거나 사진 파일을 선택하세요.';
+  if(name==='NotReadableError'||name==='TrackStartError')return '카메라를 시작할 수 없습니다. 다른 카메라 앱(예: Logi Capture, OBS, PRISM)이 사용 중이면 종료하거나, 사용할 수 있는 실제 또는 가상 카메라를 아래에서 선택하고 다시 시도하세요. 카메라 연결과 기기의 카메라 개인정보 설정도 확인해주세요.';
+  if(name==='SecurityError')return '이 페이지의 보안 설정에서 카메라 사용을 제한했습니다. 스튜디오의 HTTPS 주소로 직접 접속하거나 사진 파일을 선택하세요.';
+  if(name==='OverconstrainedError')return '카메라가 요청한 촬영 조건을 지원하지 않습니다. 다른 카메라를 연결하거나 사진 파일을 선택하세요.';
+  if(name==='AbortError')return '카메라 시작이 중단되었습니다. 다시 시도하거나 사진 파일을 선택하세요.';
+  return '카메라를 열지 못했습니다. 카메라 연결 상태를 확인하고 다시 시도하거나 사진 파일을 선택하세요.';
+}
+function camListDevices(request,selected){
+  if(!navigator.mediaDevices||typeof navigator.mediaDevices.enumerateDevices!=='function')return;
+  navigator.mediaDevices.enumerateDevices().then(function(devices){
+    if(request!==camRequest||!ge('mCam').classList.contains('open'))return;
+    var select=ge('camDevice');select.textContent='';
+    var option=document.createElement('option');option.value='';option.textContent='브라우저 기본 카메라';select.appendChild(option);
+    devices.filter(function(d){return d.kind==='videoinput'&&d.deviceId;}).forEach(function(d,i){
+      var o=document.createElement('option');o.value=d.deviceId;o.textContent=d.label||('카메라 '+(i+1));select.appendChild(o);
+    });
+    if(selected&&!Array.from(select.options).some(function(o){return o.value===selected;})){
+      var missing=document.createElement('option');missing.value=selected;missing.textContent='선택한 카메라 (연결 확인 필요)';select.appendChild(missing);
+    }
+    select.value=selected||'';
+    ge('camDeviceWrap').style.display=select.options.length>1?'block':'none';
+  }).catch(function(){});
+}
+function openCam(target,deviceId){
+  if(target!=='s'&&target!=='ci')return;
+  stopCam();
+  var request=camRequest;
   camTarget=target;
+  ge('camDeviceWrap').style.display='none';
   ge('camVideo').style.display='block';
   ge('camPreviewWrap').style.display='none';
-  ge('camSnapBtn').style.display='flex';
+  ge('camPreviewImg').removeAttribute('src');
+  ge('camSnapBtn').style.display='none';
+  ge('camSnapBtn').disabled=true;
   ge('camRetakeBtn').style.display='none';
   ge('camUseBtn').style.display='none';
-  navigator.mediaDevices.getUserMedia({video:true}).then(function(stream){
-    camStream=stream;ge('camVideo').srcObject=stream;om('mCam');
-  }).catch(function(){toast('카메라 접근이 거부되었습니다','⚠️');});
+  camStatus('카메라 권한을 확인하고 있습니다. 브라우저에서 요청하면 허용을 선택하세요. 사진 파일로도 진행할 수 있습니다.',false);
+  om('mCam');
+  if(!window.isSecureContext){camStatus('카메라 촬영은 보안 연결(HTTPS)에서 사용할 수 있습니다. 스튜디오의 HTTPS 주소로 접속하거나 사진 파일을 선택하세요.',false);return;}
+  if(!navigator.mediaDevices||typeof navigator.mediaDevices.getUserMedia!=='function'){camStatus('이 브라우저는 카메라 촬영을 지원하지 않습니다. 최신 브라우저로 접속하거나 사진 파일을 선택하세요.',false);return;}
+  var policy=document.permissionsPolicy||document.featurePolicy;
+  if(policy&&typeof policy.allowsFeature==='function'&&!policy.allowsFeature('camera')){camStatus('이 페이지의 보안 정책에서 카메라 사용을 제한했습니다. 스튜디오 주소로 직접 접속하거나 사진 파일을 선택하세요.',false);return;}
+  function active(){return request===camRequest&&ge('mCam').classList.contains('open');}
+  function failed(error){
+    if(!active())return;
+    stopCam();
+    var failureRequest=camRequest;
+    camStatus(camErrorMessage(error),true);
+    camListDevices(failureRequest,deviceId);
+    /* Permissions API cannot reliably distinguish site denial from OS denial. */
+    if(error&&error.name==='NotAllowedError'&&navigator.permissions&&navigator.permissions.query){
+      try{navigator.permissions.query({name:'camera'}).then(function(result){
+        if(failureRequest===camRequest&&ge('mCam').classList.contains('open'))camStatus(camErrorMessage(error,result.state),true);
+      }).catch(function(){});}catch(ignore){}
+    }
+  }
+  try{
+    navigator.mediaDevices.getUserMedia({video:deviceId?{deviceId:{exact:deviceId}}:true,audio:false}).then(function(stream){
+      if(!active()){stream.getTracks().forEach(function(t){t.stop();});return;}
+      camStream=stream;
+      camListDevices(request,deviceId);
+      var video=ge('camVideo');
+      video.onloadedmetadata=function(){
+        if(!active()||camStream!==stream||!video.videoWidth||!video.videoHeight)return;
+        ge('camSnapBtn').disabled=false;ge('camSnapBtn').style.display='flex';
+        camStatus('카메라가 준비되었습니다. 촬영 버튼을 눌러 사진을 찍으세요.',false);
+      };
+      video.srcObject=stream;
+      var playing=video.play();
+      if(playing&&playing.catch)playing.catch(failed);
+    }).catch(failed);
+  }catch(error){failed(error);}
 }
-function stopCam(){if(camStream){camStream.getTracks().forEach(function(t){t.stop();});camStream=null;}}
+function stopCam(){
+  camRequest++;
+  if(camStream){camStream.getTracks().forEach(function(t){t.stop();});camStream=null;}
+  var video=ge('camVideo');
+  if(video){video.onloadedmetadata=null;video.srcObject=null;}
+  if(ge('camSnapBtn'))ge('camSnapBtn').disabled=true;
+}
+window.addEventListener('pagehide',stopCam);
+function camChooseFile(){
+  var input=ge(camTarget+'-file-input');
+  if(!input){camStatus('사진 입력 화면을 다시 열어 파일을 선택하세요.',false);return;}
+  cm('mCam');input.click();
+}
 function snapPhoto(){
   var v=ge('camVideo');
+  if(!camStream||ge('camSnapBtn').disabled||!v.videoWidth||!v.videoHeight){camStatus('카메라가 준비된 뒤 촬영하세요. 사진 파일로도 진행할 수 있습니다.',false);return;}
   var c=document.createElement('canvas');
   /* 최대 800px로 리사이즈 (localStorage 용량 절약) */
   var MAX=800;
@@ -5203,6 +5296,7 @@ function snapPhoto(){
   ge('camSnapBtn').style.display='none';
   ge('camRetakeBtn').style.display='flex';
   ge('camUseBtn').style.display='flex';
+  camStatus('촬영한 사진을 확인하고 사용을 선택하세요.',false);
 }
 function retakeCam(){
   ge('camVideo').style.display='block';
@@ -5213,7 +5307,9 @@ function retakeCam(){
 }
 function useCamPhoto(){
   var data=ge('camPreviewImg').src;
-  ge(camTarget+'-photo-data').value=data;
+  var field=ge(camTarget+'-photo-data');
+  if(!field||!/^data:image\/jpeg;base64,/.test(data||'')){camStatus('먼저 사진을 촬영하거나 사진 파일을 선택하세요.',false);return;}
+  field.value=data;
   var pv=ge(camTarget+'-photo-preview');
   if(pv){
     pv.innerHTML='<img src="'+data+'" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onclick="openLightbox(this.src)">';
@@ -9951,6 +10047,22 @@ function openRecordConsent(did,mode){
 
 
 /* 출력 */
+function assessmentPrintCSS(){
+  /* Keep feedback readable at 100% A4 scale; let long sections span pages. */
+  return '@page{size:A4;margin:12mm;}'+
+    'html{background:#fff;}body{width:100%;max-width:186mm;margin:0 auto;padding:6mm;box-sizing:border-box;font-size:11pt!important;line-height:1.5!important;}'+
+    'body *{box-sizing:border-box;min-width:0;font-size:11pt!important;line-height:1.5!important;overflow-wrap:anywhere;}'+
+    'h1{font-size:17pt!important;break-after:avoid;page-break-after:avoid;} .sec-t{font-size:12pt!important;padding:5px 10px;break-after:avoid;}'+
+    '.sec{overflow:visible;break-inside:auto;page-break-inside:auto;margin-bottom:12px;}'+
+    '.two-col{display:block;padding:8px 10px;} .two-col>div+div{margin-top:12px;}'+
+    '.box,.comment-box{height:auto;max-height:none;overflow:visible;line-height:1.6!important;}'+
+    '.box-label{break-after:avoid;} .notice-item{break-inside:avoid;page-break-inside:avoid;padding:5px 0;}'+
+    '.notice-body{flex:1;} .sign-area,.account-box{break-inside:avoid;page-break-inside:avoid;} .sign-lbl{word-break:keep-all;overflow-wrap:normal;}'+
+    'table{width:100%;table-layout:fixed;}td{width:auto!important;vertical-align:top;}'+
+    'td:first-child{width:25%!important;}td:last-child{width:35%!important;}tr{break-inside:avoid;page-break-inside:avoid;}'+
+    'td span[style*="inline-flex"]{flex-wrap:wrap;max-width:100%;} .info-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}'+
+    '@media print{body{padding:0;max-width:none;}button,.no-print{display:none!important;}}';
+}
 function printBeforeSheet(did,mode){
   /* 출력 전 화면 값 자동 저장 */
   var data=mode==='consult'?consults.find(function(x){return x.id===did;}):students.find(function(x){return x.id===did;});
@@ -10000,15 +10112,17 @@ function printBeforeSheet(did,mode){
     '.sign-lbl{font-size:8.5px;color:#555;}'+
     '@media print{@page{size:A4;margin:5mm 8mm;}body{padding:0;}button{display:none!important;}}';
 
-  w.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>레슨 평가지</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>'+css+'</style></head><body>');
+  css+=assessmentPrintCSS();
+  w.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>레슨 평가지</title><style>'+css+'</style></head><body>');
   w.document.write('<h1>HLB보컬스튜디오</h1>');
   w.document.write('<div class="studioname">원장 &nbsp;·&nbsp; ☎ [스튜디오 연락처]</div>');
   w.document.write('<div class="sub">수강생: <strong>'+esc(data.name)+'</strong>&nbsp;&nbsp;|&nbsp;&nbsp;레슨 유의사항 &amp; 트레이너 초기 평가&nbsp;&nbsp;|&nbsp;&nbsp;'+ds+'</div>');
 
   /* ── 트레이너 초기 평가 ── */
   w.document.write('<div class="sec"><div class="sec-t">트레이너 초기 평가</div><div class="two-col">');
-  w.document.write('<div><div class="box-label">발견된 문제점</div><div class="box">'+((prob||'').split('\n').join('<br>')||'<span style="color:#bbb">—</span>')+'</div></div>');
-  w.document.write('<div><div class="box-label">개선 방향 &amp; 레슨 계획</div><div class="box">'+((impr||'').split('\n').join('<br>')||'<span style="color:#bbb">—</span>')+'</div></div>');
+  if(data.song)w.document.write('<div><div class="box-label">평가 곡</div><div class="box">'+esc(data.song)+'</div></div>');
+  w.document.write('<div><div class="box-label">발견된 문제점</div><div class="box">'+(esc(prob||'').split('\n').join('<br>')||'<span style="color:#bbb">—</span>')+'</div></div>');
+  w.document.write('<div><div class="box-label">개선 방향 &amp; 레슨 계획</div><div class="box">'+(esc(impr||'').split('\n').join('<br>')||'<span style="color:#bbb">—</span>')+'</div></div>');
   w.document.write('</div></div>');
 
   /* ── 유의사항 ── */
@@ -11205,7 +11319,7 @@ function evalHTML(ds){
     +'.sign-area{display:flex;justify-content:space-between;align-items:flex-end;margin-top:12px;gap:16px;}'
     +'.sign-box{text-align:center;flex:1;}.sign-line{border-bottom:1.5px solid #333;height:36px;margin-bottom:4px;}.sign-lbl{font-size:10.5px;color:#555;}'
     +'@page{margin:14mm 16mm;}'
-    +'@media print{.no-print{display:none!important;}}';
+    +'@media print{.no-print{display:none!important;}}'+assessmentPrintCSS();
   return '<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>보컬 평가지</title><style>'+css+'</style></head><body>'
     +'<h1>Vocal Studio 보컬 평가지</h1><div class="sub">접수일: '+ds+'</div>'
     +'<div class="sec"><div class="sec-t">기본 정보</div><div class="info-grid">'
@@ -11551,15 +11665,17 @@ function printEvalSheet(cid){
     '.sign-lbl{font-size:8.5px;color:#555;}'+
     '@media print{@page{size:A4;margin:5mm 8mm;}body{padding:0;}button{display:none!important;}}';
 
-  w.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>레슨 평가지</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>'+css+'</style></head><body>');
+  css+=assessmentPrintCSS();
+  w.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>레슨 평가지</title><style>'+css+'</style></head><body>');
   w.document.write('<h1>HLB보컬스튜디오</h1>');
   w.document.write('<div class="studioname">원장 &nbsp;·&nbsp; ☎ [스튜디오 연락처]</div>');
   w.document.write('<div class="sub">수강생: <strong>'+esc(c.name)+'</strong>&nbsp;&nbsp;|&nbsp;&nbsp;레슨 유의사항 &amp; 트레이너 초기 평가&nbsp;&nbsp;|&nbsp;&nbsp;'+ds+'</div>');
 
   /* ── 트레이너 초기 평가 ── */
   w.document.write('<div class="sec"><div class="sec-t">트레이너 초기 평가</div><div class="two-col">');
-  w.document.write('<div><div class="box-label">발견된 문제점</div><div class="box">'+((prob||'').split('\n').join('<br>')||'<span style="color:#bbb">—</span>')+'</div></div>');
-  w.document.write('<div><div class="box-label">개선 방향 &amp; 레슨 계획</div><div class="box">'+((impr||'').split('\n').join('<br>')||'<span style="color:#bbb">—</span>')+'</div></div>');
+  if(c.song)w.document.write('<div><div class="box-label">평가 곡</div><div class="box">'+esc(c.song)+'</div></div>');
+  w.document.write('<div><div class="box-label">발견된 문제점</div><div class="box">'+(esc(prob||'').split('\n').join('<br>')||'<span style="color:#bbb">—</span>')+'</div></div>');
+  w.document.write('<div><div class="box-label">개선 방향 &amp; 레슨 계획</div><div class="box">'+(esc(impr||'').split('\n').join('<br>')||'<span style="color:#bbb">—</span>')+'</div></div>');
   w.document.write('</div></div>');
 
   /* ── 유의사항 ── */
@@ -12049,7 +12165,7 @@ function openLightbox(src){
 /* HELPERS */
 function closestOv(el){var p=el;while(p&&!p.classList.contains("ov"))p=p.parentElement;if(p)p.remove();}
 function om(id){ge(id).classList.add('open');}
-function cm(id){ge(id).classList.remove('open');}
+function cm(id){if(id==='mCam')stopCam();ge(id).classList.remove('open');}
 document.querySelectorAll('.ov').forEach(function(o){
   o.addEventListener('click',function(ev){
     var noAutoClose=['mQS','mS','mLR','mFlexWeek','mWE','mTempReschedule'];
