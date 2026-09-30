@@ -10,7 +10,8 @@
   <link rel="manifest" href="/manifest.json" crossorigin="use-credentials">
   <link rel="apple-touch-icon" href="/icon-192.png">
   <meta name="mobile-web-app-capable" content="yes">
-  <script src="./vs-sync.js?v=20260929-quota2"></script>
+  <script src="./vs-backup.js?v=20260930-overflow1"></script>
+  <script src="./vs-sync.js?v=20260930-overflow1"></script>
   <script src="./cf-transport.js?v=20260917-shared1"></script>
   <script src="./cf-migration.js?v=20260915-cf1"></script>
   <script src="./v2-ui.js?v=20260928-v3"></script>
@@ -4673,6 +4674,7 @@ var _vsSyncLabels={
   'legacy-conflict':'이전 버전 변경 감지 · 자동 저장 중지',
   conflict:'동시 수정 충돌 · 변경 보관 · 확인 필요',
   'storage-error':'기기 저장 공간 확인 필요 · 서버 전송 중지',
+  'storage-pending':'기기 보관본 저장 확인 중 · 확인 후 서버에 전송합니다',
   'apply-error':'화면 반영 확인 필요 · 보관본 유지',
   'write-error':'서버 저장 실패 · 변경 보관 · 다시 확인해 주세요',
   frozen:'마이그레이션 동결 · 서버 저장 보류'
@@ -4680,7 +4682,7 @@ var _vsSyncLabels={
 function _updateV2InitialSyncState(mode){
   var content=ge('content');if(!content)return;
   var pane=ge('v2InitialSyncState');
-  var waiting=['checking-session','checking-server','unconfirmed'].indexOf(mode)>=0;
+  var waiting=['checking-session','checking-server','unconfirmed','storage-pending'].indexOf(mode)>=0;
   if(waiting){
     if(_cfAppHydrated||(_vsSync&&_vsSync.ready))return;
     /* Keep an in-progress form: only replace the view once the user is not editing. */
@@ -4693,8 +4695,8 @@ function _updateV2InitialSyncState(mode){
     pane.setAttribute('role','status');pane.setAttribute('aria-live','polite');pane.setAttribute('aria-busy','true');
     while(pane.firstChild)pane.removeChild(pane.firstChild);
     var spinner=document.createElement('span');spinner.className='v2-initial-sync-spinner';spinner.setAttribute('aria-hidden','true');
-    var title=document.createElement('strong');title.textContent='공용 자료를 불러오는 중';
-    var detail=document.createElement('p');detail.textContent='서버 응답을 확인하고 있습니다. 확인이 끝나면 스케줄과 명단을 표시합니다.';
+    var title=document.createElement('strong');title.textContent=mode==='storage-pending'?'기기 보관본 저장을 확인하는 중':'공용 자료를 불러오는 중';
+    var detail=document.createElement('p');detail.textContent=mode==='storage-pending'?'이전 보관본을 유지하며 새 보관본을 안전하게 저장하고 있습니다. 확인 후 연결을 계속합니다.':'서버 응답을 확인하고 있습니다. 확인이 끝나면 스케줄과 명단을 표시합니다.';
     pane.appendChild(spinner);pane.appendChild(title);pane.appendChild(detail);
     content.setAttribute('aria-busy','true');return;
   }
@@ -4726,10 +4728,9 @@ function _vsCarryRows(rows,previous){
   });
 }
 var _vsSync=null;
-try{if(typeof VSSync!=='undefined')_vsSync=VSSync.create({
+try{if(typeof VSBackup==='undefined')throw Error('backup-module-unavailable');if(typeof VSSync!=='undefined')_vsSync=VSSync.create({
   namespace:'vocal-studio',store:sessionStorage,backupStore:localStorage,
-  /* Last resort when a sync backup cannot be written: keep only the newest local recovery snapshot. */
-  reclaim:function(){return _pruneRecoverySnapshots(1)+_reclaimDuplicateRecoverySnapshot();},
+  overflowStore:VSBackup.create({indexedDB:window.indexedDB}),
   instanceId:typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():undefined,
   forkInstance:!!(performance.getEntriesByType&&performance.getEntriesByType('navigation')[0]&&performance.getEntriesByType('navigation')[0].type==='navigate'),
   owner:function(){return hasAdminSession()?_cfSession.principal:null;},
@@ -4792,10 +4793,15 @@ function _vsSyncActions(mode){
     bar=document.createElement('div');bar.id='vsSyncActions';bar.style.cssText='display:flex;flex-wrap:wrap;gap:6px;width:100%;min-width:0';
     [['vsSyncRetry','다시 확인',function(){_retryCloudflareSync();}],
      ['vsMediaRetry','미디어 다시 전송',function(){_cfDrainMedia();}],
-     ['vsSyncExport','기기 보관본',function(){
-       if(!_vsSync)return;var blob=new Blob([JSON.stringify(_vsSync.exportData(),null,2)],{type:'application/json'});
-       var url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='vocal-studio-local-recovery.json';
-       document.body.appendChild(link);link.click();link.remove();setTimeout(function(){URL.revokeObjectURL(url);},1000);
+     ['vsSyncExport','기기 보관본',async function(){
+       if(!_vsSync)return;var button=ge('vsSyncExport'),epoch=_vsSync.epoch;button.disabled=true;
+       try{
+         var data=await _vsSync.exportData();if(!_vsSync.guard(epoch))throw Error('export-session-changed');
+         var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+         var url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='vocal-studio-local-recovery.json';
+         document.body.appendChild(link);link.click();link.remove();setTimeout(function(){URL.revokeObjectURL(url);},1000);
+       }catch(error){_showSyncStatus('기기 보관본을 확인하지 못했습니다 · 저장소 연결을 확인한 뒤 다시 시도해 주세요');}
+       finally{button.disabled=false;}
      }],
      ['vsSyncUseServer','서버 기준 사용',function(){
        if(_vsSync&&confirm('미동기화 변경을 기기 보관본에 남기고, 마지막으로 확인한 서버 자료를 사용합니다. 계속할까요?'))_vsSync.useServer();

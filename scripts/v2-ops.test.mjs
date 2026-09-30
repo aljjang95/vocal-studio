@@ -174,12 +174,16 @@ test('lesson types map to stable color keys and cards expose them without contac
   assert.match(css,/--v2-font:"Pretendard"/);
   assert.doesNotMatch(css.slice(css.indexOf('V2.1 design refresh')),/font-style:italic/);
 });
-test('sync backup quota falls back to pruning local recovery snapshots',()=>{
-  const hook=html.match(/backupStore:localStorage,[\s\S]*?reclaim:(function\(\)\{[^}]*\})/);
-  assert.ok(hook,'backup adapter exposes a quota recovery hook');
-  const calls=[];
-  const context=vm.createContext({_pruneRecoverySnapshots:keep=>{calls.push(['prune',keep]);return 2;},_reclaimDuplicateRecoverySnapshot:()=>{calls.push(['duplicates']);return 1;}});
-  assert.equal(vm.runInContext('('+hook[1]+')()',context),3);
-  assert.deepEqual(calls,[['prune',1],['duplicates']]);
+test('sync backup adapter uses dedicated overflow without pruning local recovery snapshots',()=>{
+  const adapter=html.slice(html.indexOf('var _vsSync=null;'),html.indexOf('saveAll=function(){',html.indexOf('var _vsSync=null;')));
+  const calls=[],indexedDB={synthetic:true},overflowStore={synthetic:true};
+  const context=vm.createContext({window:{indexedDB},sessionStorage:{},localStorage:{},performance:{},crypto:{},
+    VSBackup:{create:options=>{calls.push(options.indexedDB);return overflowStore;}},VSSync:{create:options=>options},
+    _cfDatabase(){},_vsEditing(){},_showSyncStatus(){}});
+  vm.runInContext(adapter,context);
+  assert.deepEqual(calls,[indexedDB]);assert.equal(context._vsSync.overflowStore,overflowStore);
+  assert.equal(context._vsSync.reclaim,undefined,'backup overflow cannot delete app recovery to obtain capacity');
+  assert.match(html,/<script src="\.\/vs-backup\.js\?v=/);
   assert.match(html,/<script src="\.\/vs-sync\.js\?v=/);
+  assert.match(build,/'vs-backup.js'/);assert.match(read('worker/index.mjs'),/'\/vs-backup.js'/);
 });
