@@ -2805,6 +2805,10 @@ div.mwv .lb { font-size: 7px !important; padding: 0 !important; min-height: 0 !i
         <div class="f1" style="margin-bottom:12px"><label>요일별 고정 시간</label><div id="tsSlots"><span style="font-size:13px;color:var(--tm)">위에서 요일을 선택하면 나타납니다</span></div></div>
       </div>
       <div id="s-confirmed-hint" style="display:none;background:var(--ag);border:1px solid var(--b2);border-radius:9px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--t)"></div>
+      <div class="student-confirmed-entry">
+        <button type="button" class="btn bg2" id="s-confirmed-register" onclick="openStudentConfirmedSchedule()">일정 확정 등록</button>
+        <div id="s-confirmed-entry-note" role="note">입력 중인 정보는 유지됩니다. 날짜별 확정 일정을 등록·수정·삭제할 수 있습니다.</div>
+      </div>
       <div id="s-week-override-hint" role="note" style="display:none;background:var(--ag);border:1px solid var(--b2);border-radius:9px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--t)"></div>
       <div id="s-schedule-error" role="alert" style="display:none;background:#fff0ec;border:1px solid var(--r);border-radius:9px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--r)"></div>
       <div id="s-flex-wrap" style="display:none;background:rgba(110,163,200,.06);border:1px solid rgba(110,163,200,.18);border-radius:10px;padding:12px 14px;margin-bottom:12px">
@@ -2967,6 +2971,7 @@ div.mwv .lb { font-size: 7px !important; padding: 0 !important; min-height: 0 !i
     </div>
     <div class="mb">
       <div style="font-size:13px;color:var(--ts);margin-bottom:12px;background:var(--ag);border-radius:8px;padding:9px 12px;color:var(--a)">배정할 레슨생을 선택하세요. 여러 명 동시 배정 가능합니다.</div>
+      <label for="qs-time">배정 시간</label><select id="qs-time" onchange="changeQuickSlotTime(this.value)"></select>
       <div id="qsBody"></div>
     </div>
     <div class="mf">
@@ -6757,12 +6762,12 @@ function buildWeekGlance(mon,sched){
   o+='<div class="week-glance-grid">';
   ALL7.forEach(function(day,i){
     var date=toDS(addDays(mon,i)),slots=scheduleSlotsForDay(sched,day);
-    o+='<div class="week-glance-day" data-glance-date="'+date+'">';
-    o+='<div class="week-glance-day-head"><strong>'+day+'</strong><span>'+(addDays(mon,i).getMonth()+1)+'/'+addDays(mon,i).getDate()+'</span><b>'+slots.length+'</b></div>';
-    if(!slots.length)o+='<div class="week-glance-empty">일정 없음</div>';
+    o+='<div class="week-glance-day" data-glance-date="'+date+'" data-date="'+date+'" onclick="openQuickSlot(this.dataset.date)">';
+    o+='<button type="button" class="week-glance-day-head" data-date="'+date+'" onclick="event.stopPropagation();openQuickSlot(this.dataset.date)" aria-label="'+date+' '+day+'요일 새 일정 추가"><strong>'+day+'</strong><span>'+(addDays(mon,i).getMonth()+1)+'/'+addDays(mon,i).getDate()+'</span><b>'+slots.length+'</b></button>';
+    if(!slots.length)o+='<button type="button" class="week-glance-empty" data-date="'+date+'" onclick="event.stopPropagation();openQuickSlot(this.dataset.date)">＋ 일정 추가</button>';
     slots.forEach(function(slot){
       var label=scheduleStatusLabel(slot),exception=slot.oneOff&&!slot.absent;
-      o+='<button type="button" class="week-glance-slot'+(exception?' is-exception':'')+'" data-day="'+day+'" data-sid="'+esc(slot.s.id)+'" data-time="'+esc(slot.time)+'" data-date="'+date+'" onclick="lbClick(this)"';
+      o+='<button type="button" class="week-glance-slot'+(exception?' is-exception':'')+'" data-day="'+day+'" data-sid="'+esc(slot.s.id)+'" data-time="'+esc(slot.time)+'" data-date="'+date+'" onclick="event.stopPropagation();lbClick(this)"';
       o+=' aria-label="'+esc(day+' '+slot.time+' '+(slot.s.name||'이름 없음')+' '+label)+'">';
       o+='<time>'+esc(slot.time)+'</time><span>'+esc(slot.s.name||'이름 없음')+'</span>';
       if(exception)o+='<i aria-label="이번 주 변경">변경</i>';
@@ -6770,7 +6775,7 @@ function buildWeekGlance(mon,sched){
     });
     o+='</div>';
   });
-  o+='</div><div class="week-glance-note">이번 주 변경 일정은 기본 고정 요일보다 우선합니다. 일정을 누르면 상세 메뉴가 열립니다.</div></section>';
+  o+='</div><div class="week-glance-note">이번 주 변경 일정은 기본 고정 요일보다 우선합니다. 날짜를 누르면 새 일정 추가, 레슨을 누르면 상세 메뉴가 열립니다.</div></section>';
   return o;
 }
 function auditScheduleConflicts(mon){
@@ -6793,6 +6798,15 @@ function _scheduleNewConflicts(after,before){
   var seen={};
   (before&&before.conflicts||[]).forEach(function(c){seen[_scheduleConflictKey(c)]=true;});
   return after.conflicts.filter(function(c){return !seen[_scheduleConflictKey(c)];});
+}
+function studentScheduleValidationWeeks(s){
+  var weeks={};
+  function add(d){var m=getMon(d);weeks[getWK(m)]=m;}
+  [getMon(new Date()),typeof getViewMon==='function'?getViewMon():getMon(new Date()),s.st?getMon(parseDateLocal(s.st)):getMon(new Date())].forEach(function(m){add(m);add(addDays(m,7));add(addDays(m,14));});
+  Object.keys(weekOvr).forEach(function(wk){var m=_scheduleMondayForWeekKey(wk);if(m)add(m);});
+  students.forEach(function(row){_scheduleStudentConfirmedDates(row).forEach(function(cd){add(parseDateLocal(cd.date));});});
+  consults.forEach(function(row){consultDateEntries(row).forEach(function(cd){add(parseDateLocal(cd.date));});});
+  return weeks;
 }
 function _scheduleConflictToast(audit,label,beforeAudit){
   if(!audit||!audit.overbookCount)return false;
@@ -6905,12 +6919,16 @@ function attachMobileEvents(){
   });
 }
 
-function openQuickSlot(){
+function openQuickSlot(dateStr){
   /* 현재 선택된 요일로 빠른 배정 */
   var mon=getViewMon();
   var d=ALL7[mobileSchedDay];
   var dd=addDays(mon,mobileSchedDay);
   var ddStr=toDS(dd);
+  if(dateStr){
+    dd=parseDateLocal(dateStr);ddStr=toDS(dd);
+    d=JSDOW[dd.getDay()];
+  }
   /* 가장 가까운 정시 */
   var now=new Date();
   var h=now.getHours();
@@ -6918,7 +6936,9 @@ function openQuickSlot(){
   var timeStr=(h<10?'0':'')+h+':00';
   /* HRS_LBL에 있는 시간으로 보정 */
   if(HRS_LBL.indexOf(timeStr)<0) timeStr=HRS_LBL[0];
-  cellClick(d,timeStr,ddStr);
+  if(isOffDay(ddStr)){
+    vsConfirm({msg:getOffLabel(ddStr)+' 날 레슨 배정',sub:'휴무일이지만 이 날 레슨을 배정하시겠습니까?',okLabel:'배정',onOk:function(){cellClick(d,timeStr,ddStr);}});
+  }else cellClick(d,timeStr,ddStr);
 }
 
 
@@ -7011,7 +7031,7 @@ function openBulkSchedule(sid){
 
   var confirmed=_scheduleStudentConfirmedDates(s);
   var html='<div class="modal wide"><div class="mh"><div class="mt">📅 '+esc(s.name)+' 확정 일정 관리</div><div class="mc" onclick="document.getElementById(\'mBulkSched\').remove()">&#x2715;</div></div><div class="mb">';
-  html+='<div class="bulk-priority-note">확정 날짜는 해당 주의 반복 고정 일정보다 우선합니다. 이미 저장한 이번 주 변경은 유지하며 새로 확정한 날짜만 함께 표시합니다.</div>';
+  html+='<div class="bulk-priority-note">확정 날짜는 해당 주의 반복 고정 일정보다 우선합니다. 이번 주 변경·빈 주·취소·보강은 유지하며 새로 확정한 날짜만 함께 표시합니다. 취소한 시간은 다시 살리지 않습니다.</div>';
   html+='<div class="bulk-existing-head">현재 확정 일정 <b>'+confirmed.length+'건</b></div>';
   html+='<div id="bulk-confirmed-list">';
   if(!confirmed.length)html+='<div class="bulk-no-confirmed">아직 확정된 날짜가 없습니다.</div>';
@@ -7040,6 +7060,7 @@ function openBulkSchedule(sid){
   html+='</div></div></div>';
   m.innerHTML=html;
   m.dataset.initialConfirmedCount=String(confirmed.length);
+  if(editSid===sid&&curSType==='flex'&&ge('s-flex-week-rows'))m._studentFlexDraft=_collectStudentFlexWeekRows();
   document.body.appendChild(m);
   window._bulkSelections={};
 }
@@ -7140,7 +7161,7 @@ function saveBulkSchedule(sid){
   var entries=[],seen={},error=ge('bulk-error');
   if(error){error.style.display='none';error.textContent='';}
   function appendDate(ds,time){
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(ds)||!/^\d{2}:\d{2}$/.test(time))return false;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(ds)||toDS(parseDateLocal(ds))!==ds||!/^([01]\d|2[0-3]):[0-5]\d$/.test(time))return false;
     var key=ds+'_'+time;
     if(!seen[key]){seen[key]=true;entries.push({date:ds,time:time});}
     return true;
@@ -7170,7 +7191,11 @@ function saveBulkSchedule(sid){
     }
   }
   entries.sort(function(a,b){return (a.date+' '+a.time).localeCompare(b.date+' '+b.time);});
-  pushUndo();
+  var affectedWeeks={},beforeAudits={};
+  original.concat(entries).forEach(function(cd){var m=getMon(parseDateLocal(cd.date));affectedWeeks[getWK(m)]=m;});
+  Object.keys(affectedWeeks).forEach(function(wk){beforeAudits[wk]=auditScheduleConflicts(affectedWeeks[wk]);});
+  var weekBefore=weekOvr;
+  weekOvr=JSON.parse(JSON.stringify(weekOvr));
   /* Remove only exact old confirmation slots that this modal explicitly changed or
      deleted. Unmarked manual overrides and other weeks remain untouched. */
   var nextKeys={};entries.forEach(function(cd){nextKeys[cd.date+'_'+cd.time]=true;});
@@ -7180,7 +7205,7 @@ function saveBulkSchedule(sid){
     var ov=weekOvr[wk];
     if(!ov||!Object.prototype.hasOwnProperty.call(ov,sid))return;
     ov[sid]=(ov[sid]||[]).filter(function(sl){
-      return !(sl.day===day&&sl.time===cd.time&&sl.source==='consult-confirmed');
+      return !(sl.day===day&&sl.time===cd.time&&sl.source==='consult-confirmed'&&!sl.absent&&sl.kind!=='cancel'&&sl.overrideType!=='cancel');
     });
   });
   /* Keep old slots in a manually edited week, including an empty week, and add only
@@ -7192,23 +7217,51 @@ function saveBulkSchedule(sid){
     if(!ov||!Object.prototype.hasOwnProperty.call(ov,sid))return;
     var slots=(ov[sid]||[]).slice();
     var existing=slots.find(function(sl){return sl.day===day&&sl.time===cd.time;});
-    if(existing){existing.absent=false;existing.source='consult-confirmed';}
+    if(existing){/* An existing manual cancellation or makeup remains authoritative. */}
     else slots.push({day:day,time:cd.time,absent:false,source:'consult-confirmed'});
     ov[sid]=slots;
   });
   var linked=s.consultData&&consults.find(function(c){return c.id===s.consultData.id&&c.converted;});
-  if(linked){
-    linked.confirmedDates=entries.map(function(cd){return {date:cd.date,time:cd.time};});
-    linked.firstDate=entries.length?entries[0].date:'';
-    linked.firstTime=entries.length?entries[0].time:'';
+  var owners=[s];if(linked)owners.push(linked);if(s.consultData)owners.push(s.consultData);
+  var ownerBefore=owners.map(function(owner){return {owner:owner,values:['confirmedDates','firstDate','firstTime'].map(function(key){return {key:key,had:Object.prototype.hasOwnProperty.call(owner,key),value:owner[key]};})};});
+  function applyDates(){owners.forEach(function(owner){owner.confirmedDates=entries.map(function(cd){return {date:cd.date,time:cd.time};});owner.firstDate=entries.length?entries[0].date:'';owner.firstTime=entries.length?entries[0].time:'';});}
+  function restoreDates(){ownerBefore.forEach(function(row){row.values.forEach(function(v){if(v.had)row.owner[v.key]=v.value;else delete row.owner[v.key];});});}
+  applyDates();
+  var newConflict=null;
+  Object.keys(affectedWeeks).some(function(wk){newConflict=_scheduleNewConflicts(auditScheduleConflicts(affectedWeeks[wk]),beforeAudits[wk])[0];return !!newConflict;});
+  var proposedWeek=weekOvr;
+  weekOvr=weekBefore;restoreDates();
+  if(newConflict){
+    if(error){error.textContent=newConflict.date+' '+newConflict.time+'에 다른 확정 일정이 있습니다. 저장되지 않았습니다.';error.style.display='block';}
+    return;
   }
-  s.confirmedDates=entries.map(function(cd){return {date:cd.date,time:cd.time};});
+  pushUndo();weekOvr=proposedWeek;applyDates();
   saveAll();
   modal.remove();
   toast(entries.length+'건 확정 일정 저장됨 📅');
   renderSidebarToday();
-  if(page==='schedule'){renderScheduleContent();}
-  else render();
+  var focusDate=entries.find(function(cd){return !oldKeys[cd.date+'_'+cd.time];})||entries[0]||original[0];
+  if(focusDate)focusScheduleDate(focusDate.date);
+  else if(page==='schedule')renderScheduleContent();else render();
+  if(editSid===sid&&ge('mS')&&ge('mS').classList.contains('open')){
+    showStudentConfirmedHint(s);showStudentWeekOverrideHint(s);
+    if(curSType==='flex'&&modal._studentFlexDraft){
+      var draft=modal._studentFlexDraft,editorMon=studentFlexWeekMon||getViewMon(),editorWeek=getWK(editorMon);
+      draft=draft.filter(function(sl){return !original.some(function(cd){return !nextKeys[cd.date+'_'+cd.time]&&getWK(getMon(parseDateLocal(cd.date)))===editorWeek&&sl.day===JSDOW[parseDateLocal(cd.date).getDay()]&&sl.time===cd.time&&sl.source==='consult-confirmed'&&!sl.absent&&sl.kind!=='cancel'&&sl.overrideType!=='cancel';});});
+      _scheduleStudentSlots(s,editorWeek,weekOvr[editorWeek]||{}).forEach(function(sl){
+        if(sl.source==='consult-confirmed'&&!draft.some(function(row){return row.day===sl.day&&row.time===sl.time;}))draft.push(Object.assign({},sl));
+      });
+      var rows=ge('s-flex-week-rows');if(rows)rows.innerHTML=draft.map(function(sl,i){return studentFlexWeekRowHtml(i,sl);}).join('');
+      studentFlexDraftSlots=draft;
+    }
+  }
+}
+function focusScheduleDate(date){
+  var d=parseDateLocal(date),m=getMon(d),today=getMon(new Date());
+  go('schedule');
+  wkOfs=Math.round((Date.UTC(m.getFullYear(),m.getMonth(),m.getDate())-Date.UTC(today.getFullYear(),today.getMonth(),today.getDate()))/604800000);
+  mobileSchedDay=ALL7.indexOf(JSDOW[d.getDay()]);mobileSchedView='week';
+  loadHolidaysForView(function(){render();});
 }
 
 function parseDateLocal(ds){
@@ -7695,13 +7748,13 @@ function buildMobileWeekView(mon,sched,todayStr,isThis,flexS,unassignedFlex,acti
   o+='<div class="mobile-week-agenda" aria-label="주간 일정">';
   ALL7.forEach(function(d,i){
     var dd=addDays(mon,i),dateStr=toDS(dd),isToday=dateStr===todayStr,isOff=isOffDay(dateStr),slots=scheduleSlotsForDay(sched,d);
-    o+='<section class="mobile-week-day'+(isToday?' is-today':'')+'" data-week-date="'+dateStr+'">';
-    o+='<header class="mobile-week-day-head"><span class="mobile-week-day-name">'+d+'요일</span><time class="mobile-week-day-date">'+(dd.getMonth()+1)+'. '+dd.getDate()+'.</time>';
+    o+='<section class="mobile-week-day'+(isToday?' is-today':'')+'" data-week-date="'+dateStr+'" data-date="'+dateStr+'" onclick="openQuickSlot(this.dataset.date)">';
+    o+='<header><button type="button" class="mobile-week-day-head" data-date="'+dateStr+'" onclick="event.stopPropagation();openQuickSlot(this.dataset.date)" aria-label="'+dateStr+' '+d+'요일 새 일정 추가"><span class="mobile-week-day-name">'+d+'요일</span><time class="mobile-week-day-date">'+(dd.getMonth()+1)+'. '+dd.getDate()+'.</time>';
     if(isToday)o+='<span class="mobile-week-day-badge">오늘</span>';
     if(isOff)o+='<span class="mobile-week-day-badge is-holiday">'+esc(getOffLabel(dateStr)||'휴무')+'</span>';
-    o+='<span class="mobile-week-day-date">'+slots.length+'건</span></header>';
+    o+='<span class="mobile-week-day-date">'+slots.length+'건</span></button></header>';
     o+='<div class="mobile-week-slots">';
-    if(!slots.length)o+='<div class="mobile-week-empty">일정 없음</div>';
+    if(!slots.length)o+='<button type="button" class="mobile-week-empty" data-date="'+dateStr+'" onclick="event.stopPropagation();openQuickSlot(this.dataset.date)">일정 없음 · ＋ 새 일정 추가</button>';
     slots.forEach(function(x){
       var c=gc(x.s),status=scheduleStatusLabel(x),statusClass=x.tentative?' is-pending':((x.absent||x.overrideType==='cancel')?' is-cancel':'');
       o+='<div class="lb schedule-card mobile-week-slot '+x.type+(x.absent?' absent-block':'')+'" style="--student-color:'+c+'" data-sid="'+esc(x.s.id)+'" data-time="'+esc(x.time)+'" data-date="'+dateStr+'"';
@@ -7710,7 +7763,8 @@ function buildMobileWeekView(mon,sched,todayStr,isThis,flexS,unassignedFlex,acti
       o+='<div class="schedule-card-main"><div class="schedule-card-title"><span class="schedule-card-name">'+esc(x.s.name||'이름 없음')+'</span>'+scheduleTimeControl(x,dateStr)+'</div>';
       o+='<div class="schedule-card-details"><span class="schedule-card-kind" data-kind="'+scheduleKindKey(x)+'">'+esc(scheduleLessonKind(x))+'</span><span class="schedule-status'+statusClass+'">'+esc(status)+'</span></div></div></div>';
     });
-    o+='<button type="button" class="mobile-week-add" onclick="mSelectWeekDay('+i+')">＋ 이 요일 시간 배정</button></div></section>';
+    o+='<button type="button" class="mobile-week-add" data-date="'+dateStr+'" onclick="event.stopPropagation();openQuickSlot(this.dataset.date)">＋ 새 일정 추가</button>';
+    o+='<button type="button" class="mobile-week-add" onclick="event.stopPropagation();mSelectWeekDay('+i+')">이 요일 시간표 보기</button></div></section>';
   });
   o+='</div>';
   return o;
@@ -8216,12 +8270,13 @@ function saveFlexWeek(){
 /* QUICK SLOT */
 var qsDay='',qsTime='',qsDate='',qsSel={};
 function cellClick(day,time,dateStr){
-  var mon=getMon(new Date(dateStr));var sched=getWeekSched(mon);
-  var existing=(sched[day+'_'+time]||[]).map(function(x){return x.s.id;});
+  var mon=getMon(parseDateLocal(dateStr));var sched=getWeekSched(mon);
+  var existing=(sched[day+'_'+time]||[]).filter(function(x){return !x.absent&&x.overrideType!=='cancel';}).map(function(x){return x.s.id;});
   qsDay=day;qsTime=time;qsDate=dateStr;qsSel={};
   existing.forEach(function(id){qsSel[id]=true;});
   ge('qsTitle').textContent=day+'요일 '+time;
   ge('qsMeta').textContent=dateStr;
+  var timeSelect=ge('qs-time');if(timeSelect)timeSelect.innerHTML=scheduleTimeOptions(time);
   var active=students.filter(function(s){return s.status==='수강중';});
   var o='';
   if(!active.length){o='<div style="text-align:center;padding:20px;color:var(--tm)">수강중인 레슨생이 없습니다</div>';}
@@ -8242,33 +8297,30 @@ function tQS(sid){
   row.classList.toggle('sel',!!qsSel[sid]);
   row.querySelector('.qs-check').textContent=qsSel[sid]?'✓':'';
 }
+function changeQuickSlotTime(time){
+  var selected=Object.assign({},qsSel);
+  cellClick(qsDay,time,qsDate);
+  Object.keys(selected).forEach(function(sid){if(selected[sid]&&!qsSel[sid])tQS(sid);});
+}
 function saveQS(){
-  pushUndo();
-  var mon=getMon(new Date(qsDate)),wk=getWK(mon);
+  var mon=getMon(parseDateLocal(qsDate)),wk=getWK(mon);
   var _hadWeek=!!weekOvr[wk],_weekBefore=_hadWeek?JSON.parse(JSON.stringify(weekOvr[wk])):null,_auditBefore=auditScheduleConflicts(mon);
   if(!weekOvr[wk])weekOvr[wk]={};
   students.filter(function(s){return s.status==='수강중';}).forEach(function(s){
-    if(s.schedType==='flex'){
-      /* 변동: weekOvr 기준으로 슬롯 추가/삭제 */
-      var slots=_scheduleStudentSlots(s,wk,weekOvr[wk]).slice();
-      var inSlot=slots.findIndex(function(sl){return sl.day===qsDay&&sl.time===qsTime;});
-      if(qsSel[s.id]){if(inSlot<0)slots.push({day:qsDay,time:qsTime,absent:false});else slots[inSlot].absent=false;}
-      else{if(inSlot>=0)slots.splice(inSlot,1);}
-      weekOvr[wk][s.id]=slots;
-    } else {
-      /* 고정: weekOvr 있으면 그걸 기준, 없으면 기본 스케줄 기준 */
-      var base=(s.id in (weekOvr[wk]||{}))
-        ?weekOvr[wk][s.id].slice()
-        :_scheduleStudentBaseSlots(s,wk);
-      var inSlot2=base.findIndex(function(sl){return sl.day===qsDay&&sl.time===qsTime;});
-      if(qsSel[s.id]){if(inSlot2<0)base.push({day:qsDay,time:qsTime,absent:false});else base[inSlot2].absent=false;}
-      else{if(inSlot2>=0)base.splice(inSlot2,1);}
-      /* 항상 저장 — removeSlotFromMenu가 정확히 동작하도록 */
-      weekOvr[wk][s.id]=base;
-    }
+    var base=_scheduleStudentSlots(s,wk,weekOvr[wk]).map(function(sl){return Object.assign({},sl);});
+    var index=base.findIndex(function(sl){return sl.day===qsDay&&sl.time===qsTime;});
+    var active=index>=0&&!base[index].absent&&base[index].kind!=='cancel'&&base[index].overrideType!=='cancel';
+    if(!!qsSel[s.id]===active)return; /* Do not freeze untouched students' recurring weeks. */
+    if(qsSel[s.id]){
+      if(index<0)base.push({day:qsDay,time:qsTime,absent:false});
+      else{base[index].absent=false;if(base[index].kind==='cancel')delete base[index].kind;if(base[index].overrideType==='cancel')delete base[index].overrideType;}
+    }else if(index>=0)base.splice(index,1);
+    weekOvr[wk][s.id]=base;
   });
   var _auditAfter=auditScheduleConflicts(mon);
   if(_scheduleConflictToast(_auditAfter,'슬롯 배정',_auditBefore)){if(_hadWeek)weekOvr[wk]=_weekBefore;else delete weekOvr[wk];return;}
+  var proposed=weekOvr[wk];if(_hadWeek)weekOvr[wk]=_weekBefore;else delete weekOvr[wk];
+  pushUndo();weekOvr[wk]=proposed;
   saveAll();cm('mQS');toast('슬롯 업데이트됨');renderSidebarToday();
   if(page==='schedule'){renderScheduleContent();}else render();
 }
@@ -9443,16 +9495,18 @@ function studentFlexWeekRowHtml(i,sl){
     +'<button class="btn bd bsm" onclick="removeStudentFlexWeekRow(this)">삭제</button>'
     +'</div>';
 }
+var studentFlexWeekMon=null,studentFlexDraftSlots=[];
 function renderStudentFlexWeekEditor(){
   var body=ge('s-flex-week-body');if(!body)return;
   var label=ge('s-flex-week-label');
-  var mon=getViewMon(),wk=getWK(mon),s=editSid?students.find(function(x){return x.id===editSid;}):null;
+  var mon=studentFlexWeekMon||getViewMon(),wk=getWK(mon),s=editSid?students.find(function(x){return x.id===editSid;}):null;
   if(label)label.textContent=fmtS(mon)+' ~ '+fmtS(addDays(mon,6));
   if(!s){
     body.innerHTML='<div style="font-size:12.5px;color:var(--tm);line-height:1.6;background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.12);border-radius:8px;padding:10px 12px">새 레슨생은 먼저 저장한 뒤 이번 주 변동 일정을 배정할 수 있습니다.</div>';
     return;
   }
   var slots=_scheduleStudentSlots(s,wk,weekOvr[wk]||{}).slice();
+  studentFlexDraftSlots=slots;
   var rows=slots.map(function(sl,i){return studentFlexWeekRowHtml(i,sl);}).join('');
   body.innerHTML='<div style="font-size:12.5px;color:var(--tm);line-height:1.6;margin-bottom:7px">변동 스케줄은 아래 요일·시간이 바로 주간 스케줄에 반영됩니다.</div>'
     +'<div id="s-flex-week-rows">'+(rows||'<div class="s-flex-empty" style="font-size:12.5px;color:var(--r);background:rgba(200,114,114,.06);border:1px solid rgba(200,114,114,.16);border-radius:8px;padding:9px 11px">이번 주 배정 없음</div>')+'</div>';
@@ -9479,12 +9533,12 @@ function _collectStudentFlexWeekRows(){
     var d=row.querySelector('.s-flex-day'),t=row.querySelector('.s-flex-time');
     var day=d&&d.value,time=t&&t.value;
     var key=day+'_'+time;
-    if(day&&time&&!seen[key]){seen[key]=true;slots.push({day:day,time:time,absent:false});}
+    if(day&&time&&!seen[key]){seen[key]=true;var original=studentFlexDraftSlots.find(function(sl){return sl.day===day&&sl.time===time;});slots.push(original?Object.assign({},original):{day:day,time:time,absent:false});}
   });
   return slots;
 }
 function _storeStudentFlexWeekRows(sid){
-  var mon=getViewMon(),wk=getWK(mon);
+  var mon=studentFlexWeekMon||getViewMon(),wk=getWK(mon);
   if(!weekOvr[wk])weekOvr[wk]={};
   weekOvr[wk][sid]=_collectStudentFlexWeekRows();
   return weekOvr[wk][sid];
@@ -9492,8 +9546,12 @@ function _storeStudentFlexWeekRows(sid){
 function saveStudentFlexWeek(){
   var s=editSid?students.find(function(x){return x.id===editSid;}):null;
   if(!s){toast('먼저 레슨생을 저장하세요','⚠️');return;}
-  pushUndo();
-  var slots=_storeStudentFlexWeekRows(s.id);
+  var mon=studentFlexWeekMon||getViewMon(),wk=getWK(mon),had=Object.prototype.hasOwnProperty.call(weekOvr,wk),beforeWeek=had?JSON.parse(JSON.stringify(weekOvr[wk])):null,before=auditScheduleConflicts(mon);
+  var slots=_storeStudentFlexWeekRows(s.id),proposed=weekOvr[wk];
+  var after=auditScheduleConflicts(mon);
+  if(had)weekOvr[wk]=beforeWeek;else delete weekOvr[wk];
+  if(_scheduleConflictToast(after,'변동 일정',before))return;
+  pushUndo();weekOvr[wk]=proposed;
   saveAll();renderSidebarToday();
   if(page==='schedule')render();
   renderStudentFlexWeekEditor();
@@ -9503,6 +9561,7 @@ function openSModal(id){
   /* pendingConvertId 가 외부(convertFromProfile 등)에서 미리 세팅된 경우 보존.
    * id 명시 = 수정 모드 → pendingConvertId 무효화. id 없음 + pendingConvertId 있음 = 상담→레슨생 변환 모드 */
   editSid=id||null;
+  studentFlexWeekMon=getViewMon();studentFlexDraftSlots=[];
   if(id) pendingConvertId=null;
   var isEdit=!!id;
   ge('mST').textContent=isEdit?'레슨생 수정':'레슨생 추가';
@@ -9545,10 +9604,21 @@ function openSModal(id){
   showConsultHint(null);
   showStudentConfirmedHint(s);
   showStudentWeekOverrideHint(s);
+  var entryNote=ge('s-confirmed-entry-note');if(entryNote)entryNote.textContent=id?'입력 중인 정보는 유지됩니다. 날짜별 확정 일정을 등록·수정·삭제할 수 있습니다.':'새 레슨생은 기본 정보를 먼저 저장한 뒤 확정 일정 관리창이 열립니다.';
   var scheduleError=ge('s-schedule-error');if(scheduleError){scheduleError.style.display='none';scheduleError.textContent='';}
   setTimeout(function(){if(!id||(id&&!(s&&s.fee>0)))autoFee();},80);
   renderStudentFlexWeekEditor();
   updateTimeSlots(s);om('mS');
+}
+async function openStudentConfirmedSchedule(){
+  if(editSid&&students.some(function(s){return s.id===editSid;})){
+    openBulkSchedule(editSid);return;
+  }
+  var button=ge('s-confirmed-register');if(button)button.disabled=true;
+  try{
+    var sid=await saveStudent();
+    if(sid){openSModal(sid);openBulkSchedule(sid);}
+  }finally{if(button)button.disabled=false;}
 }
 function tDay(btn){btn.classList.toggle('on');updateTimeSlots(editSid?students.find(function(s){return s.id===editSid;}):null);}
 function updateCyclePreview(){
@@ -9602,7 +9672,7 @@ function showStudentConfirmedHint(s){
   var dates=s?_scheduleStudentConfirmedDates(s):[];
   if(!dates.length){hint.style.display='none';return;}
   hint.style.display='block';
-  hint.textContent='상담 확정 일정 '+dates.length+'건: '+dates.map(function(cd){return cd.date+' '+cd.time;}).join(' · ')+' — 해당 주에는 이 날짜가 고정 요일보다 우선합니다. 주간 시간표에서 이번 주 변경이 가능합니다.';
+  hint.textContent='확정 일정 '+dates.length+'건: '+dates.map(function(cd){return cd.date+' '+cd.time;}).join(' · ')+' — 해당 주에는 이 날짜가 고정 요일보다 우선합니다. 수동 변경·취소·빈 주·보강은 유지됩니다. 일정 확정 등록에서 관리하세요.';
 }
 function showStudentWeekOverrideHint(s){
   var hint=ge('s-week-override-hint');if(!hint)return;
@@ -9731,7 +9801,12 @@ async function saveStudent(){
   data.primaryPayerId=_groupEnrollment.primaryPayerId;
   data.sharedSlot=_groupEnrollment.sharedSlot;
   data.schedulePolicyVersion=SCHEDULE_ENGINE_VERSION;
-  var _auditBeforeSave=auditScheduleConflicts(getMon(new Date()));
+  var _flexWeekMon=curSType==='flex'&&ge('s-flex-week-rows')&&editSid?(studentFlexWeekMon||getViewMon()):null;
+  var _validationWeeks=studentScheduleValidationWeeks(data),_auditsBeforeSave={};
+  if(_flexWeekMon)_validationWeeks[getWK(_flexWeekMon)]=_flexWeekMon;
+  Object.keys(_validationWeeks).forEach(function(wk){_auditsBeforeSave[wk]=auditScheduleConflicts(_validationWeeks[wk]);});
+  var _flexWeekKey=_flexWeekMon?getWK(_flexWeekMon):null;
+  var _hadFlexWeek=_flexWeekKey&&Object.prototype.hasOwnProperty.call(weekOvr,_flexWeekKey),_flexWeekBefore=_hadFlexWeek?JSON.parse(JSON.stringify(weekOvr[_flexWeekKey])):null;
   /* 전환 중에는 같은 사람의 상담 슬롯과 새 학생 슬롯을 중복 예약으로 세지 않는다. */
   var _sourceConvertedBefore=_sourceConsult&&_sourceConsult.converted;
   if(_sourceConsult)_sourceConsult.converted=true;
@@ -9744,12 +9819,14 @@ async function saveStudent(){
   } else {
     students.push(data);
   }
-  var _auditAfterSave=auditScheduleConflicts(getMon(new Date()));
-  var newScheduleConflicts=data.status==='수강중'?_scheduleNewConflicts(_auditAfterSave,_auditBeforeSave):[];
+  if(_flexWeekKey)_storeStudentFlexWeekRows(sid);
+  var newScheduleConflicts=[];
+  if(data.status==='수강중')Object.keys(_validationWeeks).forEach(function(wk){newScheduleConflicts=newScheduleConflicts.concat(_scheduleNewConflicts(auditScheduleConflicts(_validationWeeks[wk]),_auditsBeforeSave[wk]));});
   if(newScheduleConflicts.length){
     if(editSid&&_studentBeforeIndex>=0)students[_studentBeforeIndex]=_studentBefore;
     else students=students.filter(function(s){return s.id!==data.id;});
     if(_sourceConsult)_sourceConsult.converted=_sourceConvertedBefore;
+    if(_flexWeekKey){if(_hadFlexWeek)weekOvr[_flexWeekKey]=_flexWeekBefore;else delete weekOvr[_flexWeekKey];}
     var firstConflict=newScheduleConflicts[0];
     var conflictMessage='등록되지 않았습니다. '+firstConflict.day+' '+firstConflict.time+'에 이미 다른 확정 일정이 있습니다. 요일 또는 시간을 변경한 뒤 다시 저장하세요.';
     if(scheduleError){scheduleError.textContent=conflictMessage;scheduleError.style.display='block';scheduleError.scrollIntoView({block:'nearest'});}
@@ -9781,9 +9858,6 @@ async function saveStudent(){
     }
     pendingConvertId=null;
   }
-  if(curSType==='flex'&&ge('s-flex-week-rows')&&editSid){
-    _storeStudentFlexWeekRows(sid);
-  }
   /* 동일 번호 문의자 자동 삭제 */
   var _ph=data.ph?data.ph.replace(/[^0-9]/g,''):'';
   if(_ph){
@@ -9807,6 +9881,7 @@ async function saveStudent(){
   if(_verify<0){console.error('[saveStudent] 저장 실패 — 학생 누락', data.id);toast('⚠️ 저장 실패: 학생이 목록에서 사라졌습니다','❌');return;}
   cm('mS');renderSidebarToday();if(page==='eval')page='students';render();
   if(editSid&&_scrollY>0)setTimeout(function(){window.scrollTo(0,_scrollY);},50);
+  return data.id;
   }catch(e){
     if(_sourceConsult&&!_conversionCommitted&&typeof _sourceConvertedBefore!=='undefined'){
       _sourceConsult.converted=_sourceConvertedBefore;
