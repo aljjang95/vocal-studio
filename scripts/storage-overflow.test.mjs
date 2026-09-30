@@ -17,8 +17,13 @@ function world(){
   w.backup.setItem=()=>{throw Error('quota');};
   w.overflow={async list(p){if(w.listGate)await w.listGate.promise;if(w.listFail)throw Error('unavailable');return [...w.rows].filter(([k])=>k.startsWith(p)).map(([key,text])=>({key,text}));},async put(key,text){w.puts.push({key,text});const g=w.gates.shift();if(g)await g.promise;if(w.putFail)throw Error('quota');w.rows.set(key,text);return w.mismatch?'corrupt':text;}};
   w.snapshot=()=>({exists:true,metadata:{fromCache:false,hasPendingWrites:false},data:()=>({...copy(w.data),_vsSyncRevision:w.rev})});
-  w.emit=()=>{for(const cb of w.listeners)cb(w.snapshot());};
-  w.db={collection:()=>({doc:()=>({onSnapshot(opts,cb){w.subscriptions++;w.listeners.add(cb);queueMicrotask(()=>cb(w.snapshot()));return ()=>w.listeners.delete(cb);},get:async()=>w.snapshot()})}),async runTransaction(fn){
+  w.emit=()=>{for(const entry of w.listeners)entry.next(w.snapshot());};
+  w.remote=fn=>{fn(w.data);w.rev++;w.emit();};
+  w.fault=mode=>{for(const entry of w.listeners){
+    if(mode==='offline')entry.error(Error('synthetic disconnect'));
+    else entry.next({exists:mode!=='missing-remote',metadata:{fromCache:false,hasPendingWrites:false},data:()=>({...copy(w.data),students:{invalid:true},_vsSyncRevision:w.rev})});
+  }};
+  w.db={collection:()=>({doc:()=>({onSnapshot(opts,cb,error){w.subscriptions++;const entry={next:cb,error};w.listeners.add(entry);queueMicrotask(()=>cb(w.snapshot()));return ()=>w.listeners.delete(entry);},get:async()=>w.snapshot()})}),async runTransaction(fn){
     for(let i=0;i<5;i++){const rev=w.rev;let write;const result=await fn({get:async()=>w.snapshot(),set(ref,data){write=copy(data);}});if(rev!==w.rev)continue;
       if(write){w.data=sync.normalize(write);w.rev=write._vsSyncRevision;w.writes++;w.emit();}
       if(w.ackGate){const g=w.ackGate;w.ackGate=null;await g.promise;}return result;
@@ -126,4 +131,84 @@ test('an explicit save during startup archive is committed before subscription a
   const w=world(),a=gate(),b=gate();w.gates.push(a,b);const c=w.client();await settle();c.ui.students[0].memo='during startup';const saving=c.controller.save();
   a.resolve();await settle();assert.equal(w.subscriptions,0);assert.equal(w.writes,0);assert.equal(c.ready,false);
   b.resolve();await Promise.all([c.connection,saving]);await settle();assert.equal(w.subscriptions,1);assert.equal(w.data.students[0].memo,'during startup');assert.equal(c.controller.pending(),0);assert.equal(c.controller.state.recovery.length,1);w.intact();
+});
+for(const mode of ['offline','invalid-remote'])for(const recovery of [false,true])test('remote archive completion preserves newer '+mode+' gate with recovery='+recovery,async()=>{
+  const w=world(),c=w.client({noJournal:!recovery});await c.connection;await settle();const g=gate();w.gates.push(g);
+  w.remote(data=>{data.students[0].fee=410;});await settle();assert.equal(c.mode,'storage-pending');assert.equal(c.ready,false);
+  w.fault(mode);const blocked=c.controller.blocked;g.resolve();await settle();
+  assert.equal(c.ready,false);assert.equal(c.controller.confirmed,false);assert.equal(c.mode,mode);assert.equal(c.controller.blocked,blocked);
+  assert.equal(c.ui.students[0].fee,100,'completion cannot paint old remote data after a newer validation/connection error');assert.equal(w.writes,0);
+  w.emit();await settle();assert.equal(c.ready,true);assert.equal(c.ui.students[0].fee,410);assert.equal(c.controller.state.recovery.length,recovery?1:0);w.intact();
+});
+for(const recovery of [false,true])test('remote archive completion automatically drains newer revision with recovery='+recovery,async()=>{
+  const w=world(),c=w.client({noJournal:!recovery});await c.connection;await settle();const first=gate(),latest=gate();w.gates.push(first,latest);
+  w.remote(data=>{data.students[0].fee=410;});await settle();w.remote(data=>{data.students[0].fee=420;});
+  assert.equal(c.controller.deferred._vsSyncRevision,42);first.resolve();await settle();
+  assert.equal(c.controller.state.revision,42,'latest remote revision starts durability without another notification or retry');assert.equal(c.ready,false);assert.equal(w.writes,0);
+  latest.resolve();await settle();assert.equal(c.ui.students[0].fee,420);assert.equal(c.ready,true);assert.equal(c.controller.pending(),0);
+  assert.equal(c.controller.deferred,null);assert.equal(c.controller.state.recovery.length,recovery?1:0);w.intact();
+});
+for(const mode of ['offline','invalid-remote'])test('queued remote data before '+mode+' cannot restore confirmation after old archive completes',async()=>{
+  const w=world(),c=w.client();await c.connection;await settle();const g=gate();w.gates.push(g);
+  w.remote(data=>{data.students[0].fee=410;});await settle();w.remote(data=>{data.students[0].fee=420;});w.fault(mode);
+  g.resolve();await settle();c.controller.drain();await settle();assert.equal(c.ready,false);assert.equal(c.mode,mode);assert.equal(w.writes,0);
+  assert.equal(c.ui.students[0].fee,100);w.emit();await settle();assert.equal(c.ready,true);assert.equal(c.ui.students[0].fee,420);w.intact();
+});
+for(const mode of ['offline','invalid-remote'])test('only a fresh post-'+mode+' snapshot queued during archive can restore latest confirmation',async()=>{
+  const w=world(),c=w.client();await c.connection;await settle();const g=gate();w.gates.push(g);
+  w.remote(data=>{data.students[0].fee=410;});await settle();w.fault(mode);w.remote(data=>{data.students[0].fee=420;});
+  g.resolve();await settle();assert.equal(c.ready,true);assert.equal(c.controller.state.revision,42);assert.equal(c.ui.students[0].fee,420);
+  assert.equal(c.controller.deferred,null);assert.equal(c.controller.pending(),0);assert.equal(w.writes,0);w.intact();
+});
+for(const mode of ['offline','invalid-remote'])test('ACK and newer explicit edit survive '+mode+' during ACK durability, then fresh retry converges',async()=>{
+  const w=world(),c=w.client();await c.connection;await settle();const ack=gate();w.ackGate=ack;
+  c.ui.students[0].memo='first committed';const first=c.controller.save();await settle();assert.equal(w.writes,1);
+  const archive=gate();w.gates.push(archive);ack.resolve();await settle();assert.ok(c.controller.state.ack);
+  w.fault(mode);c.ui.students[0].memo='newest edit';const newest=c.controller.save();archive.resolve();await Promise.all([first,newest]);await settle();
+  assert.equal(c.ready,false);assert.equal(c.mode,mode);assert.ok(c.controller.state.ack);assert.equal(c.controller.state.local.students[0].memo,'newest edit');
+  assert.equal(w.writes,1);w.data.students[0].fee=420;w.rev++;await c.controller.retry();await settle();
+  assert.equal(c.ready,true);assert.equal(c.controller.state.ack,undefined);assert.equal(c.controller.pending(),0);assert.equal(c.ui.students[0].memo,'newest edit');
+  assert.equal(c.ui.students[0].fee,420);assert.equal(c.controller.state.recovery.length,1);assert.equal(w.writes,2);w.intact();
+});
+test('localStorage persistence also preserves an existing validation gate until a fresh response',async()=>{
+  const w=world();w.backup.setItem=(k,v)=>w.backup.map.set(k,v);const c=w.client();await c.connection;await settle();w.fault('invalid-remote');
+  c.ui.students[0].memo='safe local edit';await c.controller.save();assert.equal(c.ready,false);assert.equal(c.mode,'invalid-remote');assert.equal(c.controller.blocked,true);assert.equal(w.writes,0);
+  await c.controller.retry();await settle();assert.equal(c.ready,true);assert.equal(w.data.students[0].memo,'safe local edit');w.intact();
+});
+test('a quota rejection after offline keeps the connection error visible and can retry both gates',async()=>{
+  const w=world(),c=w.client();await c.connection;await settle();const g=gate();w.gates.push(g);w.putFail=true;
+  w.remote(data=>{data.students[0].fee=410;});await settle();w.fault('offline');g.resolve();await settle();
+  assert.equal(c.ready,false);assert.equal(c.mode,'offline');assert.equal(c.controller.hold,'storage');assert.equal(w.writes,0);
+  w.putFail=false;await c.controller.retry();await settle();assert.equal(c.ready,true);assert.equal(c.mode,'recovery');assert.equal(c.controller.state.recovery.length,1);w.intact();
+});
+test('memo-only form save while unseen remote fee archive is pending preserves the remote fee',async()=>{
+  const w=world(),c=w.client();await c.connection;await settle();const archive=gate();w.gates.push(archive);
+  w.remote(data=>{data.students[0].fee=111;});await settle();assert.equal(c.controller.state.base.students[0].fee,111);assert.equal(c.ui.students[0].fee,100);
+  c.editing=true;c.ui.students[0].memo='memo-only edit';const saved=c.controller.save();archive.resolve();await saved;await settle();c.editing=false;c.controller.drain();await settle();
+  assert.equal(w.data.students[0].fee,111,'unseen remote fee is not inferred as an intentional local rollback');assert.equal(w.data.students[0].memo,'memo-only edit');
+  assert.equal(c.ui.students[0].fee,111);assert.equal(c.controller.pending(),0);assert.equal(c.controller.state.recovery.length,1);w.intact();
+});
+test('same-field form edit during unseen remote archive fails closed with both variants durably retained',async()=>{
+  const w=world(),c=w.client();await c.connection;await settle();const archive=gate();w.gates.push(archive);
+  w.remote(data=>{data.students[0].fee=111;});await settle();c.editing=true;c.ui.students[0].fee=130;const saved=c.controller.save();
+  archive.resolve();await saved;await settle();c.editing=false;c.controller.drain();await settle();
+  assert.equal(w.writes,0);assert.equal(w.data.students[0].fee,111);assert.equal(c.mode,'conflict');assert.equal(c.controller.blocked,true);
+  const raw=JSON.parse(w.rows.get(prefix+':backup:'+c.controller.instance));assert.equal(raw.local.students[0].fee,130);
+  assert.ok(raw.recovery.some(d=>d.students[0].fee===111));assert.ok(raw.recovery.some(d=>d.students[0].fee===200));w.intact();
+});
+test('retry after unseen remote archive quota failure uses the captured UI patch instead of stale fields',async()=>{
+  const w=world(),c=w.client();await c.connection;await settle();const archive=gate();w.gates.push(archive);
+  w.remote(data=>{data.students[0].fee=111;});await settle();c.editing=true;c.ui.students[0].memo='memo after quota';const saved=c.controller.save();
+  w.putFail=true;archive.resolve();await saved;await settle();assert.equal(c.controller.hold,'storage');assert.equal(w.writes,0);
+  c.editing=false;w.putFail=false;await c.controller.retry();await settle();assert.equal(w.data.students[0].fee,111);assert.equal(w.data.students[0].memo,'memo after quota');
+  assert.equal(c.ready,true);assert.equal(c.controller.pending(),0);w.intact();
+});
+test('a newer failed session save invalidates older remote completion and retains all UI deltas for retry',async()=>{
+  const w=world(),c=w.client();await c.connection;await settle();const archive=gate();w.gates.push(archive);
+  w.remote(data=>{data.students[0].fee=111;});await settle();const write=c.store.setItem.bind(c.store);c.store.setItem=()=>{throw Error('session-quota');};
+  c.editing=true;c.ui.students[0].memo='first unsaved memo';assert.equal(await c.controller.save(),false);archive.resolve();await settle();
+  assert.equal(c.mode,'storage-error');assert.equal(c.controller.hold,'storage');assert.equal(c.ui.students[0].memo,'first unsaved memo');assert.equal(w.writes,0);
+  c.ui.students[0].name='second unsaved name';c.editing=false;c.store.setItem=write;await c.controller.retry();await settle();
+  assert.equal(w.data.students[0].fee,111);assert.equal(w.data.students[0].memo,'first unsaved memo');assert.equal(w.data.students[0].name,'second unsaved name');
+  assert.equal(c.ready,true);assert.equal(c.controller.pending(),0);w.intact();
 });

@@ -262,6 +262,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     this.a=adapter;this.epoch=0;this.state=null;this.owner=null;this.unsubscribe=null;
     this.flight=null;this.deferred=null;this.latest=null;this.ready=false;this.blocked=false;this.hold=null;
     this.archiveTail=Promise.resolve();this.archiveSequence=0;this.overflowBackups=new Map();
+    this.confirmationSequence=0;this.connectionError=null;
     var instanceKey='vsC_sync_instance_v1:'+encodeURIComponent(adapter.namespace);
     this.instance=adapter.forkInstance?null:adapter.store.getItem(instanceKey);
     if(!this.instance){
@@ -269,8 +270,14 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
       adapter.store.setItem(instanceKey,this.instance);
     }
   }
-  Controller.prototype.status=function(mode,detail){this.mode=mode;this.a.status(mode,detail);};
-  Controller.prototype.unready=function(){this.ready=false;this.confirmed=false;if(this.a.ready)this.a.ready(false);};
+  Controller.prototype.status=function(mode,detail){
+    if(['offline','invalid-remote','missing-remote'].indexOf(mode)>=0)this.connectionError=mode;
+    this.mode=mode;this.a.status(mode,detail);
+  };
+  Controller.prototype.unready=function(){
+    this.confirmationSequence++;this.deferred=null;this.ready=false;this.confirmed=false;this.displayRequired=true;
+    if(this.a.ready)this.a.ready(false);
+  };
   Controller.prototype.guard=function(epoch){return epoch===this.epoch&&this.owner&&this.a.owner()===this.owner;};
   /* A retained anchor can be rewritten by another tab: Web Storage has no compare-and-delete.
      Keep the exact removed bytes in this tab's journal storage before relying on that anchor.
@@ -304,7 +311,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     throw Error('backup-quota');
   };
   Controller.prototype.persist=function(next){
-    var text=JSON.stringify(next);
+    var text=JSON.stringify(next),sequence=++this.archiveSequence;
     try{
       this.a.store.setItem(this.key,text);
       if(this.a.store.getItem(this.key)!==text)throw Error('journal-readback');
@@ -331,9 +338,9 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
             // Stage the verified session journal immediately, so a subsequent save/ACK builds
             // on the newest intent. All durable writes serialize; only the latest generation
             // may release the hold. No Promise is treated as synchronous persistence success.
-            var self=this,epoch=this.epoch,sequence=++this.archiveSequence;
+            var self=this,epoch=this.epoch,confirmationSequence=this.confirmationSequence;
             this.overflowActive=true;this.state=next;this.blocked=true;this.hold='durability';this.ready=false;
-            if(this.a.ready)this.a.ready(false);this.status('storage-pending');
+            if(this.a.ready)this.a.ready(false);if(!this.connectionError)this.status('storage-pending');
             var pending=this.archiveTail.catch(function(){}).then(function(){
               if(!self.guard(epoch))return false;
               return self.a.overflowStore.put(backupKey,text).then(function(saved){
@@ -341,28 +348,39 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
                 if(!self.guard(epoch))return false;
                 self.overflowBackups.set(backupKey,text);
                 if(sequence!==self.archiveSequence)return false;
+                // Durability cannot undo a newer connection/validation failure. Retire only
+                // this archive's hold; any snapshot queued before that failure was invalidated.
+                if(confirmationSequence!==self.confirmationSequence||self.connectionError){
+                  if(self.hold==='durability')self.hold=null;
+                  if(!self.connectionError&&self.deferred)self.drain();return false;
+                }
                 self.blocked=false;self.hold=null;self.ready=!!self.confirmed;
                 if(self.a.ready)self.a.ready(self.ready);return true;
               });
             }).catch(function(){
-              if(self.guard(epoch)&&sequence===self.archiveSequence){self.blocked=true;self.hold='storage';self.unready();self.status('storage-error');}return false;
+              if(self.guard(epoch)&&sequence===self.archiveSequence){
+                self.blocked=true;self.hold='storage';
+                if(!self.connectionError){self.unready();self.status('storage-error');}
+              }return false;
             });
             this.archiveTail=pending;return pending;
           }
         }
       }
-      this.state=next;this.blocked=false;this.hold=null;return true;
-    }catch(error){this.blocked=true;this.hold='storage';this.status('storage-error');return false;}
+      this.state=next;if(!this.connectionError)this.blocked=false;this.hold=null;return true;
+    }catch(error){this.blocked=true;this.hold='storage';if(!this.connectionError)this.status('storage-error');return false;}
   };
   Controller.prototype.display=function(){
     if(this.a.editing&&this.a.editing())return;
-    try{this.a.setData(clone(this.state.local));this.a.render();}
+    try{this.a.setData(clone(this.state.local));this.a.render();this.viewBase=normalize(this.a.getData());this.displayRequired=false;}
     catch(error){this.blocked=true;this.hold='apply';this.status('apply-error');}
   };
   Controller.prototype.disconnect=function(){
     this.epoch++;if(this.unsubscribe)try{this.unsubscribe();}catch(error){}
     this.unsubscribe=null;this.ready=false;this.confirmed=false;this.blocked=false;this.hold=null;this.doc=null;this.state=null;this.flight=null;this.deferred=null;this.latest=null;this.owner=null;
     this.archiveSequence++;this.overflowActive=false;this.overflowBackups=new Map();this.connecting=null;
+    this.connectionError=null;
+    this.viewBase=null;
     if(this.a.ready)this.a.ready(false);
   };
   Controller.prototype.pending=function(){return this.state?diff(this.state.base,this.state.local).length:0;};
@@ -405,6 +423,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     var self=this,owner=this.owner;
     if(!this.guard(epoch))return false;
     try{
+      this.viewBase=normalize(this.a.getData());
       var hydrated=this.a.hydrated?!!this.a.hydrated():true;
       var durable=(!hydrated&&this.a.resumeData)?this.a.resumeData(owner):null;
       var resumeFromDurable=!!durable;
@@ -462,8 +481,11 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
       return true;
   };
   Controller.prototype.receive=function(data){
-    var rev=revision(data),remote=normalize(data),self=this;
+    var rev=revision(data),remote=normalize(data),self=this,confirmationSequence=this.confirmationSequence;
     if(this.state&&rev<this.state.revision)return;
+    // A fresh validated server snapshot may lift a connection fault. It still cannot
+    // authorize writes/readiness until the journal including it is durable.
+    this.connectionError=null;this.confirmed=true;
     this.latest=clone(data);
     if(this.hold){this.deferred=clone(data);return;}
     if(this.state&&this.state.resumeConflict){
@@ -486,27 +508,48 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
       next=Object.assign({},this.state,{revision:rev,base:remote,local:merged.value});
     }
     var changed=!this.state||!equal(this.state.local,next.local);
-    this.confirmed=true;
     return afterPersist(this.persist(next),function(){
+      if(!self.confirmed||self.connectionError||confirmationSequence!==self.confirmationSequence)return false;
       self.ready=true;self.unbound=false;if(self.a.ready)self.a.ready(true);
-      if(changed)self.display();if(self.blocked)return false;
+      if(changed||self.displayRequired)self.display();if(self.blocked)return false;
       self.status(self.pending()?'pending':(self.state.recovery.length?'recovery':'synced'));
+      // The subscription can advance while IndexedDB commits. Replay the latest queued
+      // snapshot now, rather than waiting for another notification or the audit timer.
+      if(self.deferred){self.drain();return true;}
       if(self.pending()&&!self.scheduled){self.scheduled=true;var scheduledEpoch=self.epoch;self.a.later(function(){self.scheduled=false;if(self.guard(scheduledEpoch))self.flush();});}
       return true;
     });
   };
   Controller.prototype.drain=function(){
+    if(this.connectionError)return;
     if(this.a.editing&&this.a.editing())return;
     if(this.hold==='durability')return;
     if(this.state&&this.state.ack){var self=this;return afterPersist(this.finishAck(),function(){return self.drain();});}
-    if(this.flight||this.blocked)return;
+    if(this.flight)return;
+    if(this.blocked&&this.deferred&&!this.hold&&['offline','invalid-remote','missing-remote'].indexOf(this.mode)>=0){
+      var fresh=this.deferred;this.deferred=null;return this.receive(fresh);
+    }
+    if(this.blocked)return;
     if(this.deferred){var data=this.deferred;this.deferred=null;this.receive(data);}
     this.flush();
   };
   Controller.prototype.save=function(){
     if(!this.state||this.a.owner()!==this.owner){this.unbound=true;this.status('local-only');return Promise.resolve(false);}
-    var self=this,next=Object.assign({},this.state,{local:normalize(this.a.getData())});
-    return Promise.resolve(afterPersist(this.persist(next),function(){
+    var self=this,current=normalize(this.a.getData());
+    // The journal can advance while its remote value is still awaiting durability/display.
+    // Infer user intent from the last displayed/captured UI, not from that unseen new base.
+    var merged=apply(this.state.local,diff(this.viewBase||this.state.local,current));
+    var next=Object.assign({},this.state,{local:merged.value});
+    if(merged.conflicts.length){
+      next.local=current;next.resumeConflict=true;next.recovery=clone(this.state.recovery);
+      if(!next.recovery.some(function(data){return equal(data,self.state.local);}))next.recovery.push(clone(this.state.local));
+    }
+    var saved=this.persist(next);
+    // Advance only after the session journal accepted this intent, including a pending
+    // durable archive. A failed session write must leave earlier unsaved UI deltas visible.
+    if(this.state===next)this.viewBase=clone(current);
+    return Promise.resolve(afterPersist(saved,function(){
+      if(self.connectionError)return false;
       if(self.state.resumeConflict){self.blocked=true;self.status('conflict');return false;}
       if(self.state.ack){return afterPersist(self.finishAck(),function(){self.drain();return true;});}
       self.status(self.pending()?'pending':(self.ready?'synced':'unconfirmed'));
@@ -542,11 +585,12 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
       if(!self.guard(epoch)||self.flight!==token)return false;
       var next=Object.assign({},self.state,{ack:{sent:sent,value:committed.value,revision:committed.revision}});
       return afterPersist(self.persist(next),function(){
+        if(self.connectionError)return false;
         self.status('deferred');return afterPersist(self.finishAck(),function(){self.drain();return true;});
       });
     },function(error){
       if(!self.guard(epoch)||self.flight!==token)return false;
-      self.flight=null;self.status(error.message==='write-conflict'||error.message==='legacy-conflict'?'conflict':'write-error');
+      self.flight=null;if(!self.connectionError)self.status(error.message==='write-conflict'||error.message==='legacy-conflict'?'conflict':'write-error');
       if(self.deferred){var deferred=self.deferred;self.deferred=null;self.receive(deferred);}
       return false;
     });
@@ -558,6 +602,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     var next=Object.assign({},this.state,{base:ack.value,local:rebased.value,revision:ack.revision});delete next.ack;
     var self=this,result=this.persist(next);this.flight=null;
     return afterPersist(result,function(){
+      if(self.connectionError)return false;
       self.display();
       if(!self.blocked)self.status(self.pending()?'pending':(self.state.recovery.length?'recovery':'synced'));
       return !self.blocked;
@@ -570,11 +615,10 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
       var connection=this.connect();
       if(connection&&typeof connection.then==='function')return connection.then(function(ok){return ok&&self.doc?self.retry():false;});
     }
-    if(this.hold==='durability')return this.archiveTail.then(function(ok){return ok?self.retry():false;});
+    if(this.hold==='durability')return this.archiveTail.then(function(ok){return ok||(self.connectionError&&self.hold!=='storage')?self.retry():false;});
     if(this.hold==='storage'&&this.state){
-      var saved=this.persist(Object.assign({},this.state,{local:normalize(this.a.getData())}));
-      if(saved&&typeof saved.then==='function')return saved.then(function(ok){return ok?self.retry():false;});
-      if(!saved)return Promise.resolve(false);
+      var retryEpoch=this.epoch;
+      return this.save().then(function(){return self.guard(retryEpoch)&&!self.hold?self.retry():false;});
     }
     if(this.hold==='apply'&&this.state){this.hold=null;this.blocked=false;this.display();}
     if(!this.doc||this.hold)return Promise.resolve(false);
@@ -588,7 +632,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     }).catch(function(){if(self.guard(epoch)){self.unready();self.status('offline');}return false;});
   };
   Controller.prototype.useServer=function(){
-    if(this.hold==='durability'||!this.latest||!this.guard(this.epoch)||(this.flight&&!this.state.ack)||(this.a.editing&&this.a.editing()))return false;
+    if(this.connectionError||this.hold==='durability'||!this.latest||!this.guard(this.epoch)||(this.flight&&!this.state.ack)||(this.a.editing&&this.a.editing()))return false;
     var remote=normalize(this.latest),recovery=this.state?(this.state.recovery||[]).filter(function(data){return !equal(data,remote);}):[];
     /* The selected server data is stored in both base and local. Retain each different local variant
        once, without a third full-size copy of that same confirmed server data. */
@@ -597,6 +641,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     if(this.state&&this.state.overflowPrevious)next.overflowPrevious=clone(this.state.overflowPrevious);
     var self=this;
     return afterPersist(this.persist(next),function(){
+      if(self.connectionError)return false;
       self.flight=null;self.deferred=null;self.ready=true;self.display();
       if(self.blocked)return false;
       self.status('recovery');return true;
