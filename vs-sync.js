@@ -254,9 +254,15 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     if(packed.length>=text.length||decodeBackup(packed)!==text)return text;
     return packed;
   }
+  function afterPersist(result,action){
+    if(result&&typeof result.then==='function')return result.then(function(ok){return ok?action():false;});
+    return result?action():false;
+  }
   function Controller(adapter){
     this.a=adapter;this.epoch=0;this.state=null;this.owner=null;this.unsubscribe=null;
     this.flight=null;this.deferred=null;this.latest=null;this.ready=false;this.blocked=false;this.hold=null;
+    this.archiveTail=Promise.resolve();this.archiveSequence=0;this.overflowBackups=new Map();
+    this.confirmationSequence=0;this.connectionError=null;
     var instanceKey='vsC_sync_instance_v1:'+encodeURIComponent(adapter.namespace);
     this.instance=adapter.forkInstance?null:adapter.store.getItem(instanceKey);
     if(!this.instance){
@@ -264,8 +270,14 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
       adapter.store.setItem(instanceKey,this.instance);
     }
   }
-  Controller.prototype.status=function(mode,detail){this.mode=mode;this.a.status(mode,detail);};
-  Controller.prototype.unready=function(){this.ready=false;if(this.a.ready)this.a.ready(false);};
+  Controller.prototype.status=function(mode,detail){
+    if(['offline','invalid-remote','missing-remote'].indexOf(mode)>=0)this.connectionError=mode;
+    this.mode=mode;this.a.status(mode,detail);
+  };
+  Controller.prototype.unready=function(){
+    this.confirmationSequence++;this.deferred=null;this.ready=false;this.confirmed=false;this.displayRequired=true;
+    if(this.a.ready)this.a.ready(false);
+  };
   Controller.prototype.guard=function(epoch){return epoch===this.epoch&&this.owner&&this.a.owner()===this.owner;};
   /* A retained anchor can be rewritten by another tab: Web Storage has no compare-and-delete.
      Keep the exact removed bytes in this tab's journal storage before relying on that anchor.
@@ -293,12 +305,13 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     // there is no cross-tab migration or compare-and-replace of another writer's journal.
     var stored=encodeBackup(text);
     if(stored!==text){try{store.setItem(backupKey,stored);return;}catch(error){}}
+    if(this.a.overflowStore)throw Error('backup-quota');
     var freed=0;try{freed=self.a.reclaim?Number(self.a.reclaim())||0:0;}catch(error){freed=0;}
     if(freed){try{store.setItem(backupKey,stored);return;}catch(error){}}
     throw Error('backup-quota');
   };
   Controller.prototype.persist=function(next){
-    var text=JSON.stringify(next);
+    var text=JSON.stringify(next),sequence=++this.archiveSequence;
     try{
       this.a.store.setItem(this.key,text);
       if(this.a.store.getItem(this.key)!==text)throw Error('journal-readback');
@@ -313,31 +326,104 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
            Object.keys(next).length===fields.length&&Object.keys(next).every(function(k){return fields.indexOf(k)>=0;})&&
            Array.isArray(next.recovery)&&next.recovery.length===0&&equal(next.base,next.local)&&
            this.latest&&revision(this.latest)===next.revision&&equal(normalize(this.latest),next.base);
-        if(!confirmedOnly||store.getItem(backupKey)!==null){
-          this.writeBackup(next,text,backupKey);
-          if(decodeBackup(store.getItem(backupKey))!==text)throw Error('backup-readback');
+        if(!confirmedOnly||this.a.overflowStore||store.getItem(backupKey)!==null||this.overflowActive){
+          var overflow=this.overflowActive;
+          if(!overflow){
+            try{this.writeBackup(next,text,backupKey);}catch(error){
+              if(!this.a.overflowStore||error.message!=='backup-quota')throw error;overflow=true;
+            }
+            if(!overflow&&decodeBackup(store.getItem(backupKey))!==text)throw Error('backup-readback');
+          }
+          if(overflow){
+            // Stage the verified session journal immediately, so a subsequent save/ACK builds
+            // on the newest intent. All durable writes serialize; only the latest generation
+            // may release the hold. No Promise is treated as synchronous persistence success.
+            var self=this,epoch=this.epoch,confirmationSequence=this.confirmationSequence;
+            this.overflowActive=true;this.state=next;this.blocked=true;this.hold='durability';this.ready=false;
+            if(this.a.ready)this.a.ready(false);if(!this.connectionError)this.status('storage-pending');
+            var pending=this.archiveTail.catch(function(){}).then(function(){
+              if(!self.guard(epoch))return false;
+              return self.a.overflowStore.put(backupKey,text).then(function(saved){
+                if(saved!==text)throw Error('backup-readback');
+                if(!self.guard(epoch))return false;
+                self.overflowBackups.set(backupKey,text);
+                if(sequence!==self.archiveSequence)return false;
+                // Durability cannot undo a newer connection/validation failure. Retire only
+                // this archive's hold; any snapshot queued before that failure was invalidated.
+                if(confirmationSequence!==self.confirmationSequence||self.connectionError){
+                  if(self.hold==='durability')self.hold=null;
+                  if(!self.connectionError&&self.deferred)self.drain();return false;
+                }
+                self.blocked=false;self.hold=null;self.ready=!!self.confirmed;
+                if(self.a.ready)self.a.ready(self.ready);return true;
+              });
+            }).catch(function(){
+              if(self.guard(epoch)&&sequence===self.archiveSequence){
+                self.blocked=true;self.hold='storage';
+                if(!self.connectionError){self.unready();self.status('storage-error');}
+              }return false;
+            });
+            this.archiveTail=pending;return pending;
+          }
         }
       }
-      this.state=next;this.blocked=false;this.hold=null;return true;
-    }catch(error){this.blocked=true;this.hold='storage';this.status('storage-error');return false;}
+      this.state=next;if(!this.connectionError)this.blocked=false;this.hold=null;return true;
+    }catch(error){this.blocked=true;this.hold='storage';if(!this.connectionError)this.status('storage-error');return false;}
   };
   Controller.prototype.display=function(){
     if(this.a.editing&&this.a.editing())return;
-    try{this.a.setData(clone(this.state.local));this.a.render();}
+    try{this.a.setData(clone(this.state.local));this.a.render();this.viewBase=normalize(this.a.getData());this.displayRequired=false;}
     catch(error){this.blocked=true;this.hold='apply';this.status('apply-error');}
   };
   Controller.prototype.disconnect=function(){
     this.epoch++;if(this.unsubscribe)try{this.unsubscribe();}catch(error){}
-    this.unsubscribe=null;this.ready=false;this.blocked=false;this.hold=null;this.doc=null;this.state=null;this.flight=null;this.deferred=null;this.latest=null;this.owner=null;
+    this.unsubscribe=null;this.ready=false;this.confirmed=false;this.blocked=false;this.hold=null;this.doc=null;this.state=null;this.flight=null;this.deferred=null;this.latest=null;this.owner=null;
+    this.archiveSequence++;this.overflowActive=false;this.overflowBackups=new Map();this.connecting=null;
+    this.connectionError=null;
+    this.viewBase=null;
     if(this.a.ready)this.a.ready(false);
   };
   Controller.prototype.pending=function(){return this.state?diff(this.state.base,this.state.local).length:0;};
   Controller.prototype.connect=function(){
-    var owner=this.a.owner();if(owner===this.owner&&this.unsubscribe&&!this.unbound)return;
+    var owner=this.a.owner();if(owner===this.owner&&this.connecting)return this.connecting;
+    if(owner===this.owner&&this.unsubscribe&&!this.unbound)return;
     this.disconnect();if(!owner){this.status('auth-required');return;}
     this.owner=owner;this.key='vsC_sync_v1:'+encodeURIComponent(this.a.namespace+':'+owner);
-    var epoch=this.epoch,self=this;
+    var epoch=this.epoch,self=this,connectionKey=this.key;
+    if(this.a.overflowStore){
+      this.unready();this.status('storage-pending');
+      this.connecting=Promise.resolve().then(function(){if(!self.guard(epoch))return [];return self.a.overflowStore.list(connectionKey+':backup:');}).then(function(rows){
+        if(!self.guard(epoch))return false;
+        rows.forEach(function(row){
+          if(typeof row.key!=='string'||row.key.indexOf(self.key+':backup:')!==0||typeof row.text!=='string')throw Error('invalid-overflow');
+          var journal=JSON.parse(row.text);
+          if(journal.version!==1||journal.owner!==self.owner||journal.namespace!==self.a.namespace)throw Error('invalid-overflow-owner');
+          self.overflowBackups.set(row.key,row.text);
+        });
+        var own=self.overflowBackups.get(self.key+':backup:'+self.instance),session=self.a.store.getItem(self.key);
+        self.overflowActive=!!own;
+        if(own){
+          if(!session){self.a.store.setItem(self.key,own);if(self.a.store.getItem(self.key)!==own)throw Error('journal-readback');}
+          else if(session!==own){
+            // The session journal is written before its archive and can be newer on reload.
+            // Retain the entire prior committed journal (including ACK/unknown metadata).
+            var newer=JSON.parse(session);newer.overflowPrevious=newer.overflowPrevious||[];
+            if(!newer.overflowPrevious.some(function(value){return JSON.stringify(value)===own;}))newer.overflowPrevious.push(JSON.parse(own));
+            self.a.store.setItem(self.key,JSON.stringify(newer));
+          }
+        }
+        return self.start(epoch);
+      }).catch(function(){if(self.guard(epoch)){self.blocked=true;self.hold='storage';self.unready();self.status('storage-error');}return false;});
+      var connection=this.connecting;
+      connection.then(function(){if(self.guard(epoch)&&self.connecting===connection)self.connecting=null;});return connection;
+    }
+    return this.start(epoch);
+  };
+  Controller.prototype.start=function(epoch){
+    var self=this,owner=this.owner;
+    if(!this.guard(epoch))return false;
     try{
+      this.viewBase=normalize(this.a.getData());
       var hydrated=this.a.hydrated?!!this.a.hydrated():true;
       var durable=(!hydrated&&this.a.resumeData)?this.a.resumeData(owner):null;
       var resumeFromDurable=!!durable;
@@ -358,19 +444,30 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
             // whose journal write failed. Keep it as recovery, never upload it as inferred intent.
             if(!saved.recovery.some(function(data){return equal(data,startup);}))saved.recovery.push(startup);
           }
-          if(!this.persist(saved))return;
         }else if(hydrated&&!equal(startup,saved.local)){
           if(!saved.recovery.some(function(data){return equal(data,startup);}))saved.recovery.push(startup);
           if(saved.ack||diff(saved.base,saved.local).length)saved.resumeConflict=true;
-          if(!this.persist(saved))return;
         }
-        this.state=saved;if(saved.ack&&!saved.resumeConflict)this.finishAck();
-        if(!this.unbound&&!this.blocked&&(!saved.resumeConflict||resumeFromDurable))this.display();
+        this.state=saved;
+        var needsPersist=this.a.overflowStore||JSON.stringify(saved)!==raw;
+        this.initialLocal=startup;
+        return afterPersist(needsPersist?this.persist(saved):true,function(){
+          return afterPersist(saved.ack&&!saved.resumeConflict&&!(self.a.editing&&self.a.editing())?self.finishAck():true,function(){
+            if(!self.guard(epoch)||self.blocked)return false;
+            if(!self.unbound&&(!saved.resumeConflict||resumeFromDurable))self.display();
+            return self.subscribe(epoch);
+          });
+        });
       }else if(resumeFromDurable){
         try{this.a.setData(clone(startup));this.a.render();}
         catch(error){this.blocked=true;this.hold='apply';this.status('apply-error');return;}
       }
       this.initialLocal=startup;
+      return this.subscribe(epoch);
+    }catch(error){this.blocked=true;this.hold='storage';this.status('storage-error');return false;}
+  };
+  Controller.prototype.subscribe=function(epoch){
+      var self=this;if(!this.guard(epoch)||this.blocked)return false;
       this.doc=this.a.database().collection('studio').doc('data');
       if(this.a.doc)this.a.doc(this.doc);
       var unsubscribe=this.doc.onSnapshot({includeMetadataChanges:true},function(snapshot){
@@ -381,21 +478,24 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
         try{self.receive(snapshot.data());}catch(error){self.unready();self.blocked=true;self.status('invalid-remote');}
       },function(){if(!self.guard(epoch))return;self.unready();self.status('offline');});
       if(this.guard(epoch))this.unsubscribe=unsubscribe;else unsubscribe();
-    }catch(error){this.blocked=true;this.status('storage-error');}
+      return true;
   };
   Controller.prototype.receive=function(data){
-    var rev=revision(data),remote=normalize(data),self=this;
+    var rev=revision(data),remote=normalize(data),self=this,confirmationSequence=this.confirmationSequence;
     if(this.state&&rev<this.state.revision)return;
+    // A fresh validated server snapshot may lift a connection fault. It still cannot
+    // authorize writes/readiness until the journal including it is durable.
+    this.connectionError=null;this.confirmed=true;
     this.latest=clone(data);
+    if(this.hold){this.deferred=clone(data);return;}
     if(this.state&&this.state.resumeConflict){
       if(!this.state.ack&&equal(remote,this.state.local)){
         // This exact local value is already confirmed. Lift only the obsolete resume hold;
         // every alternate recovery snapshot stays in the journal and durable backup.
         var confirmed=Object.assign({},this.state,{revision:rev,base:remote});delete confirmed.resumeConflict;
-        if(!this.persist(confirmed))return;
+        return afterPersist(this.persist(confirmed),function(){return self.receive(data);});
       }else{this.blocked=true;this.status('conflict');return;}
     }
-    if(this.hold){this.deferred=clone(data);return;}
     if(this.flight||(this.state&&this.state.ack)||(this.blocked&&(this.mode==='storage-error'||this.mode==='apply-error'))||(this.a.editing&&this.a.editing())){this.deferred=clone(data);this.status('deferred');return;}
     var next;
     if(!this.state){
@@ -408,26 +508,56 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
       next=Object.assign({},this.state,{revision:rev,base:remote,local:merged.value});
     }
     var changed=!this.state||!equal(this.state.local,next.local);
-    if(!this.persist(next))return;
-    this.ready=true;this.unbound=false;if(this.a.ready)this.a.ready(true);
-    if(changed)this.display();if(this.blocked)return;
-    this.status(this.pending()?'pending':(this.state.recovery.length?'recovery':'synced'));
-    if(this.pending()&&!this.scheduled){this.scheduled=true;var scheduledEpoch=this.epoch;this.a.later(function(){self.scheduled=false;if(self.guard(scheduledEpoch))self.flush();});}
+    return afterPersist(this.persist(next),function(){
+      if(!self.confirmed||self.connectionError||confirmationSequence!==self.confirmationSequence)return false;
+      self.ready=true;self.unbound=false;if(self.a.ready)self.a.ready(true);
+      if(changed||self.displayRequired)self.display();if(self.blocked)return false;
+      self.status(self.pending()?'pending':(self.state.recovery.length?'recovery':'synced'));
+      // The subscription can advance while IndexedDB commits. Replay the latest queued
+      // snapshot now, rather than waiting for another notification or the audit timer.
+      if(self.deferred){self.drain();return true;}
+      if(self.pending()&&!self.scheduled){self.scheduled=true;var scheduledEpoch=self.epoch;self.a.later(function(){self.scheduled=false;if(self.guard(scheduledEpoch))self.flush();});}
+      return true;
+    });
   };
   Controller.prototype.drain=function(){
+    if(this.connectionError)return;
     if(this.a.editing&&this.a.editing())return;
-    if(this.state&&this.state.ack)this.finishAck();
-    if(this.flight||this.blocked)return;
+    if(this.hold==='durability')return;
+    if(this.state&&this.state.ack){var self=this;return afterPersist(this.finishAck(),function(){return self.drain();});}
+    if(this.flight)return;
+    if(this.blocked&&this.deferred&&!this.hold&&['offline','invalid-remote','missing-remote'].indexOf(this.mode)>=0){
+      var fresh=this.deferred;this.deferred=null;return this.receive(fresh);
+    }
+    if(this.blocked)return;
     if(this.deferred){var data=this.deferred;this.deferred=null;this.receive(data);}
     this.flush();
   };
   Controller.prototype.save=function(){
     if(!this.state||this.a.owner()!==this.owner){this.unbound=true;this.status('local-only');return Promise.resolve(false);}
-    var next=Object.assign({},this.state,{local:normalize(this.a.getData())});
-    if(!this.persist(next))return Promise.resolve(false);
-    if(this.state.resumeConflict){this.blocked=true;this.status('conflict');return Promise.resolve(false);}
-    this.status(this.pending()?'pending':(this.ready?'synced':'unconfirmed'));
-    return this.flush();
+    var self=this,current=normalize(this.a.getData());
+    // The journal can advance while its remote value is still awaiting durability/display.
+    // Infer user intent from the last displayed/captured UI, not from that unseen new base.
+    var merged=apply(this.state.local,diff(this.viewBase||this.state.local,current));
+    var next=Object.assign({},this.state,{local:merged.value});
+    if(merged.conflicts.length){
+      next.local=current;next.resumeConflict=true;next.recovery=clone(this.state.recovery);
+      if(!next.recovery.some(function(data){return equal(data,self.state.local);}))next.recovery.push(clone(this.state.local));
+    }
+    var saved=this.persist(next);
+    // Advance only after the session journal accepted this intent, including a pending
+    // durable archive. A failed session write must leave earlier unsaved UI deltas visible.
+    if(this.state===next)this.viewBase=clone(current);
+    return Promise.resolve(afterPersist(saved,function(){
+      if(self.connectionError)return false;
+      if(self.state.resumeConflict){self.blocked=true;self.status('conflict');return false;}
+      if(self.state.ack){return afterPersist(self.finishAck(),function(){self.drain();return true;});}
+      self.status(self.pending()?'pending':(self.ready?'synced':'unconfirmed'));
+      // A save can supersede the initial archive while connect is waiting for durability.
+      // Connection may start only after this newest journal is committed as well.
+      if(!self.doc&&self.a.overflowStore)self.subscribe(self.epoch);
+      return self.flush();
+    }));
   };
   Controller.prototype.flush=function(){
     var self=this,epoch=this.epoch;
@@ -454,11 +584,13 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     return request.then(function(committed){
       if(!self.guard(epoch)||self.flight!==token)return false;
       var next=Object.assign({},self.state,{ack:{sent:sent,value:committed.value,revision:committed.revision}});
-      if(!self.persist(next)){self.flight=null;return false;}
-      self.status('deferred');self.finishAck();self.drain();return true;
+      return afterPersist(self.persist(next),function(){
+        if(self.connectionError)return false;
+        self.status('deferred');return afterPersist(self.finishAck(),function(){self.drain();return true;});
+      });
     },function(error){
       if(!self.guard(epoch)||self.flight!==token)return false;
-      self.flight=null;self.status(error.message==='write-conflict'||error.message==='legacy-conflict'?'conflict':'write-error');
+      self.flight=null;if(!self.connectionError)self.status(error.message==='write-conflict'||error.message==='legacy-conflict'?'conflict':'write-error');
       if(self.deferred){var deferred=self.deferred;self.deferred=null;self.receive(deferred);}
       return false;
     });
@@ -468,16 +600,25 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     var ack=this.state.ack,rebased=apply(ack.value,diff(ack.sent,this.state.local));
     if(rebased.conflicts.length){this.flight=null;this.blocked=true;this.status('conflict',rebased.conflicts.length);return false;}
     var next=Object.assign({},this.state,{base:ack.value,local:rebased.value,revision:ack.revision});delete next.ack;
-    if(!this.persist(next)){this.flight=null;return false;}
-    this.flight=null;this.display();
-    if(!this.blocked)this.status(this.pending()?'pending':(this.state.recovery.length?'recovery':'synced'));
-    return true;
+    var self=this,result=this.persist(next);this.flight=null;
+    return afterPersist(result,function(){
+      if(self.connectionError)return false;
+      self.display();
+      if(!self.blocked)self.status(self.pending()?'pending':(self.state.recovery.length?'recovery':'synced'));
+      return !self.blocked;
+    });
   };
   Controller.prototype.retry=function(){
     if(!this.a.owner()){this.status('auth-required');return Promise.resolve(false);}
-    if(this.a.owner()!==this.owner||!this.unsubscribe)this.connect();
+    var self=this;
+    if(this.a.owner()!==this.owner||!this.unsubscribe){
+      var connection=this.connect();
+      if(connection&&typeof connection.then==='function')return connection.then(function(ok){return ok&&self.doc?self.retry():false;});
+    }
+    if(this.hold==='durability')return this.archiveTail.then(function(ok){return ok||(self.connectionError&&self.hold!=='storage')?self.retry():false;});
     if(this.hold==='storage'&&this.state){
-      if(!this.persist(Object.assign({},this.state,{local:normalize(this.a.getData())})))return Promise.resolve(false);
+      var retryEpoch=this.epoch;
+      return this.save().then(function(){return self.guard(retryEpoch)&&!self.hold?self.retry():false;});
     }
     if(this.hold==='apply'&&this.state){this.hold=null;this.blocked=false;this.display();}
     if(!this.doc||this.hold)return Promise.resolve(false);
@@ -485,22 +626,29 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     return this.doc.get({source:'server'}).then(function(snapshot){
       if(!self.guard(epoch))return false;
       if(!snapshot.exists){self.unready();self.status('missing-remote');return false;}
-      self.receive(snapshot.data());self.drain();return self.flush();
+      var received=self.receive(snapshot.data());
+      if(received&&typeof received.then==='function')return received.then(function(ok){if(!ok)return false;self.drain();return self.flush();});
+      self.drain();return self.flush();
     }).catch(function(){if(self.guard(epoch)){self.unready();self.status('offline');}return false;});
   };
   Controller.prototype.useServer=function(){
-    if(!this.latest||!this.guard(this.epoch)||(this.flight&&!this.state.ack)||(this.a.editing&&this.a.editing()))return false;
+    if(this.connectionError||this.hold==='durability'||!this.latest||!this.guard(this.epoch)||(this.flight&&!this.state.ack)||(this.a.editing&&this.a.editing()))return false;
     var remote=normalize(this.latest),recovery=this.state?(this.state.recovery||[]).filter(function(data){return !equal(data,remote);}):[];
     /* The selected server data is stored in both base and local. Retain each different local variant
        once, without a third full-size copy of that same confirmed server data. */
     if(this.state&&!equal(this.state.local,remote)&&!recovery.some(function(data){return equal(data,this.state.local);},this))recovery.push(clone(this.state.local));
     var next={version:1,namespace:this.a.namespace,owner:this.owner,revision:revision(this.latest),base:remote,local:remote,recovery:recovery};
-    if(!this.persist(next))return false;
-    this.flight=null;this.deferred=null;this.ready=true;this.display();
-    if(this.blocked)return false;
-    this.status('recovery');return true;
+    if(this.state&&this.state.overflowPrevious)next.overflowPrevious=clone(this.state.overflowPrevious);
+    var self=this;
+    return afterPersist(this.persist(next),function(){
+      if(self.connectionError)return false;
+      self.flight=null;self.deferred=null;self.ready=true;self.display();
+      if(self.blocked)return false;
+      self.status('recovery');return true;
+    });
   };
   Controller.prototype.exportData=function(){
+    if(!this.guard(this.epoch))return {version:1,current:null,backups:[],reclaimedBackups:[]};
     var result={version:1,current:this.state,backups:[],reclaimedBackups:[]},store=this.a.backupStore;
     if(store&&this.key)for(var i=0;i<store.length;i++){
       var key=store.key(i);if(key&&key.indexOf(this.key+':backup:')===0){
@@ -512,6 +660,18 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
       var savedKey=store.key(j);if(savedKey&&savedKey.indexOf(this.key+':reclaimed:')===0){
         try{result.reclaimedBackups.push(JSON.parse(decodeBackup(store.getItem(savedKey))));}catch(error){result.reclaimedBackups.push({unreadable:true});}
       }
+    }
+    if(this.a.overflowStore){
+      var self=this,epoch=this.epoch,prefix=this.key+':backup:';
+      return this.archiveTail.then(function(){if(!self.guard(epoch))throw Error('export-session-changed');return self.a.overflowStore.list(prefix);}).then(function(rows){
+        if(!self.guard(epoch))throw Error('export-session-changed');
+        rows.forEach(function(row){
+          if(typeof row.key!=='string'||row.key.indexOf(prefix)!==0)throw Error('invalid-overflow');
+          var journal=JSON.parse(row.text);
+          if(journal.owner!==self.owner||journal.namespace!==self.a.namespace)throw Error('invalid-overflow-owner');
+          result.backups.push(journal);
+        });result.current=self.state;return clone(result);
+      });
     }
     return clone(result);
   };

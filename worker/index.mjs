@@ -4,7 +4,7 @@ export { StudioState };
 const PROTOCOL = 'vs-cf-1';
 const MAX_MEDIA_BYTES = 20 * 1024 * 1024;
 const ASSETS = new Set([
-  '/index.html', '/vs-sync.js', '/cf-transport.js', '/cf-migration.js',
+  '/index.html', '/vs-sync.js', '/vs-backup.js', '/cf-transport.js', '/cf-migration.js',
   '/v2-ui.js', '/v2.css',
   '/v3-daylight.css', '/studio-daylight.png',
   '/sw.js', '/manifest.json', '/icon-192.png', '/icon-512.png',
