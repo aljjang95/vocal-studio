@@ -36,7 +36,9 @@ test('Cloudflare cold start announces access and server hydration while pending'
   assert.match(html,/var checking=\['checking-session','checking-server'\]\.indexOf\(mode\)>=0/);
   const disabled=html.slice(html.indexOf('function _disableCloudflareSync'),html.indexOf('function signInAdmin'));
   assert.match(disabled,/_vsSyncActions\('auth-required'\)/);
-  assert.match(html,/function _retryCloudflareSync\(\)\{\s*if\(!hasAdminSession\(\)\|\|!_vsSync\)return initCloudflare\(\);\s*return _vsSync\.retry\(\);/);
+  assert.match(html,/function _retryCloudflareSync\(\)\{\s*if\(_cfAuthIssue\|\|!hasAdminSession\(\)\|\|!_vsSync\)return initCloudflare\(\);\s*return _vsSync\.retry\(\);/);
+  assert.match(init,/if\(epoch!==_cfInitEpoch\)return false;/);
+  assert.match(init,/return Promise\.resolve\(_vsSync\.unsubscribe\?_vsSync\.retry\(\):_vsSync\.connect\(\)\)/);
   assert.match(html,/function\(\)\{_retryCloudflareSync\(\);\}/);
   assert.match(html,/pane\.className='v2-initial-sync-state';/);
 });

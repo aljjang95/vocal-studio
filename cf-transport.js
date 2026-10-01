@@ -3,21 +3,36 @@
   var PROTOCOL='vs-cf-1';
   var auditMs=300000;
   var stateMode='unknown';
+  var stateError=null;
+  var stateEpoch=0,activeReads=new Set();
+  function invalidateStateReads(){stateEpoch++;activeReads.forEach(function(controller){controller.abort();});}
+  function fault(kind,message,status){return Object.assign(new Error(message),{kind:kind,status:status});}
   function headers(extra){return Object.assign({'X-VS-Protocol':PROTOCOL},extra||{});}
   async function api(path,options){
     options=options||{};
-    var controller=new AbortController(),timer=setTimeout(function(){controller.abort();},20000);
-    var cancel=function(){controller.abort();};
+    var controller=new AbortController(),rejectDeadline;
+    var deadline=new Promise(function(resolve,reject){rejectDeadline=reject;});
+    var timer=setTimeout(function(){rejectDeadline(fault('timeout','request-timeout'));controller.abort();},20000);
+    var cancel=function(){rejectDeadline(fault('cancelled','request-cancelled'));controller.abort();};
     if(options.signal){if(options.signal.aborted)cancel();else options.signal.addEventListener('abort',cancel,{once:true});}
     try{
-      var init={method:options.method||'GET',credentials:'same-origin',cache:'no-store',redirect:'error',signal:controller.signal,headers:headers(options.headers)};
+      var init={method:options.method||'GET',credentials:'same-origin',cache:'no-store',redirect:'manual',signal:controller.signal,headers:headers(options.headers)};
       if(options.body!==undefined){init.body=typeof options.body==='string'?options.body:JSON.stringify(options.body);init.headers['Content-Type']=init.headers['Content-Type']||'application/json';}
-      var response=await fetch(path,init),text=await response.text(),data;
-      try{data=JSON.parse(text);}catch(error){return Object.assign(new Error('invalid-json-response'),{status:response.status});}
-      if(response.redirected||!data||typeof data!=='object'||Array.isArray(data))return new Error('invalid-api-response');
-      if(!response.ok&&!options.allow)return Object.assign(new Error(data.error||('http-'+response.status)),{status:response.status,data:data});
-      return {response:response,data:data,text:text};
-    }finally{clearTimeout(timer);if(options.signal)options.signal.removeEventListener('abort',cancel);}
+      return await Promise.race([deadline,(async function(){
+        var response;
+        try{response=await fetch(path,init);}catch(error){throw fault('network','network-unavailable');}
+        if(response.type==='opaqueredirect'||response.redirected||(response.status>=300&&response.status<400)||response.status===401||response.status===403)
+          return fault('auth','access-session-required',response.status);
+        var text=await response.text(),data;
+        if(/text\/html/i.test(response.headers&&response.headers.get('content-type')||'')||/^\s*(?:<!doctype\s+html|<html\b)/i.test(text))
+          return fault('auth','access-login-response',response.status);
+        try{data=JSON.parse(text);}catch(error){return fault('invalid-response','invalid-json-response',response.status);}
+        if(!data||typeof data!=='object'||Array.isArray(data))return fault('invalid-response','invalid-api-response',response.status);
+        if(!response.ok&&!options.allow)return Object.assign(fault('server',data.error||('http-'+response.status),response.status),{data:data});
+        return {response:response,data:data,text:text};
+      })()]);
+    }catch(error){throw error.kind?error:fault('network','network-unavailable');}
+    finally{clearTimeout(timer);if(options.signal)options.signal.removeEventListener('abort',cancel);}
   }
   function validRecord(value){
     return value&&['active','staged'].includes(value.mode)&&Number.isSafeInteger(value.revision)&&value.revision>=0&&
@@ -30,23 +45,35 @@
   }
   function snapshot(payload){
     if(payload===null)return{exists:false,metadata:{fromCache:false,hasPendingWrites:false},data:function(){return null;}};
-    if(!validRecord(payload))throw new Error('invalid-state-response');
+    if(!validRecord(payload))throw fault('invalid-response','invalid-state-response');
     stateMode=payload.mode;
     var data=Object.assign({},payload.state||{}, {_vsSyncRevision:payload.revision||0});
     return{exists:true,metadata:{fromCache:false,hasPendingWrites:false},data:function(){return JSON.parse(JSON.stringify(data));},mode:stateMode};
   }
   async function readState(signal){
-    var result=await api('/api/state',{allow:true,signal:signal});
+    var epoch=stateEpoch,controller=new AbortController(),cancel=function(){controller.abort();};
+    activeReads.add(controller);
+    if(signal){if(signal.aborted)cancel();else signal.addEventListener('abort',cancel,{once:true});}
+    try{
+    var result=await api('/api/state',{allow:true,signal:controller.signal});
+    if(epoch!==stateEpoch)throw fault('cancelled','superseded-state-read');
     if(result instanceof Error)throw result;
-    if(result.response.status===404&&result.data.error==='missing-state'){stateMode='missing';return snapshot(null);}
+    if(result.response.status===404&&result.data.error==='missing-state'){stateError=null;stateMode='missing';return snapshot(null);}
     if(!result.response.ok)throw Object.assign(new Error((result.data&&result.data.error)||('http-'+result.response.status)),{status:result.response.status});
-    return snapshot(result.data);
+    var value=snapshot(result.data);stateError=null;return value;
+    }catch(error){if(epoch===stateEpoch&&!controller.signal.aborted)stateError=error;throw error;}
+    finally{activeReads.delete(controller);if(signal)signal.removeEventListener('abort',cancel);}
   }
   function eventUrl(){
     if(!root.location||!root.location.host)return null;
     return(root.location.protocol==='https:'?'wss://':'ws://')+root.location.host+'/api/events?protocol='+encodeURIComponent(PROTOCOL);
   }
   function makeDoc(){
+    var readFailed=false;
+    async function read(signal){
+      try{var value=await readState(signal);readFailed=false;return value;}
+      catch(error){readFailed=true;throw error;}
+    }
     return{
       onSnapshot:function(options,onValue,onError){
         var stopped=false,auditTimer=null,reconnectTimer=null,controller=null,socket=null,reading=false,queued=false,lastRevision=null,retryMs=1000;
@@ -54,8 +81,8 @@
         function scheduleAudit(){if(stopped)return;if(auditTimer)clearTimeout(auditTimer);auditTimer=setTimeout(function(){refresh().finally(scheduleAudit);},auditMs);}
         async function refresh(){
           if(stopped)return;if(reading){queued=true;return;}reading=true;controller=new AbortController();
-          try{var value=await readState(controller.signal);if(stopped)return;var data=value.exists?value.data():null;lastRevision=data?Number(data._vsSyncRevision||0):null;onValue(value);}
-          catch(error){if(!stopped&&onError)onError(error);}
+          try{var value=await read(controller.signal);if(stopped)return;var data=value.exists?value.data():null;lastRevision=data?Number(data._vsSyncRevision||0):null;onValue(value);}
+          catch(error){if(error.kind!=='cancelled'&&!stopped&&onError)onError(error);}
           finally{controller=null;reading=false;if(queued&&!stopped){queued=false;refresh();}}
         }
         function scheduleReconnect(){
@@ -67,20 +94,23 @@
           if(stopped)return;var url=eventUrl();if(!url||!root.WebSocket){scheduleAudit();return;}
           try{socket=new root.WebSocket(url);}catch(error){scheduleReconnect();return;}
           socket.onopen=function(){retryMs=1000;scheduleAudit();};
-          socket.onmessage=function(event){try{var msg=JSON.parse(event.data);if((msg.type==='state-changed'||msg.type==='hello')&&msg.revision!==lastRevision)refresh();}catch(error){}};
+          socket.onmessage=function(event){try{var msg=JSON.parse(event.data);if((msg.type==='state-changed'||msg.type==='hello')&&(readFailed||msg.revision!==lastRevision))refresh();}catch(error){}};
           socket.onerror=function(){};
           socket.onclose=function(){socket=null;if(auditTimer){clearTimeout(auditTimer);auditTimer=null;}scheduleReconnect();};
         }
+        function resume(){if(!stopped&&root.document.visibilityState==='visible')refresh();}
+        if(root.document&&root.document.addEventListener)root.document.addEventListener('visibilitychange',resume);
         refresh().finally(connect);
-        return function(){stopped=true;clearTimers();if(controller)controller.abort();if(socket)try{socket.close();}catch(error){}socket=null;};
+        return function(){stopped=true;clearTimers();if(root.document&&root.document.removeEventListener)root.document.removeEventListener('visibilitychange',resume);if(controller)controller.abort();if(socket)try{socket.close();}catch(error){}socket=null;};
       },
-      get:function(){return readState();}
+      get:function(){return read();}
     };
   }
   function database(){
     return{
       collection:function(){return{doc:function(){return makeDoc();}};},
       runTransaction:async function(fn){
+        var epoch=stateEpoch;
         for(var attempt=0;attempt<4;attempt++){
           var before=await readState();
           if(!before.exists)throw new Error('missing-remote');
@@ -88,11 +118,16 @@
           var tx={get:async function(){return before;},set:function(doc,value){written=JSON.parse(JSON.stringify(value));}};
           var result=await fn(tx);
           if(!written)return result;
+          if(epoch!==stateEpoch)throw fault('cancelled','superseded-state-transaction');
           if(before.mode!=='active')throw new Error('staged-readonly');
           var baseRevision=Number(base._vsSyncRevision||0);delete written._vsSyncRevision;
           var requestId=(root.crypto&&root.crypto.randomUUID?root.crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2));
-          var committed=await api('/api/commit',{method:'POST',body:{baseRevision:baseRevision,requestId:requestId,state:written}});
+          var committed;
+          try{committed=await api('/api/commit',{method:'POST',body:{baseRevision:baseRevision,requestId:requestId,state:written}});}
+          catch(error){if(epoch!==stateEpoch)throw fault('cancelled','superseded-state-transaction');stateError=error;throw error;}
+          if(epoch!==stateEpoch)throw fault('cancelled','superseded-state-transaction');
           if(committed instanceof Error){
+            stateError=committed;
             if(committed.status===409&&committed.data?.error==='revision-conflict'&&attempt<3)continue;
             throw committed;
           }
@@ -105,7 +140,9 @@
     };
   }
   async function session(){
-    var result=await api('/api/session');if(result instanceof Error)throw result;return result.data;
+    var result=await api('/api/session');if(result instanceof Error)throw result;
+    if(result.data.ok!==true||typeof result.data.principal!=='string'||!result.data.principal||result.data.protocol!==PROTOCOL)throw fault('invalid-response','invalid-session-response');
+    return result.data;
   }
   function dataUrlBlob(data,contentType){
     if(typeof data!=='string'||data.slice(0,5)!=='data:')throw new Error('invalid-data-url');
@@ -130,5 +167,6 @@
   }
   function mediaUrl(pointer){return '/api/media/'+encodeURIComponent(pointer);}
   root.VCFTransport={protocol:PROTOCOL,api:api,session:session,database:database,uploadDataUrl:uploadDataUrl,mediaUrl:mediaUrl,
+    stateError:function(){return stateError;},invalidateStateReads:invalidateStateReads,
     stateMode:function(){return stateMode;},setPollMs:function(ms){auditMs=Math.max(60000,Number(ms)||300000);},setAuditMs:function(ms){auditMs=Math.max(60000,Number(ms)||300000);}};
 })(typeof globalThis!=='undefined'?globalThis:this);
