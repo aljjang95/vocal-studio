@@ -63,7 +63,7 @@ test('unsubscribed polling cannot deliver late customer data or errors',async()=
 });
 test('API requests reject redirects and bypass caches',async()=>{
   let observed;const h=harness(async(path,init)=>{observed=init;return json({ok:true});});
-  await h.api.api('/api/session');assert.equal(observed.cache,'no-store');assert.equal(observed.redirect,'error');
+  await h.api.api('/api/session');assert.equal(observed.cache,'no-store');assert.equal(observed.redirect,'manual');
   assert.equal(observed.credentials,'same-origin');assert.equal(observed.headers['X-VS-Protocol'],'vs-cf-1');
 });
 test('a hung response is aborted within a bounded request deadline',async()=>{

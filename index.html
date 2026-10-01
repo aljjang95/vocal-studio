@@ -4397,10 +4397,11 @@ function getOffLabel(dateStr){
 var _fbReady=false, _fbSyncing=false, _fbUnsub=null, _skipRenderCount=0, _fbApplyingRemote=false, _lastFirestorePushSig='', _lastFirestorePushAt=0, _localProtectUntil=0;
 
 var _cfSession=null,_cfAppHydrated=false;
+var _cfAuthIssue=false,_cfConnectionIssue=null,_cfInitPromise=null,_cfInitEpoch=0;
 function _isFirebaseAdminUser(){return false;}
 function hasAdminSession(){return !!(_cfSession&&_cfSession.ok&&_cfSession.principal);}
 function _updateAdminAuthControls(){
-  var isAdmin=hasAdminSession();
+  var isAdmin=hasAdminSession()&&!_cfAuthIssue;
   [
     {login:ge('adminLoginBtn'),logout:ge('adminLogoutBtn')},
     {login:ge('topAdminLoginBtn'),logout:ge('topAdminLogoutBtn')}
@@ -4423,12 +4424,16 @@ function _cfLoadLocalResume(owner){
   }catch(e){return null;}
 }
 function _disableCloudflareSync(msg){
+  _cfInitEpoch++;
   _fbReady=false;_cfSession=null;
   if(typeof _vsSync!=='undefined'&&_vsSync)_vsSync.disconnect();
   _showSyncStatus(msg||'Cloudflare Access 세션 확인 필요');
   _vsSyncActions('auth-required');
 }
-function signInAdmin(){location.reload();return Promise.resolve();}
+function signInAdmin(){
+  if(_vsEditing()&&!confirm('입력 중인 내용이 있습니다. 저장하지 않은 입력을 확인한 뒤 로그인 화면으로 이동할까요?'))return Promise.resolve(false);
+  location.assign('/');return Promise.resolve(true);
+}
 function signOutAdmin(){location.assign('/cdn-cgi/access/logout');return Promise.resolve();}
 
 
@@ -4516,20 +4521,31 @@ function removeCustomHoliday(ds){
   toast('휴무일 삭제: '+ds+' ✓');
 }
 function initCloudflare(){
+  if(_cfInitPromise)return _cfInitPromise;
   if(typeof VCFTransport==='undefined'){
-    _disableCloudflareSync('Cloudflare transport 확인 필요');return;
+    _vsSyncActions('offline');_showSyncStatus('연결 모듈 확인 필요 · 변경 보관');return Promise.resolve(false);
   }
+  var epoch=++_cfInitEpoch;
   _vsSyncActions('checking-session');
   _showSyncStatus('Cloudflare Access 연결 확인 중 · 변경은 이 기기에 보관됩니다');
-  VCFTransport.session().then(function(session){
-    _cfSession=session;_updateAdminAuthControls();
+  var attempt=VCFTransport.session().then(function(session){
+    if(epoch!==_cfInitEpoch)return false;
+    _cfConnectionIssue=null;_cfAuthIssue=false;_cfSession=session;_updateAdminAuthControls();
     _vsSyncActions('checking-server');
     _showSyncStatus('🔐 Cloudflare Access 인증됨 · 서버 자료 확인 중');
-    if(_vsSync)_vsSync.connect();else{_vsSyncActions('offline');_showSyncStatus('동기화 모듈 확인 필요 · 서버 연결 중지');}
+    if(_vsSync)return Promise.resolve(_vsSync.unsubscribe?_vsSync.retry():_vsSync.connect());
+    _vsSyncActions('offline');_showSyncStatus('동기화 모듈 확인 필요 · 서버 연결 중지');return false;
   }).catch(function(e){
+    if(epoch!==_cfInitEpoch)return false;
     console.error('Cloudflare Access 세션 확인 실패',e);
-    _disableCloudflareSync('⚠️ Access 세션 확인 실패');
+    _cfConnectionIssue=e;_cfAuthIssue=_cfAuthIssue||e.kind==='auth';
+    VCFTransport.invalidateStateReads();
+    if(_vsSync)_vsSync.unready();_fbReady=false;
+    var mode=_cfAuthIssue?'auth-required':(e.kind==='timeout'?'connection-delayed':(e.kind==='invalid-response'?'invalid-remote':'offline'));
+    _updateAdminAuthControls();_vsSyncActions(mode);_showSyncStatus(_vsSyncLabels[mode]);return false;
   });
+  _cfInitPromise=attempt.finally(function(){if(_cfInitPromise===pending)_cfInitPromise=null;});
+  var pending=_cfInitPromise;return pending;
 }
 function _cfDatabase(){return VCFTransport.database();}
 
@@ -4664,7 +4680,9 @@ function _warnLocalOnlySync(msg){
 }
 /* Active runtime adapter: all writes pass through the versioned transaction controller. */
 var _vsSyncLabels={
-  'auth-required':'관리자 로그인 필요 · 이 기기에만 저장됩니다',
+  'auth-required':'로그인이 만료되었거나 확인이 필요합니다 · 다시 로그인해 주세요 · 변경 보관',
+  'connection-delayed':'연결 확인이 지연되고 있습니다 · 다시 확인하거나 로그인해 주세요 · 변경 보관',
+  'storage-delayed':'기기 보관본 저장 확인이 지연되고 있습니다 · 저장소 확인 후 다시 시도해 주세요 · 서버 전송 중지',
   'local-only':'서버 확인 전 · 변경은 이 기기에 보관됩니다',
   saving:'서버 저장 확인 중',pending:'미동기화 변경 보관 중',synced:'동기화됨',
   recovery:'동기화됨 · 이전 기기 보관본 있음',deferred:'입력·저장 응답 확인 후 다른 기기 변경을 반영합니다',
@@ -4679,6 +4697,22 @@ var _vsSyncLabels={
   'write-error':'서버 저장 실패 · 변경 보관 · 다시 확인해 주세요',
   frozen:'마이그레이션 동결 · 서버 저장 보류'
 };
+var _cfWaitingTimer=null,_cfWaitingPhase=null,_cfWaitingExpired=false;
+function _cfSyncMode(mode){
+  if(['synced','recovery'].indexOf(mode)>=0){
+    if(!_vsSync||(_vsSync.ready&&_vsSync.confirmed)){_cfConnectionIssue=null;_cfAuthIssue=false;_updateAdminAuthControls();}
+    else if(_cfConnectionIssue)mode='offline';
+  }
+  if(mode==='offline'||mode==='write-error'){
+    var error=_cfConnectionIssue||(typeof VCFTransport!=='undefined'&&VCFTransport.stateError&&VCFTransport.stateError());
+    if(error&&error.kind==='auth'){_cfAuthIssue=true;if(_vsSync&&_vsSync.ready)_vsSync.unready();_updateAdminAuthControls();return 'auth-required';}
+    if(_cfAuthIssue)return 'auth-required';
+    if(error&&error.kind==='invalid-response')return 'invalid-remote';
+    if(error&&error.kind==='timeout')return 'connection-delayed';
+  }
+  if(_cfAuthIssue&&['synced','recovery','pending','unconfirmed','saving','deferred','offline','write-error','invalid-remote','connection-delayed'].indexOf(mode)>=0)return 'auth-required';
+  return mode;
+}
 function _updateV2InitialSyncState(mode){
   var content=ge('content');if(!content)return;
   var pane=ge('v2InitialSyncState');
@@ -4753,7 +4787,7 @@ try{if(typeof VSBackup==='undefined')throw Error('backup-module-unavailable');if
     _fbApplyingRemote=true;
     try{renderSidebarToday();if(typeof render==='function')render();}finally{_fbApplyingRemote=false;}
   },
-  status:function(mode,count){_showSyncStatus((_vsSyncLabels[mode]||mode)+(count?' ('+count+'건)':''));_vsSyncActions(mode);}
+  status:function(mode,count){mode=_cfSyncMode(mode);_showSyncStatus((_vsSyncLabels[mode]||mode)+(count?' ('+count+'건)':''));_vsSyncActions(mode);}
 });}catch(error){_showSyncStatus('동기화 저장소 확인 필요 · 서버 전송 중지');}
 saveAll=function(){
   if(hasAdminSession())_cfBindLocalOwner();
@@ -4773,10 +4807,27 @@ function _cfDrainMedia(){
   });
 }
 function _retryCloudflareSync(){
-  if(!hasAdminSession()||!_vsSync)return initCloudflare();
+  if(_cfAuthIssue||!hasAdminSession()||!_vsSync)return initCloudflare();
   return _vsSync.retry();
 }
 function _vsSyncActions(mode){
+  mode=_cfSyncMode(mode);
+  var phase=mode==='storage-pending'?'storage':(['checking-session','checking-server','unconfirmed'].indexOf(mode)>=0?'connection':null);
+  if(phase){
+    if(_cfWaitingPhase!==phase){
+      if(_cfWaitingTimer)clearTimeout(_cfWaitingTimer);
+      _cfWaitingPhase=phase;_cfWaitingExpired=false;
+      _cfWaitingTimer=setTimeout(function(){
+        _cfWaitingTimer=null;_cfWaitingExpired=true;
+        var delayed=phase==='storage'?'storage-delayed':'connection-delayed';
+        _vsSyncActions(delayed);_showSyncStatus(_vsSyncLabels[delayed]);
+      },25000);
+    }
+    if(_cfWaitingExpired)mode=phase==='storage'?'storage-delayed':'connection-delayed';
+  }else if(mode!=='storage-delayed'&&mode!=='connection-delayed'){
+    if(_cfWaitingTimer)clearTimeout(_cfWaitingTimer);
+    _cfWaitingTimer=null;_cfWaitingPhase=null;_cfWaitingExpired=false;
+  }
   var top=ge('topSyncStatus');if(!top)return;
   var panel=ge('vsSyncPanel');
   if(!panel){
@@ -4792,6 +4843,7 @@ function _vsSyncActions(mode){
   if(!bar){
     bar=document.createElement('div');bar.id='vsSyncActions';bar.style.cssText='display:flex;flex-wrap:wrap;gap:6px;width:100%;min-width:0';
     [['vsSyncRetry','다시 확인',function(){_retryCloudflareSync();}],
+     ['vsSyncLogin','다시 로그인',function(){signInAdmin();}],
      ['vsMediaRetry','미디어 다시 전송',function(){_cfDrainMedia();}],
      ['vsSyncExport','기기 보관본',async function(){
        if(!_vsSync)return;var button=ge('vsSyncExport'),epoch=_vsSync.epoch;button.disabled=true;
@@ -4816,6 +4868,7 @@ function _vsSyncActions(mode){
   var checking=['checking-session','checking-server'].indexOf(mode)>=0;
   bar.style.display=(checking||(mode==='synced'&&mediaPending===0))?'none':'flex';
   ge('vsMediaRetry').hidden=mediaPending===0;
+  ge('vsSyncLogin').hidden=mode!=='auth-required'&&mode!=='connection-delayed';
   ge('vsSyncUseServer').hidden=['conflict','legacy-conflict','recovery'].indexOf(mode)<0;
   _updateV2InitialSyncState(mode);
 }
