@@ -21,6 +21,7 @@
     "ACCESS_TEAM_DOMAIN": "lucky-darkness-1a97.cloudflareaccess.com",
     "ACCESS_AUD": "5c27461e13a37da1b3c13f3b00b6c00f25af5052d82f2306913536767b23fe5d",
     "ACCESS_ALLOWED_EMAILS": "aljjang95@gmail.com",
-    "DEPLOYMENT_ENABLED": "false"
+    "DEPLOYMENT_ENABLED": "false",
+    "SMS_RELAY_ORIGIN": ""
   }
 }

@@ -8,6 +8,7 @@ const ASSETS = new Set([
   '/v2-ui.js', '/v2.css',
   '/v3-daylight.css', '/studio-daylight.png',
   '/sw.js', '/manifest.json', '/icon-192.png', '/icon-512.png',
+  '/sms-manager.js', '/sms-manager.css', '/hlb-sms-relay.apk',
 ]);
 const CSP = "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; " +
   "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; " +
@@ -150,6 +151,10 @@ export default {
       if (request.method === 'PUT' && !requireProtocol(request)) return json({ error: 'protocol-required' }, 400);
       try { return await mediaResponse(request, env, url); }
       catch (error) { return json({ error: error?.message || 'media-error' }, 400); }
+    }
+    if (url.pathname.startsWith('/api/sms/')) {
+      if (!requireProtocol(request)) return json({ error: 'protocol-required' }, 400);
+      return callState(request, env, principal, url.pathname.replace('/api/sms/', '/sms/'));
     }
     const stateRoute = new Map([
       ['/api/state', '/state'], ['/api/commit', '/commit'], ['/api/import', '/import'],

@@ -88,7 +88,7 @@ has(sync,'this.state.resumeConflict','conflict blocks flush');
 
 const assetBlock=(worker.match(/const ASSETS = new Set\(\[([\s\S]*?)\]\);/)||[])[1]||'';
 const assetPaths=[...assetBlock.matchAll(/'([^']+)'/g)].map(m=>m[1]);
-ok(assetPaths.length===13&&new Set(assetPaths).size===13&&assetPaths.includes('/v3-daylight.css')&&assetPaths.includes('/studio-daylight.png')&&assetPaths.includes('/vs-backup.js')&&read('scripts/build-worker.mjs').includes("'vs-backup.js'"),'exactly thirteen app assets including daylight theme and durable backup overflow in Worker/build');
+ok(assetPaths.length===16&&new Set(assetPaths).size===16&&['/v3-daylight.css','/studio-daylight.png','/vs-backup.js','/sms-manager.js','/sms-manager.css','/hlb-sms-relay.apk'].every(p=>assetPaths.includes(p)&&read('scripts/build-worker.mjs').includes("'"+p.slice(1)+"'")),'exactly sixteen private app assets including SMS manager and Android relay in Worker/build');
 has(sw,"key.indexOf('vs-v2-')===0",'old service worker cache retirement');
 has(sw,'event.respondWith(fetch(event.request))','network-only service worker');
 lacks(sw,'caches.match(','service worker cache reads');
