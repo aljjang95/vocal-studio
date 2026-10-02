@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "baselineCommit": "e84aa0fbd28eccea164e93214951304f9042ef75",
+  "branch": "codex/sms-flex-bridge-20261003",
+  "checkedAt": "2026-10-02T18:45:45.309Z",
+  "sourceSha256": {
+    "index.html": "4d2c6dd4d95977888cc5ea94dcac9f8691130e100c054dbb7e25b081fe7217c7",
+    "sms-manager.js": "6e1f9e11727a67a4c2d56c69dba7e7cbc818618c3c47d426593174e44c5d3767",
+    "sms-manager.css": "45379d6caae5292bfcb9bb42ee0075edd1f7b0dfe0eeb06af633baf377757062",
+    "vs-sync.js": "0118f9d02eae6c569df65e7eb6b3c9a6868dc4a5b9c637427e7fe2534f3a433d",
+    "worker/sms.mjs": "380474ac93351b8e866a48d5187e829dcd3ccebed44741823deb022a08d2aa6b",
+    "worker/sms-relay.mjs": "74cba7a79ab8bccb67e808a7421c20284feaa3edd21afc560a8c99ea1216c473",
+    "worker/entry.mjs": "9097bab4b4c439b0c3f69820c86018a357000578e0ce673da147a69fea0c0837",
+    "worker/index.mjs": "ebb6168307d71c67b54cfda7612880bb2fd07954438e7a6173a01b25f69dc9d9",
+    "worker/state.mjs": "28cc7764d3f8fea57d12be1314477a1772036331808fb9bfb6a26e4789f38ef8",
+    "worker/schedule-core.generated.mjs": "6efbc9da55703e030c66661fd2832a5263208e85e03fa15a1b0899aaa202536b",
+    "scripts/build-schedule-core.mjs": "e6f316ba8e5d577956315b3caba2b900fa6b3634dc12d9700982a2d27d5f6481",
+    "scripts/sms-bridge.test.mjs": "90f037daeb0497702fefbd9a59ad6a0bed80d51af1eb76fb9570bbf39fd1bf51",
+    "scripts/sms-manager.test.mjs": "ccb52411db0eb7a369188cbc37f9ba5cc49a9f0565fda3ceb890a95bddff2ae6",
+    "hlb-sms-relay.apk": "4a7847a2d3eb2e2988d45b87250626f8e19ce23c4e820af3af20f68b37cd1898"
+  },
+  "android": {
+    "apkSha256": "4a7847a2d3eb2e2988d45b87250626f8e19ce23c4e820af3af20f68b37cd1898",
+    "buildReceiptSha256": "51bec5de20ac5f52c958dd86edbe01ccf1ff4eb6126115fc09633e38f4ee3cd0",
+    "signingCertificateSha256": "20b5570b93a0a0550003d5fa5cf9707a0f44bf5a506915f0f134361c38c8aa1c",
+    "minSdk": 26,
+    "targetSdk": 36,
+    "sourceFiles": [
+      {
+        "path": "native/android-sms-relay/src/com/tllhouse/hlbreplay/BootReceiver.java",
+        "sha256": "2025295a1422e6f830bca902dee6a5ee044169c80a1de2ece2e3b1312f6a0b2f"
+      },
+      {
+        "path": "native/android-sms-relay/src/com/tllhouse/hlbreplay/IncomingSmsReceiver.java",
+        "sha256": "78e95e704da89ba0bb58356a3ce77ae2161ff668f35baefb8474126a50583f04"
+      },
+      {
+        "path": "native/android-sms-relay/src/com/tllhouse/hlbreplay/MainActivity.java",
+        "sha256": "a0fe9f135f23d85415bef65a098bc0e2a4329539ce00384d60b8c3291b2320fe"
+      },
+      {
+        "path": "native/android-sms-relay/src/com/tllhouse/hlbreplay/RelayConfig.java",
+        "sha256": "a979200ba0118b4cb9f4af08e6538e6ceae8bf6d6068b67f05820df9a5f975ab"
+      },
+      {
+        "path": "native/android-sms-relay/src/com/tllhouse/hlbreplay/RelayEngine.java",
+        "sha256": "ca7fe52bbfc6746d1128328ab53ce44f6014d67359eec0f5269720a0730f20dc"
+      },
+      {
+        "path": "native/android-sms-relay/src/com/tllhouse/hlbreplay/RelayHttp.java",
+        "sha256": "9898ce0f3275b904e0c771d9d1ee7065a95e2d51262632c188e764a048834732"
+      },
+      {
+        "path": "native/android-sms-relay/src/com/tllhouse/hlbreplay/RelayJobService.java",
+        "sha256": "00fb45a93b933cfcb9d32593f376b6e07f488ea429e9fb991622eef18eddbd79"
+      },
+      {
+        "path": "native/android-sms-relay/src/com/tllhouse/hlbreplay/RelayPolicy.java",
+        "sha256": "881d704d678fb5a31e6eeb149972e989280f19a02b12e7f157fce7f4ded553d8"
+      },
+      {
+        "path": "native/android-sms-relay/src/com/tllhouse/hlbreplay/RelayScheduler.java",
+        "sha256": "05e7420b7b02418906d2c78c9e1eab265bd2b17806b4545e43d4908f08a3d400"
+      },
+      {
+        "path": "native/android-sms-relay/src/com/tllhouse/hlbreplay/RelayStore.java",
+        "sha256": "d04af62b59d5c299dabcd8115309fca61bc7443a63d1225fee717aa45c013b53"
+      },
+      {
+        "path": "native/android-sms-relay/src/com/tllhouse/hlbreplay/SendCoordinator.java",
+        "sha256": "a51d03e462a319ab26bc5021af90b9fc055662a25abc44b2fc59655ae688ca5b"
+      },
+      {
+        "path": "native/android-sms-relay/src/com/tllhouse/hlbreplay/SentResultReceiver.java",
+        "sha256": "c803fc87c8045085d313ee4d4547f8b82cd41c384bccc78bf3dc894891ca79ab"
+      },
+      {
+        "path": "native/android-sms-relay/tests/RelayCoreTest.java",
+        "sha256": "e70c71f881482e792135d60f6df360fcdc39881ebab6236a284ec5e1a10daeaa"
+      },
+      {
+        "path": "native/android-sms-relay/AndroidManifest.xml",
+        "sha256": "7137ccf8652c7cafb75f7f0927f15792b3dd0f9b685c33dca6738e4f70e07e66"
+      },
+      {
+        "path": "native/android-sms-relay/res/xml/data_extraction_rules.xml",
+        "sha256": "5643f0d9ab9899dc353f3e063ebdc2ca68c9b30f3baea95b2573a33e9ff7b62c"
+      },
+      {
+        "path": "scripts/build-android-sms-relay.ps1",
+        "sha256": "ef1f773e2264a0fe4e142502c10a3d696deb8db91befdc3150693ef3e52d12fa"
+      }
+    ]
+  },
+  "verification": {
+    "backend": {
+      "reviewer": "Hegel",
+      "groupsPassed": 6,
+      "changedRegressionsPassed": 6,
+      "scope": "StudioState/node:sqlite; supplied accepted exact backend source"
+    },
+    "uiNative": {
+      "reviewer": "Hooke",
+      "targetedTestsPassed": 14,
+      "reproExitCode": 0,
+      "trackedHashesUnchanged": 24,
+      "scope": "Owner transition/401, actual VSSync with synthetic delayed overflow, manual-send provenance, old-generation stop, retained media display"
+    },
+    "authorUiTestsPassed": 32,
+    "browser": {
+      "surface": "localhost with synthetic records",
+      "mobileViewport": "390x844",
+      "checks": [
+        "Conflict blocks both cards and preserves date/time/selection",
+        "Batch confirmation appears in actual weekly schedule",
+        "Accepted 19:00 differs from original 18:00 and survives reload",
+        "Modal remains above mobile navigation"
+      ],
+      "physicalDevice": false
+    },
+    "builds": {
+      "mainDryRun": true,
+      "relayDryRun": true,
+      "apkSourceHashesMatched": 16
+    }
+  },
+  "unverified": [
+    "Physical S26 Ultra installation and hard-restricted SMS permissions",
+    "Physical SMS provider creator fields and modem sending/receiving",
+    "Background/Doze/process-death/reboot reliability",
+    "Real browser IndexedDB race timing"
+  ],
+  "defaults": {
+    "automaticSendingEnabled": false,
+    "mondayTime": "10:00",
+    "tuesdayTime": "14:00",
+    "timeZone": "Asia/Seoul"
+  },
+  "rollbackWorkerVersion": "b928f205-85b5-414c-a91d-860b1b9b377e"
+}

@@ -1,5 +1,6 @@
 ﻿const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'private, no-store' };
 import { initIntakeTables, acceptIntake, drainIntakeOutbox, notificationStatus, intakeError } from './intake.mjs';
+import { initSmsTables, handleSmsOwner, handleSmsDevice } from './sms.mjs';
 const READBACK_TTL_MS = 10 * 60 * 1000;
 function json(data, status = 200, headers = {}) {
   return new Response(JSON.stringify(data), { status, headers: { ...JSON_HEADERS, ...headers } });
@@ -27,6 +28,7 @@ export class StudioState {
       this.sql.exec('CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
       this.sql.exec('CREATE TABLE IF NOT EXISTS requests (id TEXT PRIMARY KEY, payload_sha TEXT NOT NULL, response_json TEXT NOT NULL, created_at INTEGER NOT NULL)');
       initIntakeTables(this.sql);
+      initSmsTables(this.sql);
     });
   }
   getKV(key) {
@@ -42,6 +44,8 @@ export class StudioState {
     const url = new URL(request.url);
     return this.ctx.blockConcurrencyWhile(async () => {
       try {
+        if (url.pathname.startsWith('/sms/')) return await handleSmsOwner(this, request);
+        if (url.pathname.startsWith('/sms-device/')) return await handleSmsDevice(this, request);
         if (request.method === 'POST' && url.pathname === '/booking') return await acceptIntake(this, await request.json());
         if (request.method === 'GET' && url.pathname === '/intake/notifications') return notificationStatus(this);
         if (request.method === 'GET' && url.pathname === '/api/events') return this.eventSocket(request);

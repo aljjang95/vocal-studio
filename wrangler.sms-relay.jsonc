@@ -1,0 +1,10 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "vocal-studio-sms-relay",
+  "main": "worker/sms-relay.mjs",
+  "compatibility_date": "2026-09-14",
+  "workers_dev": true,
+  "services": [{ "binding": "SMS_STUDIO", "service": "vocal-studio", "entrypoint": "SmsRelay" }],
+  "observability": { "enabled": false },
+  "vars": { "DEPLOYMENT_ENABLED": "false" }
+}

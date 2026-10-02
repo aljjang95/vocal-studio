@@ -1,0 +1,35 @@
+.vs-sms-modal{position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:24px;color:var(--t,#2a1f0e);font-family:inherit;font-size:14px;line-height:1.6;box-sizing:border-box}
+.vs-sms-modal *{box-sizing:border-box}
+.vs-sms-panel{width:min(920px,100%);max-height:calc(100dvh - 48px);overflow:auto;overscroll-behavior:contain;border:1px solid rgba(100,75,40,.25);border-radius:16px;background:var(--s1,#fffdf9);box-shadow:0 24px 80px rgba(0,0,0,.35)}
+.vs-sms-header{position:sticky;top:0;z-index:2;background:var(--s1,#fffdf9);display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:16px 20px;border-bottom:1px solid rgba(100,75,40,.25)}
+.vs-sms-modal h2,.vs-sms-modal h3,.vs-sms-modal h4{color:var(--t,#2a1f0e)}
+.vs-sms-header h2{font-size:19px;margin:0 auto 0 0}
+.vs-sms-content,.vs-sms-secret{padding:0 20px}
+.vs-sms-secret:empty{display:none}
+.vs-sms-secret:not(:empty){margin:16px 20px;padding:16px;border:2px solid var(--a,#c8a96e);border-radius:10px}
+.vs-sms-section{padding:20px 0;border-bottom:1px solid var(--b,#45454c)}
+.vs-sms-section:last-child{border-bottom:0}
+.vs-sms-section h3{font-size:16px;margin:0 0 10px}
+.vs-sms-card{padding:16px;margin:12px 0;border:1px solid rgba(100,75,40,.25);border-radius:10px;background:var(--s2,#f5f0e8);min-width:0}
+.vs-sms-card h4{margin:0;font-size:15px;overflow-wrap:anywhere}
+.vs-sms-field{display:flex;flex-direction:column;gap:5px;margin:12px 0;min-width:0}
+.vs-sms-modal label,.vs-sms-modal label span{text-transform:none;letter-spacing:normal}
+.vs-sms-field:has(input[type=checkbox]){flex-direction:row;align-items:flex-start;justify-content:flex-start;gap:10px}
+.vs-sms-field:has(input[type=checkbox]) input{order:-1;width:20px;min-height:20px;flex-shrink:0;margin-top:3px;accent-color:var(--a,#c8a96e)}
+.vs-sms-modal input,.vs-sms-modal textarea,.vs-sms-modal select{font:inherit;color:var(--t,#2a1f0e);background:var(--s1,#fffdf9);border:1px solid rgba(100,75,40,.35);border-radius:7px;padding:9px 10px;min-height:44px;width:100%;min-width:0;color-scheme:light}
+.vs-sms-modal textarea{min-height:90px;resize:vertical}
+.vs-sms-modal option{background:var(--s1,#fffdf9);color:var(--t,#2a1f0e)}
+.vs-sms-button{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;min-height:44px;border:1px solid rgba(100,75,40,.35);border-radius:8px;padding:9px 13px;margin:4px 6px 4px 0;font:inherit;color:var(--t,#2a1f0e);background:var(--s1,#fffdf9);cursor:pointer;white-space:normal;text-align:center}
+.vs-sms-button:disabled{opacity:.5;cursor:default}
+.vs-sms-button[data-action=confirm],.vs-sms-button[data-action=settings]{background:var(--a,#c8a96e);color:#17130d;border-color:var(--a,#c8a96e);font-weight:700}
+.vs-sms-modal :focus-visible{outline:3px solid var(--a,#c8a96e);outline-offset:3px}
+.vs-sms-entry{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:12px}
+.vs-sms-raw,.vs-sms-preview{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;font:inherit;color:var(--t,#2a1f0e);padding:12px;background:var(--s1,#fffdf9);border-radius:8px;margin:10px 0;max-width:100%}
+.vs-sms-help{font-size:13px;color:var(--ts,#6b5030);overflow-wrap:anywhere}
+.vs-sms-warning{color:#805011;overflow-wrap:anywhere}
+.vs-sms-notice{width:100%;margin:0;padding:9px 12px;border-radius:8px;color:var(--t,#2a1f0e);overflow-wrap:anywhere;background:var(--s2,#f5f0e8)}
+.vs-sms-notice:empty{display:none}
+.vs-sms-notice[role=alert]{color:#a52b20}
+.vs-sms-outbox{padding-left:20px;overflow-wrap:anywhere}
+@media(max-width:600px){.vs-sms-modal{padding:0;align-items:stretch}.vs-sms-panel{width:100%;max-height:100dvh;border-radius:0;border:0}.vs-sms-header{padding:12px 14px}.vs-sms-header h2{width:100%;font-size:18px}.vs-sms-content{padding:0 14px}.vs-sms-entry{grid-template-columns:1fr;gap:0}.vs-sms-card{padding:12px}.vs-sms-secret:not(:empty){margin:14px;padding:12px}.vs-sms-notice{padding:12px 14px}}
+@media print{.vs-sms-modal{display:none!important}}

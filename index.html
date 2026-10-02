@@ -2689,6 +2689,7 @@ div.mwv .lb { font-size: 7px !important; padding: 0 !important; min-height: 0 !i
       <button id="topAdminLoginBtn" class="btn bsm bm" onclick="signInAdmin()">관리자 로그인</button>
       <button id="topAdminVerifyBtn" class="btn bsm bg2" onclick="openAdminVerificationPanel()" style="display:none">관리자 검증</button>
       <button id="topAdminLogoutBtn" class="btn bsm bd" onclick="signOutAdmin()" style="display:none">로그아웃</button>
+      <button id="smsScheduleBtn" class="btn bsm bg2" onclick="VSSms.open()">문자 일정</button>
     </div>
     <div id="topSyncStatus" style="width:100%;font-size:11px;color:var(--tm);display:none;line-height:1.35"></div>
     
@@ -12754,4 +12755,6 @@ if('serviceWorker' in navigator){
 
 </script>
 <button id="viewToggleBtn" onclick="toggleViewMode()" title="PC/모바일 화면 전환">🖥 PC</button>
+<link rel="stylesheet" href="./sms-manager.css">
+<script src="./sms-manager.js"></script>
 </body></html>
