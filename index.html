@@ -9887,7 +9887,8 @@ async function saveStudent(){
     if(_sourceConsult)_sourceConsult.converted=_sourceConvertedBefore;
     if(_flexWeekKey){if(_hadFlexWeek)weekOvr[_flexWeekKey]=_flexWeekBefore;else delete weekOvr[_flexWeekKey];}
     var firstConflict=newScheduleConflicts[0];
-    var conflictMessage='등록되지 않았습니다. '+firstConflict.day+' '+firstConflict.time+'에 이미 다른 확정 일정이 있습니다. 요일 또는 시간을 변경한 뒤 다시 저장하세요.';
+    var otherNames=firstConflict.names.filter(function(otherName,index){return firstConflict.studentIds[index]!==sid;}).join(', ');
+    var conflictMessage='등록되지 않았습니다. '+firstConflict.date+' ('+firstConflict.day+') '+firstConflict.time+'에 이미 '+otherNames+'님 확정 일정이 있습니다. 요일 또는 시간을 변경한 뒤 다시 저장하세요.';
     if(scheduleError){scheduleError.textContent=conflictMessage;scheduleError.style.display='block';scheduleError.scrollIntoView({block:'nearest'});}
     toast('같은 시간 일정 충돌 · 등록되지 않았습니다','⚠️');
     return;
