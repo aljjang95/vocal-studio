@@ -81,6 +81,36 @@ test('saving a flexible student checks proposed week rows before committing the 
   assert.deepEqual(copy(ctx.students),before);assert.equal(ctx.weekOvr[week],undefined);assert.equal(calls.save,0);
 });
 
+test('recurring Friday 16:00 save explains a future collision with its exact date and the other student only',async()=>{
+  for(const editedFirst of [true,false]){
+    const {ctx,nodes,week,form,calls}=setup();
+    const edited=student('edited',{name:'합성 편집 학생',days:['화'],times:{화:'11:00'}});
+    const peer=student('peer',{name:'합성 충돌 학생',confirmedDates:[{date:'2026-10-23',time:'16:00'}]});
+    ctx.students=editedFirst?[edited,peer]:[peer,edited];ctx.weekOvr[week]={peer:[]};form(edited);
+    nodes['s-nm'].value='합성 편집 초안';ctx.formDays=['금'];nodes['ts-금'].value='16:00';
+    const before=copy({students:ctx.students,consults:ctx.consults,weekOvr:ctx.weekOvr});
+    await ctx.saveStudent();
+    assert.equal(nodes['s-schedule-error'].style.display,'block');
+    assert.match(nodes['s-schedule-error'].textContent,/2026-10-23 \(금\) 16:00/);
+    assert.match(nodes['s-schedule-error'].textContent,/합성 충돌 학생님 확정 일정/);
+    assert.doesNotMatch(nodes['s-schedule-error'].textContent,/합성 편집/);
+    assert.deepEqual(copy({students:ctx.students,consults:ctx.consults,weekOvr:ctx.weekOvr}),before);
+    assert.equal(ctx.students.find(s=>s.id==='edited'),edited,'rollback restores the original student object');
+    assert.equal(calls.save,0);assert.equal(calls.undo,0);
+  }
+});
+
+test('recurring Friday 16:00 remains saveable when the future confirmed lesson has a different time',async()=>{
+  const {ctx,nodes,form,calls}=setup();
+  ctx.students=[student('edited'),student('peer',{confirmedDates:[{date:'2026-10-23',time:'17:00'}]})];
+  form(ctx.students[0]);ctx.formDays=['금'];nodes['ts-금'].value='16:00';
+  await ctx.saveStudent();
+  assert.equal(calls.save,1);assert.equal(nodes['s-schedule-error'].textContent,'');
+  const future=copy(ctx.getWeekSched(new Date(2026,9,19)));
+  assert.equal(future['금_16:00'][0].s.id,'edited');assert.equal(future['금_16:00'][0].date,'2026-10-23');
+  assert.equal(future['금_17:00'][0].s.id,'peer');
+});
+
 test('student edit has a confirmed-date entry that leaves the draft intact',async()=>{
   const {ctx,nodes,form,calls}=setup();ctx.students=[student('a')];form(ctx.students[0]);
   assert.match(html,/>일정 확정 등록<\/button>/);
