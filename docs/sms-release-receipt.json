@@ -136,5 +136,7 @@
     "tuesdayTime": "14:00",
     "timeZone": "Asia/Seoul"
   },
-  "rollbackWorkerVersion": "b928f205-85b5-414c-a91d-860b1b9b377e"
+  "rollbackWorkerVersion": "b928f205-85b5-414c-a91d-860b1b9b377e",
+  "relayOrigin": "https://vocal-studio-sms-relay.affinity-agent-studio.workers.dev",
+  "relayWorkerVersion": "7867f49e-0ba4-4ea2-bc3a-0102b7bf8c83"
 }
