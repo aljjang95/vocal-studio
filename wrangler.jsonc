@@ -22,6 +22,6 @@
     "ACCESS_AUD": "5c27461e13a37da1b3c13f3b00b6c00f25af5052d82f2306913536767b23fe5d",
     "ACCESS_ALLOWED_EMAILS": "aljjang95@gmail.com",
     "DEPLOYMENT_ENABLED": "false",
-    "SMS_RELAY_ORIGIN": ""
+    "SMS_RELAY_ORIGIN": "https://vocal-studio-sms-relay.affinity-agent-studio.workers.dev"
   }
 }
