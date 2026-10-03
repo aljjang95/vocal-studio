@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#2E4C3C"/>
+  <circle cx="256" cy="256" r="228" fill="#356050" fill-opacity="0.55"/>
+  <path d="M 190.17 326.61 A 112 112 0 0 1 190.17 145.39" fill="none" stroke="#F7F4EE" stroke-opacity="1" stroke-width="12" stroke-linecap="round"/>
+  <path d="M 321.83 145.39 A 112 112 0 0 1 321.83 326.61" fill="none" stroke="#F7F4EE" stroke-opacity="1" stroke-width="12" stroke-linecap="round"/>
+<path d="M 165.48 360.59 A 154 154 0 0 1 165.48 111.41" fill="none" stroke="#E4C98A" stroke-opacity="1" stroke-width="10" stroke-linecap="round"/>
+  <path d="M 346.52 111.41 A 154 154 0 0 1 346.52 360.59" fill="none" stroke="#E4C98A" stroke-opacity="1" stroke-width="10" stroke-linecap="round"/>
+  <rect x="198" y="156" width="116" height="148" rx="58" fill="#F6F3EC"/>
+  <rect x="214" y="168" width="22" height="112" rx="11" fill="#FFFFFF" fill-opacity="0.38"/>
+  <g stroke="#2E4C3C" stroke-opacity="0.28" stroke-width="3.2" stroke-linecap="round">
+    <path d="M228 196h56"/>
+    <path d="M224 214h64"/>
+    <path d="M224 232h64"/>
+    <path d="M228 250h56"/>
+  </g>
+  <path d="M186 228c0 58 28 92 70 92s70-34 70-92" fill="none" stroke="#F6F3EC" stroke-width="16" stroke-linecap="round"/>
+  <rect x="246" y="312" width="20" height="58" rx="10" fill="#F6F3EC"/>
+  <rect x="198" y="364" width="116" height="16" rx="8" fill="#F6F3EC"/>
+  <rect x="222" y="364" width="68" height="3.5" rx="1.5" fill="#E4C98A"/>
+</svg>

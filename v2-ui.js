@@ -98,23 +98,27 @@ window.v2UpdateOps=function(){
   var warn=el('v2ConflictCard');if(warn)warn.classList.toggle('v2-has-conflict',cf>0);
 };
 function applyStudioIcons(){
+  /* One 24px stroke set, matched to the daylight studio mark. */
   var shapes={
-    consult:'<path d="M8 3h8v4H8zM6 5H4v16h16V5h-2M8 11h8M8 15h5"/>',
-    students:'<circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6M18 15a5 5 0 0 1 3 5"/>',
-    logs:'<path d="M4 4h12v16H4zM8 8h5M8 12h3M14 14l6-6 2 2-6 6-3 1z"/>',
-    timeline:'<path d="M4 3v17h17M7 15l4-5 4 2 5-7"/>',
-    payment:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/>',
-    today:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
-    schedule:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 11h18M7 15h2M12 15h2M7 18h2"/>',
-    phone:'<path d="M5 3h4l2 5-3 2a15 15 0 0 0 6 6l2-3 5 2v4a2 2 0 0 1-2 2A18 18 0 0 1 3 5a2 2 0 0 1 2-2z"/>'
+    consult:'<path d="M8 4.2h8"/><rect x="5.5" y="6" width="13" height="14" rx="2"/><path d="M8.7 12.4l2.1 2.1 4.5-4.6"/>',
+    students:'<circle cx="9" cy="8.2" r="2.35"/><path d="M4.6 18.2v-.2a4.2 4.2 0 0 1 7.6-1.6"/><circle cx="16.1" cy="9.3" r="1.9"/><path d="M13.8 18.2v-.15a3.5 3.5 0 0 1 5.6-2.8"/>',
+    logs:'<path d="M6 4h8.2L18 7.8V20H6z"/><path d="M14 4.2V8h3.8M8.6 12.4h5M8.6 15.8h3"/>',
+    timeline:'<path d="M4.5 19V5"/><path d="M4.5 15.2c2.4-.3 3.5-4 6.2-4 2.5 0 3.1 2.5 5.4 2.1 1.5-.3 2.5-2.2 3.4-3.8"/><circle cx="19.3" cy="6.4" r="1.25" fill="currentColor" stroke="none"/>',
+    payment:'<rect x="3.5" y="6" width="17" height="12.5" rx="2"/><path d="M3.5 10.2h17M7 14.4h3.4"/>',
+    today:'<circle cx="12" cy="12.2" r="7.4"/><path d="M12 8.6v4l2.7 1.7"/>',
+    schedule:'<rect x="4" y="5.2" width="16" height="14.6" rx="2"/><path d="M4 9.4h16M8 3.6v3.1M16 3.6v3.1"/><circle cx="8.2" cy="13" r=".9" fill="currentColor" stroke="none"/><circle cx="12" cy="13" r=".9" fill="currentColor" stroke="none"/><circle cx="15.8" cy="13" r=".9" fill="currentColor" stroke="none"/><circle cx="8.2" cy="16.2" r=".9" fill="currentColor" stroke="none"/><circle cx="12" cy="16.2" r=".9" fill="currentColor" stroke="none"/>',
+    dashboard:'<path d="M4.5 19.2h15"/><path d="M7 19.2V12.2M12 19.2V7.4M17 19.2v-5.2"/>',
+    phone:'<path d="M8.1 4.2h2.5l1.15 2.7-1.65 1a9.2 9.2 0 0 0 4.7 4.7l1-1.65 2.7 1.15v2.5a1.35 1.35 0 0 1-1.35 1.35A12.5 12.5 0 0 1 6.75 5.55 1.35 1.35 0 0 1 8.1 4.2z"/>'
   };
   function put(node,key){if(!node||node.dataset.studioIcon===key)return;node.innerHTML='<svg class="ui-line-icon" viewBox="0 0 24 24" aria-hidden="true">'+shapes[key]+'</svg>';node.dataset.studioIcon=key;}
   document.querySelectorAll('.ni[data-p]').forEach(function(n){var key=n.dataset.p;if(shapes[key])put(n.querySelector('.ni-ic'),key);});
-  [['v2CallCapture','phone'],['v2ConsultIntake','consult'],['v2FixedSchedule','schedule'],['v2FlexSchedule','today']].forEach(function(pair){var n=el(pair[0]);if(n)put(n.querySelector('.v2-action-icon'),pair[1]);});
+  [['v2CallCapture','phone'],['v2ConsultIntake','consult'],['v2FixedSchedule','schedule'],['v2FlexSchedule','today'],['pwaGostudents','students']].forEach(function(pair){var n=el(pair[0]);if(n)put(n.querySelector('.v2-action-icon'),pair[1]);});
   document.querySelectorAll('.mtab-item').forEach(function(n){var key=(n.id||'').replace(/^mTab_/,'');if(shapes[key])put(n.querySelector('.mtab-ic'),key);});
 }
 function initV2(){
   applyStudioIcons();
+  /* Tab bar is built by a later DOMContentLoaded listener, so paint icons again after it. */
+  setTimeout(applyStudioIcons,0);
   var iconRoot=el('content');if(iconRoot&&typeof MutationObserver!=='undefined')new MutationObserver(applyStudioIcons).observe(iconRoot,{childList:true,subtree:true});
   v2UpdateOps();setInterval(v2UpdateOps,10000);
   var pwa=el('pwaInstallBtn');if(pwa&&typeof _pwaStandalone==='function'&&_pwaStandalone())pwa.style.display='none';
