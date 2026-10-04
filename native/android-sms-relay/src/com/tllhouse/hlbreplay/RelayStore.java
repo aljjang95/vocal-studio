@@ -12,14 +12,42 @@ import java.util.List;
 
 /** The SQLite journal is private, synchronous and retained across crashes. No message logging. */
 final class RelayStore extends SQLiteOpenHelper {
-    RelayStore(Context c) { super(c, "relay_private.db", null, 1); }
+    RelayStore(Context c) { super(c, "relay_private.db", null, 2); }
     @Override public void onConfigure(SQLiteDatabase db) { db.execSQL("PRAGMA synchronous=FULL"); }
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE events (id TEXT PRIMARY KEY,generation TEXT NOT NULL,phone TEXT NOT NULL,body TEXT NOT NULL,date INTEGER NOT NULL,direction TEXT NOT NULL,done INTEGER NOT NULL DEFAULT 0)");
         db.execSQL("CREATE INDEX events_pending ON events(generation,done,date)");
         db.execSQL("CREATE TABLE attempts (id TEXT PRIMARY KEY,generation TEXT NOT NULL,phone TEXT NOT NULL,body TEXT NOT NULL,created INTEGER NOT NULL,started INTEGER,state TEXT NOT NULL,parts TEXT NOT NULL DEFAULT '[]',error TEXT NOT NULL DEFAULT '',acked INTEGER NOT NULL DEFAULT 0)");
+        createCalls(db);
     }
-    @Override public void onUpgrade(SQLiteDatabase db, int old, int version) { throw new IllegalStateException("Migration required"); }
+    @Override public void onUpgrade(SQLiteDatabase db, int old, int version) {
+        if (old==1 && version==2) createCalls(db);
+        else throw new IllegalStateException("Migration required");
+    }
+    private static void createCalls(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE calls (id TEXT PRIMARY KEY,generation TEXT NOT NULL,epoch TEXT NOT NULL,boundary INTEGER NOT NULL,phone TEXT NOT NULL,date INTEGER NOT NULL,direction TEXT NOT NULL CHECK(direction='incoming'),done INTEGER NOT NULL DEFAULT 0)");
+        db.execSQL("CREATE INDEX calls_pending ON calls(generation,done,date)");
+    }
+    void enqueueCall(CallPolicy.Event event) {
+        ContentValues v=new ContentValues(); v.put("id",event.id); v.put("generation",event.generation);
+        v.put("epoch",event.epoch); v.put("boundary",event.boundary); v.put("phone",event.phone);
+        v.put("date",event.receivedAt); v.put("direction","incoming");
+        // Ignore re-delivery; never replace a timestamp or payload under an existing ID.
+        getWritableDatabase().insertWithOnConflict("calls",null,v,SQLiteDatabase.CONFLICT_IGNORE);
+    }
+    List<CallPolicy.Event> calls(String generation) {
+        List<CallPolicy.Event> rows=new ArrayList<>();
+        try (Cursor c=getReadableDatabase().query("calls",new String[]{"id","phone","date","generation","epoch","boundary"},
+            "generation=? AND done=0",new String[]{generation},null,null,"date,id","40")) {
+            while (c.moveToNext()) rows.add(new CallPolicy.Event(c.getString(0),c.getString(1),c.getLong(2),
+                c.getString(3),c.getString(4),c.getLong(5)));
+        }
+        return rows;
+    }
+    void callDone(String id) {
+        ContentValues v=new ContentValues(); v.put("done",1);
+        getWritableDatabase().update("calls",v,"id=?",new String[]{id});
+    }
 
     void enqueue(RelayConfig config, String rawPhone, String body, long date, String direction) {
         enqueue(config,rawPhone,body,date,direction,date);

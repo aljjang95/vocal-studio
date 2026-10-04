@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "atUtc": "2026-10-04T05:50:48.812Z",
+  "branch": "codex/android-studio-20261004",
+  "base": "93da7d3f45b07c26db400b734b4c219a090121da",
+  "status": "REVIEWED_BUILD_READY_FOR_RELEASE",
+  "checks": {
+    "integrated": {
+      "command": "npm test",
+      "passed": 389,
+      "failed": 0
+    },
+    "gate": "npm run gate PASS",
+    "build": "npm run build PASS",
+    "workerd": {
+      "command": "node scripts/test-sms-bridge.mjs",
+      "passed": 31,
+      "runtime": "isolated Workerd + SQLite + named service RPC",
+      "externalNetwork": false,
+      "physicalPhone": false
+    },
+    "wranglerDryRun": {
+      "main": "PASS",
+      "relay": "PASS"
+    }
+  },
+  "files": [
+    {
+      "path": "hlb-sms-relay.apk",
+      "sha256": "22010decbb1641ff3145fc8028f2f9a017bde19365e099234e7875312ef521a3"
+    },
+    {
+      "path": "native/android-sms-relay/AndroidManifest.xml",
+      "sha256": "1a652cdffbb906b8f8266b8853fd8ce18e7209722c0a227a9787eea14e3aa2d7"
+    },
+    {
+      "path": "native/android-sms-relay/README.md",
+      "sha256": "2005b470672e6117d32ce27c05fbfcb80f0dc1f34064d2fcb79cb7fb6be9a324"
+    },
+    {
+      "path": "native/android-sms-relay/src/com/tllhouse/hlbreplay/MainActivity.java",
+      "sha256": "e2a53b5bf60ffff1971d58a9315273d86c8ca3e33a2c41db44442dadd1023f7a"
+    },
+    {
+      "path": "native/android-sms-relay/src/com/tllhouse/hlbreplay/RelayConfig.java",
+      "sha256": "995c5a22296ea34a318faf48b67e9513e7f88f42d6dd6308e541353bb8a118fa"
+    },
+    {
+      "path": "native/android-sms-relay/src/com/tllhouse/hlbreplay/RelayEngine.java",
+      "sha256": "433674e00be97f5fce7faad2cbe5674e0e554944b1abab15b1281edcd361d670"
+    },
+    {
+      "path": "native/android-sms-relay/src/com/tllhouse/hlbreplay/RelayHttp.java",
+      "sha256": "bbe42f4c733460b4d05ae450e7370e1f516ad9892a67afc2bd75e9e16bafa032"
+    },
+    {
+      "path": "native/android-sms-relay/src/com/tllhouse/hlbreplay/RelayStore.java",
+      "sha256": "680ebbf34a1dc2985c7d1dd927127ce7951657c1bef5882801d8f1e78069d9a8"
+    },
+    {
+      "path": "package.json",
+      "sha256": "e69d52f23d5afd5d5b359bf27d7dacba16b700167984ba4a57ce0a40346be959"
+    },
+    {
+      "path": "scripts/build-android-sms-relay.ps1",
+      "sha256": "b278ba427dc80c588e5066c57a3e59da4e8a70e3e4d8841d2d34ea8442260620"
+    },
+    {
+      "path": "scripts/sms-bridge.test.mjs",
+      "sha256": "82143c6185fe6cb1f5f1d768404daa17df2ecad0fe4e70ae39ec47b062b4a2d1"
+    },
+    {
+      "path": "scripts/sms-manager.test.mjs",
+      "sha256": "408ae897abcc409d747dff1909731fd1aa6621a91c1a147bd47a4476df0c0af7"
+    },
+    {
+      "path": "scripts/test-sms-bridge.mjs",
+      "sha256": "51906b600bb100fbfad5f5055ad2781828046bac53acdb7f779ffb2f377b5196"
+    },
+    {
+      "path": "sms-manager.js",
+      "sha256": "9ca1239c8cbfbd8ed2a7786a983c064e231b0bb564897c444e12c1bd4dbc7353"
+    },
+    {
+      "path": "worker/sms-relay.mjs",
+      "sha256": "95caa60d242f4718fe47de051f607c30bd4775b2744e3b0276c507173f1adde3"
+    },
+    {
+      "path": "worker/sms.mjs",
+      "sha256": "16da775b26399a459118ecb0013d6d5b4d04eb838396324adde3cb172d84c287"
+    },
+    {
+      "path": "native/android-sms-relay/res/drawable/icon.png",
+      "sha256": "d0620dce6be1e98b373b51bdae714286be0ffa2ec0b2b98f93ca7df8f3ddc23e"
+    },
+    {
+      "path": "native/android-sms-relay/src/com/tllhouse/hlbreplay/CallConsent.java",
+      "sha256": "6dec40c37d665dc16e6f78caee229eb59d1fc56317125fdd222bc28a2eec5d5b"
+    },
+    {
+      "path": "native/android-sms-relay/src/com/tllhouse/hlbreplay/CallForwarder.java",
+      "sha256": "1b4d9b10fcd1867e98a8a8b635c1303cc87e772c64729549195b7910ff56319f"
+    },
+    {
+      "path": "native/android-sms-relay/src/com/tllhouse/hlbreplay/CallPolicy.java",
+      "sha256": "48a88dd05f3c73b503d40d690159af010f9f1416c462e109f67d2aed7d515d0d"
+    },
+    {
+      "path": "native/android-sms-relay/src/com/tllhouse/hlbreplay/ManagementLauncher.java",
+      "sha256": "42eb0c6258f7d1b0502db68ccf0cf3e5f8579c54c19d7276cde8f4dd074abe78"
+    },
+    {
+      "path": "native/android-sms-relay/src/com/tllhouse/hlbreplay/StudioCallScreeningService.java",
+      "sha256": "8487400d018299dd3968bf56d7beb03925e427212876a5b29d0abab188a51db4"
+    },
+    {
+      "path": "native/android-sms-relay/tests/call/NativeCallTest.java",
+      "sha256": "33b1b61dd1e58958aa1ff4bf3dd36aaef3c63658c53090e0b869c214381a394a"
+    },
+    {
+      "path": "native/android-sms-relay/tests/call/host-stubs.mjs",
+      "sha256": "4c82603c26485e3332840e88e6899deaed7f06638d4deab1a4de403d70baa9ab"
+    },
+    {
+      "path": "native/android-sms-relay/tests/verify-native.mjs",
+      "sha256": "2ea4335d02bcca7d88747c20a6feeb7aff8daaeb8c7202e2c208c899deff5189"
+    },
+    {
+      "path": "docs/android-studio-bridge-contract.md",
+      "sha256": "9cfe8ec7a127708a5c5c58fc86f9af714fadc11ac9116583c5e6dc41dc94c82c"
+    },
+    {
+      "path": "docs/android-studio-privacy.md",
+      "sha256": "c7fcbfe80a337f1d8e6d92dc864bbb59b229bea74948e77751aa7d021bc24667"
+    },
+    {
+      "path": "worker/studio-privacy.mjs",
+      "sha256": "dc0e4297668b29418c0cdd6362f77516ad38439a276d76fdc0c9b87648416817"
+    },
+    {
+      "path": "worker/schedule-options.mjs",
+      "sha256": "d9a6afacc2c5045e6313a788fca5b1bd37b4382003622b1cd0565981075d8efc"
+    },
+    {
+      "path": "scripts/android-sms-builder.test.mjs",
+      "sha256": "a9c55f0d5058aea6b83320b53b2b6c2b9e47c46de75654df352a0ff8a7b6ba19"
+    },
+    {
+      "path": "scripts/schedule-options.test.mjs",
+      "sha256": "7e9ab6923e19125e2b6e7b291af2780764c4fbd875b488ff5ce3ea85c0dcb0b3"
+    },
+    {
+      "path": "scripts/sms-call.test.mjs",
+      "sha256": "966218d2db89dd0d0d5a1511f7ca2d2a9d4e8bad615af197a2e35a968e8f0930"
+    },
+    {
+      "path": "scripts/studio-privacy.test.mjs",
+      "sha256": "ed2f9c6eb3b3a9953720df35faabbc5528811c4cf6a5b2dbc80870e98b400ddb"
+    }
+  ],
+  "apk": {
+    "versionCode": 2,
+    "versionName": "1.1",
+    "sha256": "22010decbb1641ff3145fc8028f2f9a017bde19365e099234e7875312ef521a3"
+  },
+  "aab": {
+    "sha256": "41db2dc57ee65185c7bf42483fbc44e228e7dbfaa0fda7f898b9c1ea53b8d6d8"
+  },
+  "external": {
+    "play": {
+      "status": "NOT_RELEASED",
+      "package": "com.tllhouse.hlbreplay",
+      "latestProbe": "404 Package not found; Console first setup/access and SMS permission declaration required"
+    },
+    "physical": {
+      "status": "OFFLINE",
+      "smsSent": false,
+      "calendarBookingsByAgent": false
+    },
+    "browserExtension": {
+      "name": "TinyFish",
+      "connection": "UNCONNECTED_LAST_CONFIRMED",
+      "status": "SUGGESTED_ONLY"
+    }
+  },
+  "review": {
+    "native": "ACCEPTED_FROZEN_NATIVE_AND_BUILD_SOURCE",
+    "backend": "ACCEPTED_SCOPED_19_OF_19"
+  },
+  "unverified": [
+    "Actual browser rendering",
+    "Physical phone SMS/calls/role UI/background",
+    "Google Play permissions review/internal publication",
+    "Runtime provider/model/account metadata"
+  ]
+}

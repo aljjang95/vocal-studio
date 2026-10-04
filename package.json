@@ -3,13 +3,15 @@
   "private": true,
   "scripts": {
     "build": "node scripts/build-worker.mjs",
-    "test": "node --test scripts/sync-protocol.test.mjs scripts/sync-runtime.test.mjs scripts/storage-overflow.test.mjs scripts/backup-store.test.mjs scripts/cloudflare-media.test.mjs scripts/review-regressions.test.mjs scripts/cloudflare-state.test.mjs scripts/cloudflare-transport.test.mjs scripts/pwa.test.mjs scripts/runtime-cleanup.test.mjs scripts/realtime-sync.test.mjs scripts/v2-ops.test.mjs scripts/biweekly-schedule.test.mjs scripts/student-schedule-flow.test.mjs scripts/intake.test.mjs scripts/camera-print.test.mjs scripts/mobile-auth-loading.test.mjs scripts/sms-bridge.test.mjs scripts/sms-manager.test.mjs scripts/schedule-core.test.mjs",
+    "test": "node --test scripts/sync-protocol.test.mjs scripts/sync-runtime.test.mjs scripts/storage-overflow.test.mjs scripts/backup-store.test.mjs scripts/cloudflare-media.test.mjs scripts/review-regressions.test.mjs scripts/cloudflare-state.test.mjs scripts/cloudflare-transport.test.mjs scripts/pwa.test.mjs scripts/runtime-cleanup.test.mjs scripts/realtime-sync.test.mjs scripts/v2-ops.test.mjs scripts/biweekly-schedule.test.mjs scripts/student-schedule-flow.test.mjs scripts/intake.test.mjs scripts/camera-print.test.mjs scripts/mobile-auth-loading.test.mjs scripts/sms-bridge.test.mjs scripts/sms-manager.test.mjs scripts/schedule-core.test.mjs scripts/schedule-options.test.mjs scripts/sms-call.test.mjs scripts/studio-privacy.test.mjs",
     "test:cloudflare": "node scripts/test-cloudflare.mjs",
     "gate": "node scripts/regression-gates.mjs",
     "dry-run": "npm run build && wrangler deploy --dry-run --outdir tmp/cf-evidence/dry-run",
     "deploy": "node scripts/deploy-locked.mjs",
     "test:intake": "node --test scripts/intake.test.mjs",
-    "build:android-sms": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-android-sms-relay.ps1"
+    "build:android-sms": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-android-sms-relay.ps1",
+    "test:android-build": "node --test scripts/android-sms-builder.test.mjs",
+    "build:android-studio": "powershell -NoProfile -File scripts/build-android-sms-relay.ps1 -BuildFormat Both"
   },
   "dependencies": {
     "jose": "^6.1.2"
