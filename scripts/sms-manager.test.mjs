@@ -80,6 +80,36 @@ function fixture(extra={}) {
 function ok(data) { return {response:{ok:true,status:200},data}; }
 function failure(status) { return {response:{ok:false,status},data:{ok:false,error:'synthetic-secret-error-never-display'}}; }
 async function settle() { for(let i=0;i<4;i++) await new Promise(resolve=>setImmediate(resolve)); }
+function deferred() {
+  let resolve, reject;
+  const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});
+  return {promise,resolve,reject};
+}
+function promisedClipboard(f,{requireGesture=false,denied=false,completion=null,constructorThrows=false,writeThrows=false}={}) {
+  let gesture=false;
+  f.ctx.Blob=Blob;
+  f.ctx.ClipboardItem=class {
+    constructor(data) { if(constructorThrows)throw Error('unsupported promised item');this.data=data; }
+  };
+  f.ctx.navigator.clipboard={
+    async write(items) {
+      f.calls.push({kind:'clipboard-write',gesture});
+      if(requireGesture&&!gesture)throw Error('activation lost');
+      if(writeThrows)throw Error('unsupported promised write');
+      const blob=await items[0].data['text/plain'];
+      const value=await blob.text();
+      if(completion)await completion.promise;
+      if(denied)throw Error('synthetic clipboard denied');
+      f.clipboard.push(value);
+    },
+    async writeText(value) {
+      f.calls.push({kind:'clipboard-writeText',gesture});
+      if(requireGesture&&!gesture||denied)throw Error('synthetic clipboard denied');
+      f.clipboard.push(value);
+    }
+  };
+  return {click(key){gesture=true;try{f.action(key).emit('click');}finally{gesture=false;}}};
+}
 
 test('disconnected empty overview is usable, default disabled, setup origin + protected APK and no native phone requirement',async()=>{
   const f=fixture({messages:[],unassigned:[]});await f.open();
@@ -167,12 +197,146 @@ test('name alias requires owner confirmation and unique current canonical name, 
   const g=fixture({aliasChanges:[{...alias,newName:'invented name'}]});await g.open();await g.click('alias');assert.equal(g.calls.filter(c=>c.route==='alias').length,0);
   const h=fixture({aliasChanges:[alias]});await h.open();h.sync.state.base.students.push(student('dup'));await h.click('alias');assert.equal(h.calls.filter(c=>c.route==='alias').length,0);
 });
-test('one-time pairing uses password value only, copies explicitly, clears on close and cannot rotate without confirmation',async()=>{
+test('one-time pairing auto-copies once, uses password value only, clears on close and cannot rotate without confirmation',async()=>{
   const f=fixture();await f.open();f.control.confirm=false;await f.click('pair');assert.equal(f.calls.filter(c=>c.route==='pair').length,0);
+  assert.deepEqual(f.clipboard,[]);
   f.control.confirm=true;await f.click('pair');const token=f.field('token');assert.equal(token.type,'password');assert.equal(token.value,'synthetic-one-time-token');
   assert.equal(token.getAttribute('value'),undefined);assert.ok(!f.text().includes(token.value));assert.equal(f.action('copy-token').disabled,false);
-  await f.click('copy-token');assert.deepEqual(f.clipboard,['synthetic-one-time-token']);
+  assert.deepEqual(f.clipboard,['synthetic-one-time-token']);assert.match(f.text(),/이 기기의 클립보드에 복사/);
+  await f.click('refresh');assert.deepEqual(f.clipboard,['synthetic-one-time-token']);
+  await f.click('copy-token');assert.deepEqual(f.clipboard,['synthetic-one-time-token','synthetic-one-time-token']);
+  f.control.confirm=false;await f.click('pair');assert.equal(f.calls.filter(c=>c.route==='pair').length,1);assert.equal(token.value,'synthetic-one-time-token');
   f.ctx.VSSms.close();assert.equal(token.value,'');await f.open();assert.equal(f.field('token'),null);
+});
+test('promised ClipboardItem is requested inside generation gesture and receives key only after guarded API response',async()=>{
+  const f=fixture(),gate=deferred();const clip=promisedClipboard(f,{requireGesture:true});await f.open();
+  f.control.handler=async route=>{if(route==='pair'){await gate.promise;return ok({ok:true,token:'synthetic-gesture-token',relayOrigin:f.data.device.relayOrigin});}};
+  clip.click('pair');assert.equal(f.calls.filter(c=>c.kind==='clipboard-write').length,1);assert.equal(f.field('token'),null);
+  await settle();assert.deepEqual(f.clipboard,[]);gate.resolve();await settle();
+  assert.deepEqual(f.clipboard,['synthetic-gesture-token']);assert.match(f.text(),/이 기기의 클립보드에 복사/);
+  assert.equal(f.calls.filter(c=>c.kind==='clipboard-writeText').length,0);assert.equal(f.calls.filter(c=>c.route==='pair').length,1);
+});
+test('cancelled, failed, malformed and wrong-origin pair never place data into clipboard',async()=>{
+  for(const mode of ['cancel','failure','transport','empty','wrong-origin']) {
+    const f=fixture();promisedClipboard(f);await f.open();
+    if(mode==='cancel')f.control.confirm=false;
+    else f.control.handler=route=>{if(route==='pair') {
+      if(mode==='failure')return failure(500);
+      if(mode==='transport')throw Error('synthetic private error');
+      return ok({ok:true,token:mode==='empty'?'':'synthetic-invalid-origin-token',relayOrigin:mode==='wrong-origin'?'https://another.example':f.data.device.relayOrigin});
+    }};
+    await f.click('pair');assert.deepEqual(f.clipboard,[],mode);assert.equal(f.field('token'),null,mode);
+    assert.ok(!f.text().includes('이 기기의 클립보드에 복사'));assert.ok(!f.text().includes('synthetic private error'));
+    assert.equal(f.calls.filter(c=>c.kind==='clipboard-writeText').length,0);
+    if(mode==='cancel')assert.equal(f.calls.filter(c=>c.kind==='clipboard-write'||c.route==='pair').length,0);
+  }
+});
+test('missing, denied and unsupported clipboard retain generated password plus explicit copy retry without new pair',async()=>{
+  for(const mode of ['missing','writeText-denied','item-denied','item-constructor','item-write']) {
+    const f=fixture();await f.open();
+    if(mode==='missing')delete f.ctx.navigator.clipboard;
+    if(mode==='writeText-denied')f.ctx.navigator.clipboard.writeText=async()=>{throw Error('synthetic denied');};
+    if(mode==='item-denied')promisedClipboard(f,{denied:true});
+    if(mode==='item-constructor')promisedClipboard(f,{constructorThrows:true});
+    if(mode==='item-write')promisedClipboard(f,{writeThrows:true});
+    await f.click('pair');assert.equal(f.field('token').value,'synthetic-one-time-token');assert.equal(f.action('copy-token').disabled,false);
+    if(mode==='item-constructor')assert.deepEqual(f.clipboard,['synthetic-one-time-token']);
+    else {assert.deepEqual(f.clipboard,[]);assert.match(f.text(),/자동 복사하지 못/);assert.ok(!f.text().includes('클립보드에 복사했습니다'));}
+    f.ctx.navigator.clipboard={async writeText(value){f.clipboard.push(value);}};
+    await f.click('copy-token');assert.equal(f.clipboard.at(-1),'synthetic-one-time-token');assert.match(f.text(),/이 기기의 클립보드에 복사/);
+    assert.equal(f.calls.filter(c=>c.route==='pair').length,1,mode);
+  }
+});
+test('clipboard outcome remains truthful when overview succeeds or fails after key creation',async()=>{
+  for(const denied of [false,true])for(const overviewFails of [false,true]) {
+    const f=fixture();await f.open();if(denied)f.ctx.navigator.clipboard.writeText=async()=>{throw Error('denied');};
+    if(overviewFails)f.control.handler=route=>route==='overview'?failure(500):undefined;
+    await f.click('pair');assert.equal(f.field('token').value,'synthetic-one-time-token');assert.equal(f.action('copy-token').disabled,false);
+    if(denied){assert.match(f.text(),/자동 복사하지 못/);assert.deepEqual(f.clipboard,[]);assert.ok(!f.text().includes('클립보드에 복사했습니다'));}
+    else{assert.match(f.text(),/이 기기의 클립보드에 복사/);assert.deepEqual(f.clipboard,['synthetic-one-time-token']);}
+    if(overviewFails)assert.match(f.text(),/연결 상태.*새로고침/);
+    assert.equal(f.calls.filter(c=>c.route==='pair').length,1);
+  }
+});
+test('activation-limited writeText fallback can be retried by explicit copy gesture without rotating the key',async()=>{
+  const f=fixture(),clip=promisedClipboard(f,{requireGesture:true,constructorThrows:true});await f.open();
+  clip.click('pair');await settle();assert.deepEqual(f.clipboard,[]);assert.match(f.text(),/자동 복사하지 못/);
+  clip.click('copy-token');await settle();assert.deepEqual(f.clipboard,['synthetic-one-time-token']);assert.match(f.text(),/이 기기의 클립보드에 복사/);
+  assert.equal(f.calls.filter(c=>c.route==='pair').length,1);
+});
+test('each confirmed rotation copies only its new key and wipes retained prior-key handlers without secret attributes or globals',async()=>{
+  const f=fixture();await f.open();const globals=Object.keys(f.ctx).sort();let keys=0;
+  f.control.handler=route=>route==='pair'?ok({ok:true,token:'synthetic-rotation-'+(++keys),relayOrigin:f.data.device.relayOrigin}):undefined;
+  await f.click('pair');const old=f.field('token'),oldCopy=f.action('copy-token');
+  await f.click('pair');assert.equal(old.value,'');assert.equal(f.field('token').value,'synthetic-rotation-2');
+  assert.deepEqual(f.clipboard,['synthetic-rotation-1','synthetic-rotation-2']);assert.deepEqual(Object.keys(f.ctx).sort(),globals);
+  const before=f.text();oldCopy.emit('click');await settle();assert.equal(f.text(),before);assert.equal(f.clipboard.length,2);
+  for(const el of f.query('.vs-sms-modal').querySelectorAll('input,textarea,select,button,label,p,a,section')) {
+    assert.ok(!JSON.stringify(el.attributes).includes('synthetic-rotation-'));assert.ok(!JSON.stringify(el.dataset).includes('synthetic-rotation-'));
+    assert.ok(!String(el.href||'').includes('synthetic-rotation-'));
+  }
+  assert.ok(!f.text().includes('synthetic-rotation-'));assert.ok(!JSON.stringify(f.calls).includes('synthetic-rotation-'));
+  const password=f.field('token'),copy=f.action('copy-token');f.query('[data-secret]').querySelectorAll('button').find(el=>el.textContent==='연결 키 닫기').emit('click');
+  assert.equal(password.value,'');assert.equal(f.field('token'),null);copy.emit('click');await settle();assert.equal(f.clipboard.length,2);
+});
+test('pair busy prevents duplicate generation gestures while allowing modal close and fresh reopen',async()=>{
+  const f=fixture(),gate=deferred();promisedClipboard(f);await f.open();
+  f.control.handler=async route=>{if(route==='pair'){await gate.promise;return ok({ok:true,token:'synthetic-double-gesture',relayOrigin:f.data.device.relayOrigin});}};
+  const pair=f.action('pair');pair.emit('click');pair.emit('click');await settle();
+  assert.equal(f.calls.filter(c=>c.route==='pair').length,1);assert.equal(f.calls.filter(c=>c.kind==='clipboard-write').length,1);
+  await f.click('close');assert.equal(f.query('.vs-sms-modal'),null);await f.open();const before=f.text();
+  gate.resolve();await settle();assert.equal(f.field('token'),null);assert.deepEqual(f.clipboard,[]);assert.equal(f.text(),before);
+});
+test('explicit copy retry pending native completion cannot revive a hidden key or overwrite owner and close feedback',async()=>{
+  for(const transition of ['hide','owner','logout','close']) {
+    const f=fixture();await f.open();await f.click('pair');assert.deepEqual(f.clipboard,['synthetic-one-time-token']);f.clipboard.length=0;
+    const completion=deferred();let submitted=0;
+    f.ctx.navigator.clipboard.writeText=async value=>{submitted++;await completion.promise;f.clipboard.push(value);};
+    f.action('copy-token').emit('click');await settle();const old=f.field('token');
+    if(transition==='hide')f.query('[data-secret]').querySelectorAll('button').find(el=>el.textContent==='연결 키 닫기').emit('click');
+    if(transition==='close')f.ctx.VSSms.close();
+    if(transition==='owner'||transition==='logout'){f.sync.owner=transition==='owner'?'another-owner':null;await f.open();}
+    assert.equal(old.value,'');const before=f.text();completion.resolve();await settle();
+    assert.equal(f.field('token'),null);assert.equal(old.value,'');assert.equal(f.text(),before);assert.equal(submitted,1);assert.equal(f.calls.filter(c=>c.route==='pair').length,1);
+  }
+});
+test('owner, logout, epoch, sync replacement and modal close discard pending pair before any clipboard data',async()=>{
+  for(const promised of [false,true])for(const transition of ['owner','logout','epoch','sync','close']) {
+    const f=fixture(),gate=deferred();f.sync.epoch=1;if(promised)promisedClipboard(f);await f.open();
+    f.control.handler=async route=>{if(route==='pair'){await gate.promise;return ok({ok:true,token:'synthetic-stale-key',relayOrigin:f.data.device.relayOrigin});}};
+    f.action('pair').emit('click');await settle();
+    if(transition==='owner')f.sync.owner='new-owner';
+    if(transition==='logout')f.sync.owner=null;
+    if(transition==='epoch')f.sync.epoch++;
+    if(transition==='sync')f.ctx._vsSync={...f.sync};
+    if(transition==='close'){assert.equal(f.action('close').disabled,false);f.ctx.VSSms.close();assert.equal(f.query('.vs-sms-modal'),null);}
+    else await f.open();
+    gate.resolve();await settle();assert.deepEqual(f.clipboard,[],`${promised}/${transition}`);assert.equal(f.field('token'),null);
+    assert.equal(f.calls.filter(c=>c.kind==='clipboard-writeText').length,0);assert.ok(!f.text().includes('클립보드에 복사했습니다'));
+  }
+});
+test('pending native clipboard success or refusal after owner/logout/close cannot restore secret, feedback or initiate retry',async()=>{
+  for(const promised of [false,true])for(const denied of [false,true])for(const transition of ['owner','logout','epoch','sync','close']) {
+    const f=fixture(),completion=deferred();f.sync.epoch=1;let submitted=0;
+    if(promised)promisedClipboard(f,{completion,denied});
+    else f.ctx.navigator.clipboard.writeText=async value=>{submitted++;await completion.promise;if(denied)throw Error('denied');f.clipboard.push(value);};
+    await f.open();f.action('pair').emit('click');await settle();const old=f.field('token');assert.ok(old);
+    assert.ok(!f.text().includes('클립보드에 복사했습니다'));
+    if(transition==='close'){assert.equal(f.action('close').disabled,false);f.ctx.VSSms.close();}
+    else {
+      if(transition==='owner')f.sync.owner='new-owner';
+      if(transition==='logout')f.sync.owner=null;
+      if(transition==='epoch')f.sync.epoch++;
+      if(transition==='sync')f.ctx._vsSync={...f.sync};
+      await f.open();
+    }
+    assert.equal(old.value,'');const before=f.text(),overviews=f.calls.filter(c=>c.route==='overview').length;
+    completion.resolve();await settle();assert.equal(old.value,'');assert.equal(f.field('token'),null);assert.equal(f.text(),before);
+    assert.equal(f.calls.filter(c=>c.route==='overview').length,overviews);assert.equal(f.calls.filter(c=>c.route==='pair').length,1);
+    assert.equal(promised?f.calls.filter(c=>c.kind==='clipboard-write').length:submitted,1);
+    // Clipboard API has no abort contract once data is submitted: late native completion is not a new JS write.
+    assert.equal(f.clipboard.length,denied?0:1);
+  }
 });
 test('disabled settings, explicit enable preview, prepare stages and dismiss remain narrow APIs',async()=>{
   const f=fixture({device:{paired:true,relayOrigin:'https://synthetic-relay.example'}});await f.open();
@@ -291,6 +455,7 @@ test('every stale action and retained input/copy handler rejects owner changes b
     const f=fixture({settings:{enabled:true,mondayTime:'10:00',tuesdayTime:'14:00',mondayText:'{name} A',tuesdayText:'{name} A'},
       device:{paired:true,relayOrigin:'https://synthetic-relay.example'},aliasChanges:[{id:'a',studentId:'student-1',oldName:'A',newName:'합성 정본 이름'}]});
     await f.open();await f.click('pair');const token=f.field('token'),oldInput=f.field('mondayText'),oldButton=f.action(key);
+    assert.deepEqual(f.clipboard,['synthetic-one-time-token']);f.clipboard.length=0;
     f.calls.length=0;f.sync.owner='owner-B';oldButton.emit('click');oldInput.value='{name} stale';oldInput.emit('input');await settle();
     assert.equal(token.value,'');assert.equal(f.clipboard.length,0);assert.equal(f.calls.filter(c=>c.body).length,0,key);
     assert.ok(!f.text().includes('합성 원문'));assert.equal(f.field('mondayText'),null);

@@ -74,7 +74,7 @@ public final class MainActivity extends Activity {
         token.setHint("스튜디오 관리 → 문자 일정에서 만든 연결키"); token.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD|InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         token.setSaveEnabled(false); token.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS);
         token.setLongClickable(false); token.setTextIsSelectable(false); layout.addView(token);
-        label(layout,"스튜디오 관리 → 문자 일정에서 만든 연결키를 사용해 주세요. 무선 디버깅 페어링 코드와 다릅니다.",15);
+        label(layout,"스튜디오 관리 열기 → 문자 일정에서 새 연결키를 만드세요. 키가 복사되면 이 앱에서 연결키 붙여넣기 → 연결 시작을 누르세요.",15);
         paste=new Button(this); paste.setText("연결키 붙여넣기"); layout.addView(paste);
         paste.setOnClickListener(v->{
             if(!foreground || new RelayConfig(this).enabled) return;
@@ -147,7 +147,7 @@ public final class MainActivity extends Activity {
     }
     private void keyError(boolean empty) {
         localStatus((empty ? "연결키를 입력하거나 붙여넣어 주세요. " : "연결키 형식이 올바르지 않습니다. 공백·줄바꿈 없이 다시 복사해 주세요. ")
-            +"스튜디오 관리 → 문자 일정에서 만든 연결키를 사용해 주세요. 무선 디버깅 페어링 코드와 다릅니다.",2);
+            +"스튜디오 관리 열기 → 문자 일정에서 새 연결키를 만드세요. 키가 복사되면 이 앱에서 연결키 붙여넣기 → 연결 시작을 누르세요.",2);
     }
     private void clearLocalStatus() { localStatus=null; localInput=0; }
     private void clearPermissionRequest() {

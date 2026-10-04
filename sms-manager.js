@@ -276,21 +276,21 @@
   function section(title) {
     var el = node('section', 'vs-sms-section'); el.appendChild(node('h3', '', title)); content.appendChild(el); return el;
   }
-  function setBusy(value) {
+  function setBusy(value, allowClose) {
     busy = value;
     if (modal) {
       modal.setAttribute('aria-busy', String(value));
       modal.querySelectorAll('button,input,textarea,select').forEach(function (el) {
-        if (value) { el.dataset.wasDisabled = String(el.disabled); el.disabled = true; }
+        if (value) { el.dataset.wasDisabled = String(el.disabled); el.disabled = !(allowClose && el.dataset.action === 'close'); }
         else if ('wasDisabled' in el.dataset) { el.disabled = el.dataset.wasDisabled === 'true'; delete el.dataset.wasDisabled; }
       });
     }
   }
-  async function action(task, success, allowOwnerChange) {
+  async function action(task, success, allowOwnerChange, allowClose) {
     if (!ensureOwner() && !allowOwnerChange) return;
     if (busy) return;
     var wave = generation;
-    setBusy(true); say('서버에서 확인 중입니다…');
+    setBusy(true, allowClose); say('서버에서 확인 중입니다…');
     try {
       requireOwner(wave); await task(); requireOwner(wave);
       if (wave === generation && success) say(success);
@@ -462,27 +462,75 @@
   }
   function pair() {
     return action(async function () {
-      var wave = generation;
+      var wave = generation, pairModal = modal;
+      var copiedText = '연결 키를 이 기기의 클립보드에 복사했습니다. 휴대폰 앱에 붙여 넣으세요.';
+      var fallbackText = '연결 키는 만들었지만 자동 복사하지 못했습니다. 연결 키 복사 버튼을 누르거나 키 입력란에서 직접 선택해 복사해 주세요.';
+      function requireKey(password) {
+        requireOwner(wave);
+        if (modal !== pairModal || !pairModal.contains(password) || !password.value) throw fault('stale');
+      }
+      async function copyText(password) {
+        requireKey(password);
+        await root.navigator.clipboard.writeText(password.value);
+        requireKey(password);
+      }
       var origin = validRelay(relayDraft);
       if (!origin || origin !== validRelay(overview.device.relayOrigin)) throw fault('relay');
       if (!root.confirm('새 휴대폰 연결 키를 만들까요? 이전 키는 사용할 수 없게 됩니다. 새 키는 한 번만 표시됩니다.')) { say('연결을 취소했습니다.'); return; }
-      var data = await api('pair', {relayOrigin:origin});
-      requireOwner(wave);
-      if (typeof data.token !== 'string' || !data.token || validRelay(data.relayOrigin) !== origin) throw fault('response');
-      // No persistence, console output, model property or token-valued attribute.
-      var secret = modal.querySelector('[data-secret]'); secret.replaceChildren();
-      secret.appendChild(node('p', '', '연결 키는 한 번만 표시됩니다. 휴대폰 앱에 붙여 넣으세요. 화면 캡처·공유를 하지 마세요.'));
-      var password = input('password', data.token, function () {}, 'token'); password.readOnly = true;
-      password.autocomplete = 'new-password'; password.spellcheck = false;
-      secret.appendChild(field('휴대폰 연결 키', password));
-      secret.appendChild(button('연결 키 복사', async function () {
-        try { requireOwner(wave); await root.navigator.clipboard.writeText(password.value); requireOwner(wave); say('연결 키를 복사했습니다. 휴대폰 앱에 붙여 넣으세요.'); }
-        catch (error) { if (ensureOwner() && wave === generation) say('연결 키 입력란에서 직접 복사해 주세요.', 'error'); }
-      }, false, 'copy-token'));
-      secret.appendChild(button('연결 키 닫기', function () { password.value = ''; secret.replaceChildren(); }, false));
-      await fresh(); settingsDraft.enabled = false; callSettingsDraft = Object.assign({}, overview.callSettings);
-      say('연결 키를 만들었습니다. 앱에 주소와 키를 입력하고 시작하세요.');
-    });
+      var pendingKey = api('pair', {relayOrigin:origin}).then(function (data) {
+        requireOwner(wave);
+        if (modal !== pairModal) throw fault('stale');
+        if (typeof data.token !== 'string' || !data.token || validRelay(data.relayOrigin) !== origin) throw fault('response');
+        // No persistence, console output, model property or token-valued attribute.
+        var secret = modal.querySelector('[data-secret]');
+        secret.querySelectorAll('[data-field="token"]').forEach(function (el) { el.value = ''; });
+        secret.replaceChildren();
+        secret.appendChild(node('p', '', '연결 키는 한 번만 표시됩니다. 휴대폰 앱에 붙여 넣으세요. 화면 캡처·공유를 하지 마세요.'));
+        var password = input('password', data.token, function () {}, 'token'); password.readOnly = true;
+        password.autocomplete = 'new-password'; password.spellcheck = false;
+        secret.appendChild(field('휴대폰 연결 키', password));
+        secret.appendChild(button('연결 키 복사', async function () {
+          try { await copyText(password); say(copiedText); }
+          catch (error) {
+            try { requireKey(password); say('연결 키를 복사하지 못했습니다. 키 입력란에서 직접 선택해 복사해 주세요.', 'error'); }
+            catch (stale) { /* Owner/close isolation already wiped the key; keep its notice. */ }
+          }
+        }, false, 'copy-token'));
+        secret.appendChild(button('연결 키 닫기', function () { password.value = ''; secret.replaceChildren(); }, false));
+        return password;
+      });
+      var clipboard = root.navigator && root.navigator.clipboard, copyResult;
+      if (clipboard && typeof clipboard.write === 'function' && typeof root.ClipboardItem === 'function' && typeof root.Blob === 'function') {
+        // action() invokes this callback synchronously. Reserve the write in the generation
+        // gesture, then supply text only after the API and owner/modal guards succeed.
+        var text = pendingKey.then(function (password) {
+          requireKey(password); return new root.Blob([password.value], {type:'text/plain'});
+        });
+        text.catch(function () {}); // Constructor failure must not leave an unhandled rejection.
+        var item;
+        try { item = new root.ClipboardItem({'text/plain':text}); }
+        catch (error) { /* Older implementations can still support writeText below. */ }
+        if (item) {
+          try { copyResult = Promise.resolve(clipboard.write([item])).then(function () { return true; }, function () { return false; }); }
+          catch (error) { copyResult = Promise.resolve(false); }
+        }
+      }
+      var password = await pendingKey;
+      requireKey(password);
+      if (!copyResult) copyResult = copyText(password).then(function () { return true; }, function () { return false; });
+      var copied = await copyResult;
+      requireKey(password);
+      var message = copied ? copiedText : fallbackText, kind = copied ? 'status' : 'error';
+      say(message, kind);
+      try {
+        await fresh(); requireKey(password);
+        settingsDraft.enabled = false; callSettingsDraft = Object.assign({}, overview.callSettings);
+      } catch (error) {
+        requireKey(password);
+        say(message + ' 연결 상태를 확인하지 못했습니다. 새로고침으로 확인해 주세요.', 'error'); return;
+      }
+      say(message, kind);
+    }, undefined, false, true);
   }
   function displayAt(value) {
     if (!value) return '기록 없음';
@@ -649,7 +697,8 @@
   }
   function close() {
     ensureOwner();
-    if (busy) return;
+    if (busy && modal && modal.querySelector('[data-action="close"]').disabled) return;
+    setBusy(false);
     generation++;
     if (modal) {
       modal.querySelectorAll('[data-field="token"]').forEach(function (el) { el.value = ''; });
