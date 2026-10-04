@@ -1,4 +1,5 @@
 import { scheduleSnapshot } from './schedule-core.generated.mjs';
+import { rankScheduleOptions, assertScheduleIntervalAvailable } from './schedule-options.mjs';
 
 const KST = 9 * 3600000, DAY = 86400000;
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -6,7 +7,7 @@ const TIME = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 const validTime = value => typeof value === 'string' && TIME.test(value);
 const ID = /^[A-Za-z0-9_.:-]{1,160}$/;
 export const SMS_BODY_LIMIT = 16384;
-export const DEVICE_ROUTES = Object.freeze({ '/device/pull': 'GET', '/device/event': 'POST', '/device/claim': 'POST', '/device/ack': 'POST' });
+export const DEVICE_ROUTES = Object.freeze({ '/device/pull': 'GET', '/device/event': 'POST', '/device/call': 'POST', '/device/claim': 'POST', '/device/ack': 'POST' });
 export const smsJSON = (body, status = 200) => new Response(JSON.stringify(body), {
   status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' },
 });
@@ -134,6 +135,17 @@ function disabledSettings(owner) {
   try { return { ...settings(owner), enabled: false }; }
   catch { return { ...DEFAULTS }; }
 }
+const CALL_DEFAULTS = Object.freeze({ enabled: false, includeUnknown: false });
+function validateCallSettings(value) {
+  fields(value, ['enabled', 'includeUnknown']);
+  if (typeof value.enabled !== 'boolean' || typeof value.includeUnknown !== 'boolean') fail('sms-invalid-call-settings');
+  return { enabled: value.enabled, includeUnknown: value.includeUnknown };
+}
+function callSettings(owner) {
+  // Missing, malformed and corrupt persisted preferences never grant intake consent.
+  try { return validateCallSettings(owner.getKV('sms.callSettings')); }
+  catch { return { ...CALL_DEFAULTS }; }
+}
 function recordOf(owner) {
   const r = owner.record();
   if (!r || r.mode !== 'active' || !Number.isSafeInteger(r.revision) || r.revision < 0) fail('sms-state-not-active', 409);
@@ -147,7 +159,66 @@ function recordOf(owner) {
   }
   return r;
 }
-function phoneOf(row) { return normalizePhone(row.ph || row.phone || ''); }
+function phoneOf(row) { return object(row) ? normalizePhone(row.ph || row.phone || '') : ''; }
+function callMatch(state, phone) {
+  const contacts = [['student', state.students], ['consult', state.consults || []], ['inquiry', state.inquiries || []]]
+    .flatMap(([kind, rows]) => rows.filter(row => phoneOf(row) === phone).map(row => ({ kind, row })));
+  if (!contacts.length) return { name: '', studentId: null, matchStatus: 'unknown' };
+  const people = new Set();
+  const consults = state.consults || [], inquiries = state.inquiries || [];
+  const declared = value => value !== undefined && value !== null && value !== '';
+  const unique = (rows, key, value) => {
+    if (typeof value !== 'string' || !value) return null;
+    const found = rows.filter(row => object(row) && row[key] === value);
+    return found.length === 1 ? found[0] : null;
+  };
+  function inquiryStudent(row) {
+    const ids = [row.convertedStudentId, row.studentId].filter(declared);
+    if (!ids.length) return { student: null };
+    if (ids.some(value => typeof value !== 'string') || new Set(ids).size !== 1) return null;
+    const student = unique(state.students, 'id', ids[0]);
+    return student && phoneOf(student) === phone ? { student } : null;
+  }
+  function consultPerson(row) {
+    if (unique(consults, 'id', row.id) !== row) return null;
+    const students = state.students.filter(s => s.consultData?.id === row.id);
+    if (students.length > 1 || students.length === 1 && phoneOf(students[0]) !== phone) return null;
+    let student = students[0] || null;
+    const referring = inquiries.filter(q => object(q) && q.consultId === row.id);
+    if (declared(row._inquiryId) || referring.length) {
+      const inquiry = unique(inquiries, 'id', row._inquiryId);
+      if (!inquiry || referring.length !== 1 || referring[0] !== inquiry || inquiry.consultId !== row.id ||
+        consults.filter(c => object(c) && c._inquiryId === inquiry.id).length !== 1) return null;
+      const direct = inquiryStudent(inquiry);
+      if (!direct || student && direct.student && student.id !== direct.student.id) return null;
+      student ||= direct.student;
+    }
+    return { key: student ? 'student:' + student.id : row, student };
+  }
+  let invalidLink = false;
+  for (const { kind, row } of contacts) {
+    if (kind === 'student') { people.add('student:' + row.id); continue; }
+    let person;
+    if (kind === 'consult') person = consultPerson(row);
+    else if (unique(inquiries, 'id', row.id) === row) {
+      const direct = inquiryStudent(row), referring = consults.filter(c => object(c) && c._inquiryId === row.id);
+      if (declared(row.consultId) || referring.length) {
+        const consult = unique(consults, 'id', row.consultId);
+        if (consult && referring.length === 1 && referring[0] === consult && consult._inquiryId === row.id) person = consultPerson(consult);
+        if (!direct || person?.student && direct.student && person.student.id !== direct.student.id) person = null;
+      } else if (direct) person = { key: direct.student ? 'student:' + direct.student.id : row };
+    }
+    if (!person) invalidLink = true;
+    else people.add(person.key);
+  }
+  // Only explicit IDs unify records. Same phone/name is never person-link evidence.
+  if (invalidLink || people.size > 1) return { name: '', studentId: null, matchStatus: 'ambiguous' };
+  const person = [...people][0], student = typeof person === 'string' && state.students.find(s => 'student:' + s.id === person);
+  if (student) return { name: typeof student.name === 'string' ? student.name : '', studentId: student.id, matchStatus: 'matched' };
+  const { kind } = contacts[0], row = object(person) ? person : contacts[0].row;
+  return { name: typeof row.name === 'string' ? row.name : '', studentId: kind === 'student' ? row.id : null,
+    matchStatus: kind === 'student' ? 'matched' : 'known-contact' };
+}
 function matchingStudents(state, phone) { return state.students.filter(s => phoneOf(s) === phone); }
 function registeredPhones(state) {
   return [...new Set([...state.students, ...(state.consults || []), ...(state.inquiries || [])].map(phoneOf).filter(Boolean))];
@@ -171,6 +242,8 @@ function enabledDevice(owner) {
   return device;
 }
 export function initSmsTables(sql) {
+  sql.exec('CREATE TABLE IF NOT EXISTS sms_calls (id TEXT PRIMARY KEY,device_id TEXT NOT NULL,event_id TEXT NOT NULL,payload_sha TEXT NOT NULL,phone TEXT NOT NULL,received_at INTEGER NOT NULL,status TEXT NOT NULL,UNIQUE(device_id,event_id))');
+  sql.exec('CREATE INDEX IF NOT EXISTS sms_calls_recent ON sms_calls(received_at DESC,id DESC)');
   sql.exec('CREATE TABLE IF NOT EXISTS sms_events (device_id TEXT NOT NULL,event_id TEXT NOT NULL,payload_sha TEXT NOT NULL,content_sha TEXT NOT NULL,message_id TEXT NOT NULL,PRIMARY KEY(device_id,event_id))');
   sql.exec('CREATE INDEX IF NOT EXISTS sms_events_content ON sms_events(device_id,content_sha)');
   sql.exec('CREATE TABLE IF NOT EXISTS sms_messages (id TEXT PRIMARY KEY,phone TEXT NOT NULL,text TEXT NOT NULL,direction TEXT NOT NULL,received_at INTEGER NOT NULL,student_id TEXT,match_status TEXT NOT NULL,proposal_json TEXT NOT NULL,status TEXT NOT NULL,automation INTEGER NOT NULL DEFAULT 0)');
@@ -239,6 +312,8 @@ async function overview(owner, now) {
   const outbox = owner.sql.exec('SELECT * FROM sms_outbox ORDER BY created_at DESC,id DESC LIMIT 300').toArray();
   for (const row of outbox) if (row.status === 'pending' && !recheckOutbox(owner, row, now)) row.status = owner.sql.exec('SELECT status FROM sms_outbox WHERE id=?', row.id).toArray()[0].status;
   return smsJSON({ ok: true, settings: settings(owner), device: { paired: !!device?.tokenHash, lastSeen: device?.lastSeen || null, relayOrigin: device?.relayOrigin || configuredOrigin(owner) },
+    callSettings: callSettings(owner), calls: owner.sql.exec('SELECT * FROM sms_calls ORDER BY received_at DESC,id DESC LIMIT 200').toArray()
+      .map(row => ({ id: row.id, phone: row.phone, receivedAt: row.received_at, ...callMatch(r.state, row.phone), status: row.status })),
     revision: r.revision, weekStart: info.weekStart,
     unassigned: r.state.students.filter(activeFlex).filter(s => !scheduled(snapshot, s.id)).map(s => ({ id: s.id, name: s.name, phone: phoneOf(s), replied: replied(owner, phoneOf(s), info, now, s.id), scheduled: false })),
     messages, outbox: outbox.map(row => ({ id: row.id, studentId: row.student_id, name: r.state.students.find(s => s.id === row.student_id)?.name || '',
@@ -253,6 +328,7 @@ function confirm(owner, body, now) {
   if (!Number.isSafeInteger(body.baseRevision) || body.baseRevision !== r.revision) fail('revision-conflict', 409);
   if (!Array.isArray(body.entries) || !body.entries.length || body.entries.length > 100) fail('sms-invalid-entries');
   const state = structuredClone(r.state), seenMessages = new Set(), seenSlots = new Set(), weeks = new Map(), targets = [];
+  let intervalFailure = null;
   for (const entry of body.entries) {
     fields(entry, ['messageId', 'studentId', 'date', 'time']); validId(entry.messageId);
     const s = state.students.find(s => s.id === entry.studentId);
@@ -279,6 +355,19 @@ function confirm(owner, body, now) {
         day: sl.day, time: sl.time, absent: sl.absent, source: sl.source, overrideType: sl.overrideType, makeupOf: sl.makeupOf,
       }));
     }
+    if (!intervalFailure) {
+      try { assertScheduleIntervalAvailable(state, { date: entry.date, time: entry.time, studentId: s.id }, now); }
+      catch (error) {
+        const start = Number(entry.time.slice(0, 2)) * 60 + Number(entry.time.slice(3));
+        const names = Object.entries(scheduleSnapshot(state, entry.date).slotsByKey).flatMap(([key, slots]) => slots.filter(slot => {
+          const time = validTime(slot.time) ? slot.time : Array.isArray(slot.time) && slot.time.length === 1 && validTime(slot.time[0]) && key === slot.day + '_' + slot.time[0] ? slot.time[0] : '';
+          if (slot.date !== entry.date || !realSlot(slot) || !time) return false;
+          const at = Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
+          return start < at + 60 && start + 60 > at;
+        })).map(slot => String(slot.s.name || ''));
+        intervalFailure = { error, entry, names: [...new Set(names)].filter(Boolean) };
+      }
+    }
     ov[s.id].push({ day, time: entry.time, absent: false, source: 'sms-confirmed', smsMessageId: row.id });
   }
   // Original engine owns self/group/cancel/tentative semantics, including weeks beyond the current view.
@@ -302,6 +391,14 @@ function confirm(owner, body, now) {
   // Failure to format a new conflict never grants permission to commit it.
   if (newConflictCount) fail('sms-schedule-conflict', 409, { conflicts,
     conflict: conflicts.length ? { date: conflicts[0].date, time: conflicts[0].time, names: conflicts[0].otherNames } : null });
+  if (intervalFailure) {
+    const { error, entry: e, names } = intervalFailure;
+    if (error.code === 'schedule-interval-conflict') fail('sms-schedule-conflict', 409, {
+      conflicts: [{ date: e.date, time: e.time, studentId: e.studentId, otherNames: names }],
+      conflict: names.length ? { date: e.date, time: e.time, names } : null,
+    });
+    fail(error.code || 'sms-schedule-unavailable', error.status || 409);
+  }
   const next = nextRecord(r, state);
   owner.ctx.storage.transactionSync(() => {
     if (owner.record()?.revision !== body.baseRevision) fail('revision-conflict', 409);
@@ -329,6 +426,7 @@ async function pair(owner, body, now) {
     cancelPending(owner);
     owner.setKV('sms.device', { id, tokenHash, pairedAt: now, lastSeen: null, relayOrigin: origin.origin });
     owner.setKV('sms.settings', disabled);
+    owner.setKV('sms.callSettings', { ...CALL_DEFAULTS });
   });
   return smsJSON({ ok: true, token, deviceId: id, relayOrigin: origin.origin });
 }
@@ -350,7 +448,7 @@ export async function handleSmsOwner(owner, request) {
     if (path === '/sms/pair') return await pair(owner, body, now);
     if (path === '/sms/revoke') {
       fields(body, []); const disabled = disabledSettings(owner);
-      owner.ctx.storage.transactionSync(() => { cancelPending(owner); owner.setKV('sms.device', null); owner.setKV('sms.settings', disabled); });
+      owner.ctx.storage.transactionSync(() => { cancelPending(owner); owner.setKV('sms.device', null); owner.setKV('sms.settings', disabled); owner.setKV('sms.callSettings', { ...CALL_DEFAULTS }); });
       return smsJSON({ ok: true });
     }
     if (path === '/sms/settings') {
@@ -358,6 +456,45 @@ export async function handleSmsOwner(owner, request) {
       if (body.enabled) { recordOf(owner); if (!owner.getKV('sms.device')?.tokenHash) fail('sms-unpaired', 409); }
       owner.ctx.storage.transactionSync(() => { owner.setKV('sms.settings', body); if (!body.enabled) cancelPending(owner); });
       return smsJSON({ ok: true });
+    }
+    if (path === '/sms/call-settings') {
+      const next = validateCallSettings(body);
+      if (next.enabled) { recordOf(owner); if (!owner.getKV('sms.device')?.tokenHash) fail('sms-unpaired', 409); }
+      owner.setKV('sms.callSettings', next); return smsJSON({ ok: true });
+    }
+    if (path === '/sms/call-dismiss') {
+      fields(body, ['callId']); validId(body.callId);
+      if (!owner.sql.exec('SELECT id FROM sms_calls WHERE id=?', body.callId).toArray().length) fail('sms-call-not-found', 404);
+      owner.sql.exec("UPDATE sms_calls SET status='acknowledged' WHERE id=?", body.callId); return smsJSON({ ok: true });
+    }
+    if (path === '/sms/call-inquiry') return registerCallInquiry(owner, body, now);
+    if (path === '/sms/options') {
+      fields(body, ['baseRevision', 'messageId', 'studentId', 'date', 'startTime', 'endTime', 'preferredTime']);
+      validId(body.messageId); validId(body.studentId);
+      const r = recordOf(owner);
+      if (!Number.isSafeInteger(body.baseRevision) || body.baseRevision !== r.revision) fail('revision-conflict', 409);
+      const student = r.state.students.find(s => s.id === body.studentId), row = owner.sql.exec('SELECT * FROM sms_messages WHERE id=?', body.messageId).toArray()[0];
+      if (!student || !activeFlex(student) || !row || row.status !== 'pending' || row.match_status !== 'matched' || row.student_id !== student.id ||
+        row.phone !== phoneOf(student) || matchingStudents(r.state, row.phone).length !== 1) fail('sms-message-not-confirmable', 409);
+      if (student.st && body.date < student.st) fail('sms-invalid-future-slot', 409);
+      const result = rankScheduleOptions(r.state, { date: body.date, startTime: body.startTime, endTime: body.endTime,
+        ...(body.preferredTime === undefined ? {} : { preferredTime: body.preferredTime }), limit: 12 }, now);
+      const original = scheduleSnapshot(r.state, body.date);
+      const active = Object.values(original.slotsByKey).flat().filter(slot => slot.date === body.date && realSlot(slot));
+      const candidates = result.options.filter(option => {
+        const key = DAYS[new Date(dateMillis(option.date)).getUTCDay()] + '_' + option.time;
+        if ((original.slotsByKey[key] || []).some(slot => slot.s.id === student.id)) return false;
+        const start = Number(option.time.slice(0, 2)) * 60 + Number(option.time.slice(3));
+        return !active.some(slot => {
+          if (!validTime(slot.time)) return true; // No invented availability from engine coercion.
+          const at = Number(slot.time.slice(0, 2)) * 60 + Number(slot.time.slice(3));
+          return start < at + 60 && start + 60 > at;
+        });
+      });
+      const options = candidates.slice(0, 6);
+      const warnings = result.warnings.slice();
+      if (candidates.length !== result.options.length) warnings.push('기존 일정과 겹치거나 이미 등록·취소된 본인 일정과 같은 시간은 새 일정으로 추천하지 않습니다.');
+      return smsJSON({ ok: true, revision: r.revision, messageId: row.id, options, warnings });
     }
     if (path === '/sms/prepare') { fields(body, ['stage']); return smsJSON({ ok: true, count: prepare(owner, body.stage, now, true) }); }
     if (path === '/sms/confirm') return confirm(owner, body, now);
@@ -378,6 +515,66 @@ export async function handleSmsOwner(owner, request) {
     }
     fail('sms-not-found', 404);
   } catch (e) { return smsJSON({ error: e.status ? e.message : 'sms-storage-unavailable', ...(e.status ? e.detail : {}) }, e.status || 503); }
+}
+function registerCallInquiry(owner, body, now) {
+  fields(body, ['callId', 'baseRevision', 'name', 'memo']); validId(body.callId);
+  text(body.name, 80); text(body.memo, 500, false);
+  if (!Number.isSafeInteger(body.baseRevision) || body.baseRevision < 0) fail('revision-conflict', 409);
+  const payload = JSON.stringify([body.name, body.memo]), receiptKey = 'sms.callInquiry.' + body.callId;
+  const prior = owner.getKV(receiptKey);
+  if (prior) {
+    if (prior.payload !== payload) fail('sms-call-inquiry-conflict', 409);
+    return smsJSON({ ok: true, revision: prior.revision, inquiryId: prior.inquiryId, duplicate: true });
+  }
+  const r = recordOf(owner);
+  if (r.revision !== body.baseRevision) fail('revision-conflict', 409);
+  const call = owner.sql.exec('SELECT * FROM sms_calls WHERE id=?', body.callId).toArray()[0];
+  if (!call) fail('sms-call-not-found', 404);
+  if (registeredPhones(r.state).includes(call.phone)) fail('sms-call-contact-exists', 409);
+  const state = structuredClone(r.state), inquiryId = 'call_' + call.id;
+  if ((state.inquiries || []).some(row => row?.id === inquiryId)) fail('sms-call-inquiry-conflict', 409);
+  // Same schema as the host's manual saveInquiry. Name is supplied explicitly by the owner.
+  const inquiry = { id: inquiryId, name: body.name.trim(), phone: call.phone, memo: body.memo.trim(),
+    visitDate: '', visitTime: '', date: dayInfo(now).date };
+  state.inquiries = [inquiry, ...(state.inquiries || [])];
+  const next = nextRecord(r, state);
+  owner.ctx.storage.transactionSync(() => {
+    if (owner.record()?.revision !== body.baseRevision) fail('revision-conflict', 409);
+    owner.setKV('record', next);
+    owner.setKV(receiptKey, { payload, revision: next.revision, inquiryId });
+    owner.sql.exec("UPDATE sms_calls SET status='acknowledged' WHERE id=?", body.callId);
+  });
+  owner.broadcast(next); return smsJSON({ ok: true, revision: next.revision, inquiryId, duplicate: false });
+}
+function currentDevice(owner, device) {
+  const current = owner.getKV('sms.device');
+  if (!current?.tokenHash || current.id !== device.id || current.tokenHash !== device.tokenHash) fail('sms-device-auth-required', 401);
+  return current;
+}
+async function callEvent(owner, device, body, now) {
+  fields(body, ['id', 'phone', 'receivedAt', 'direction']); validId(body.id);
+  const phone = normalizePhone(body.phone), at = body.receivedAt;
+  if (!phone || typeof at !== 'number' || !Number.isSafeInteger(at) || at <= 0 || at > now || body.direction !== 'incoming') fail('sms-invalid-call');
+  const payload = await smsHash(JSON.stringify([body.id, body.phone, at, body.direction]));
+  let duplicate = false, id;
+  owner.ctx.storage.transactionSync(() => {
+    const current = currentDevice(owner, device), cfg = callSettings(owner), r = recordOf(owner);
+    if (!cfg.enabled) fail('sms-call-disabled', 409);
+    if (at < current.pairedAt) fail('sms-historical-call', 409);
+    const known = registeredPhones(r.state).includes(phone);
+    if (!known && cfg.includeUnknown !== true) fail('sms-call-phone-denied', 409);
+    const prior = owner.sql.exec('SELECT * FROM sms_calls WHERE device_id=? AND event_id=?', current.id, body.id).toArray()[0];
+    if (prior) {
+      if (prior.payload_sha !== payload) fail('sms-call-id-conflict', 409);
+      duplicate = true; id = prior.id;
+    } else {
+      id = crypto.randomUUID();
+      owner.sql.exec('INSERT INTO sms_calls(id,device_id,event_id,payload_sha,phone,received_at,status) VALUES(?,?,?,?,?,?,?)',
+        id, current.id, body.id, payload, phone, at, 'pending');
+    }
+    owner.setKV('sms.device', { ...current, lastSeen: now });
+  });
+  return smsJSON({ ok: true, callId: id, duplicate });
 }
 async function event(owner, device, body, now) {
   fields(body, ['id', 'phone', 'text', 'receivedAt', 'direction']); validId(body.id); text(body.text, 4000);
@@ -413,8 +610,11 @@ export async function handleSmsDevice(owner, request) {
     if (!Object.hasOwn(DEVICE_ROUTES, path) || request.method !== DEVICE_ROUTES[path] || url.search) fail('sms-device-route-denied', 404);
     const token = deviceBearer(request), device = owner.getKV('sms.device');
     if (!device?.tokenHash || await smsHash(token) !== device.tokenHash) fail('sms-device-auth-required', 401);
+    currentDevice(owner, device);
     const now = Date.now(), body = request.method === 'POST' ? await readSmsBody(request) : null;
-    device.lastSeen = now; owner.setKV('sms.device', device);
+    const current = currentDevice(owner, device);
+    if (path === '/device/call') return await callEvent(owner, device, body, now);
+    owner.setKV('sms.device', { ...current, lastSeen: now });
     if (path === '/device/event') return await event(owner, device, body, now);
     if (path === '/device/pull') {
       recordOf(owner);
@@ -425,7 +625,8 @@ export async function handleSmsDevice(owner, request) {
       const rows = owner.sql.exec("SELECT * FROM sms_outbox WHERE status='pending' AND device_id=? ORDER BY created_at,id LIMIT 100", device.id).toArray();
       const messages = rows.filter(row => recheckOutbox(owner, row, now)).map(row => ({ id: row.id, phone: row.phone, text: row.text }));
       const allowedPhoneHashes = await Promise.all(registeredPhones(recordOf(owner).state).map(smsHash));
-      return smsJSON({ ok: true, deviceId: device.id, allowedPhoneHashes, messages, serverTime: now });
+      currentDevice(owner, device);
+      return smsJSON({ ok: true, deviceId: device.id, allowedPhoneHashes, messages, callIntake: callSettings(owner), serverTime: now });
     }
     fields(body, path === '/device/claim' ? ['id'] : ['id', 'status', 'error']); validId(body.id);
     const row = owner.sql.exec('SELECT * FROM sms_outbox WHERE id=? AND device_id=?', body.id, device.id).toArray()[0];

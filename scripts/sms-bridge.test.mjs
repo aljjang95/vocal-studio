@@ -54,6 +54,50 @@ const responseOK = async response => { assert.equal(response.status, 200, JSON.s
 const pendingCard = async f => (await f.overview()).messages.find(m => m.status === 'pending');
 const entry = (messageId, extra = {}) => ({ messageId, studentId: 's1', date: '2026-10-07', time: '15:00', ...extra });
 
+test('owner schedule window ranks adjacency and exact minute request, remains a read with guarded manual confirmation', async t => {
+  const peer = student('peer', { ph:'01000002222', schedType:'fixed', days:['수'], times:{수:'16:00'} });
+  const f = fixture(t,{students:[student(),peer]});await f.activate();await f.pair(false);await responseOK(await f.event());
+  const card=await pendingCard(f), before=structuredClone(f.read());
+  const query={baseRevision:0,messageId:card.id,studentId:'s1',date:'2026-10-07',startTime:'12:00',endTime:'20:00'};
+  const options=await responseOK(await f.api('/sms/options',query));assert.equal(options.options[0].time,'15:00');assert.equal(options.options.length,6);
+  const exact=await responseOK(await f.api('/sms/options',{...query,preferredTime:'14:15'}));assert.equal(exact.options[0].time,'14:15');
+  assert.deepEqual(f.read(),before);assert.equal((await pendingCard(f)).status,'pending');assert.equal(f.control.broadcasts.length,0);
+  const overlap=await responseOK(await f.api('/sms/options',{...query,preferredTime:'15:30'}));assert.ok(overlap.warnings.length);assert.ok(!overlap.options.some(o=>o.time==='15:30'||o.time==='16:00'));
+  for(const extra of [{date:'2026-02-30'},{startTime:['12:00']},{endTime:'12:30'},{preferredTime:1500},{limit:1}]) assert.equal((await f.api('/sms/options',{...query,...extra})).status,400);
+  assert.equal((await f.api('/sms/options',{...query,baseRevision:1})).status,409);assert.equal((await f.api('/sms/options',{...query,studentId:'peer'})).status,409);
+  const denied=await f.api('/sms/confirm',{baseRevision:0,entries:[entry(card.id,{time:'15:30'})]});assert.equal(denied.status,409);
+  assert.deepEqual((await denied.json()).conflict,{date:'2026-10-07',time:'15:30',names:['정식 이름 peer']});assert.deepEqual(f.read(),before);
+  await responseOK(await f.api('/sms/confirm',{baseRevision:0,entries:[entry(card.id,{time:'14:15'})]}));assert.equal(f.read().revision,1);
+  assert.equal((await f.overview()).messages[0].confirmation.time,'14:15');assert.equal((await f.api('/sms/options',{...query,baseRevision:1})).status,409);
+});
+
+test('interval confirmation detects offset batch overlap atomically, unknown active legacy data gives no options or mutation', async t => {
+  const f=fixture(t,{students:[student(),student('s2',{ph:'01000002222'})]});await f.activate();await f.pair(false);await f.event();await f.event({phone:'01000002222'});
+  const cards=(await f.overview()).messages,before=structuredClone(f.read());
+  const response=await f.api('/sms/confirm',{baseRevision:0,entries:[entry(cards.find(c=>c.studentId==='s1').id),entry(cards.find(c=>c.studentId==='s2').id,{studentId:'s2',time:'15:30'})]});
+  assert.equal(response.status,409);assert.equal((await response.json()).error,'sms-schedule-conflict');assert.deepEqual(f.read(),before);
+  const g=fixture(t,{students:[student(),student('legacy',{ph:'01000003333',schedType:'fixed',days:['수'],times:{수:['15:00','16:00']}})]});await g.activate();await g.pair(false);await g.event();
+  const card=await pendingCard(g),original=structuredClone(g.read()),query={baseRevision:0,messageId:card.id,studentId:'s1',date:'2026-10-07',startTime:'12:00',endTime:'20:00'};
+  const ranked=await responseOK(await g.api('/sms/options',query));assert.deepEqual(ranked.options,[]);assert.ok(ranked.warnings.length);
+  assert.equal((await g.api('/sms/confirm',{baseRevision:0,entries:[entry(card.id,{time:'18:00'})]})).status,409);assert.deepEqual(g.read(),original);
+});
+
+test('same-revision recommendations honor original self/canceled keys and actual confirmed-date occupancy',async t=>{
+  const date='2026-10-07',wk=scheduleSnapshot({students:[],weekOvr:{}},date).weekKey;
+  for(const variant of ['confirmed-kind-cancel','confirmed-absent','confirmed-override-cancel','week-cancel','self-active']) {
+    const cancelled=variant==='confirmed-kind-cancel'?{kind:'cancel'}:variant==='confirmed-absent'?{absent:true}:{overrideType:'cancel'};
+    const data=variant.startsWith('confirmed')?{students:[student('s1',{confirmedDates:[{date,time:'15:00',...cancelled}]})]}:
+      {weekOvr:{[wk]:{s1:[{day:'수',time:'15:00',...(variant==='week-cancel'?{absent:true,overrideType:'cancel'}:{})}]}}};
+    const f=fixture(t,data);await f.activate();await f.pair(false);await f.event();const card=await pendingCard(f),before=structuredClone(f.read());
+    const ranked=await responseOK(await f.api('/sms/options',{baseRevision:0,messageId:card.id,studentId:'s1',date,startTime:'13:00',endTime:'19:00',preferredTime:'15:00'}));
+    assert.ok(!ranked.options.some(option=>option.time==='15:00'),variant);assert.deepEqual(f.read(),before);
+    assert.equal((await f.api('/sms/confirm',{baseRevision:0,entries:[entry(card.id)]})).status,409,variant);assert.deepEqual(f.read(),before);
+    // Every offered option must be confirmable against this exact unchanged revision.
+    for(const option of ranked.options){f.control.failKey='record';const result=await f.api('/sms/confirm',{baseRevision:0,entries:[entry(card.id,{time:option.time})]});
+      assert.equal(result.status,503,variant+' offered '+option.time+' must reach transactional write');assert.equal(f.control.failKey,'');assert.deepEqual(f.read(),before);}
+  }
+});
+
 test('strict Korean phone normalization and cautious deterministic Korean proposals', () => {
   for (const phone of ['010-0000-1111', '+82 10 0000 1111', '0082-10-0000-1111', '+82 (0)10 0000 1111']) assert.equal(normalizePhone(phone), '01000001111');
   for (const phone of ['x01000001111', '01000001111/01000002222', '82 10 0000 1111', '12345', null]) assert.equal(normalizePhone(phone), '');
@@ -101,7 +145,8 @@ test('relay and DO both bound method/path/auth/body; relay never proxies owner d
   assert.equal((await r('/device/pull', { method: 'POST', body: '{}' })).status, 404);
   assert.equal((await r('/device/pull', { headers: {} })).status, 401); assert.equal(calls, 0);
   const pull = await responseOK(await r('/device/pull')); assert.deepEqual(pull.messages, []); assert.deepEqual(pull.allowedPhoneHashes, [await smsHash('01000001111')]);
-  assert.deepEqual(Object.keys(pull).sort(), ['allowedPhoneHashes', 'deviceId', 'messages', 'ok', 'serverTime']);
+  assert.deepEqual(Object.keys(pull).sort(), ['allowedPhoneHashes', 'callIntake', 'deviceId', 'messages', 'ok', 'serverTime']);
+  assert.deepEqual(pull.callIntake, {enabled:false,includeUnknown:false});
   for (const send of [body => r('/device/event', { method: 'POST', body }), body => f.state.fetch(new Request('https://studio.internal/sms-device/event', { method: 'POST', headers: { Authorization: 'Bearer ' + f.token }, body }))]) {
     assert.equal((await send('x'.repeat(16385))).status, 413); assert.equal((await send('{')).status, 400);
   }
@@ -254,6 +299,11 @@ test('legacy peer array time uses the engine canonical slot key and blocks stric
     conflict: { date: '2026-10-07', time: '15:00', names: ['정식 이름 peer'] } });
   assert.deepEqual(f.read(), before); assert.equal((await pendingCard(f)).status, 'pending');
   assert.equal(f.state.getKV('sms.confirmation.' + card.id), null); assert.equal(f.control.broadcasts.length, 0);
+  const ranked=await responseOK(await f.api('/sms/options',{baseRevision:0,messageId:card.id,studentId:'s1',date:'2026-10-07',startTime:'12:00',endTime:'20:00'}));
+  assert.deepEqual(ranked.options,[]);assert.ok(ranked.warnings.length);
+  assert.deepEqual(f.read(),before);
+  const interval=await f.api('/sms/confirm',{baseRevision:0,entries:[entry(card.id,{time:'15:30'})]});assert.equal(interval.status,409);
+  assert.deepEqual((await interval.json()).conflict,{date:'2026-10-07',time:'15:30',names:['정식 이름 peer']});assert.deepEqual(f.read(),before);
   await responseOK(await f.api('/sms/confirm', { baseRevision: 0, entries: [entry(card.id, { time: '17:00' })] }));
   assert.deepEqual(f.read().state.weekOvr[wk].peer, [legacy]);
 });
@@ -268,6 +318,17 @@ test('same group shared slot allowed; self duplicate/cancelled target and batch 
   const g = fixture(t, { weekOvr: { [wk]: { s1: [{ day: '수', time: '15:00', absent: true, overrideType: 'cancel' }] } } });
   await g.activate(); await g.pair(false); await g.event(); assert.equal((await g.api('/sms/confirm', { baseRevision: 0, entries: [entry((await pendingCard(g)).id)] })).status, 409);
   assert.equal(g.read().revision, 0);
+});
+
+test('legacy singleton override retains canonical shared-group confirmation without broad array acceptance',async t=>{
+  const wk=scheduleSnapshot({students:[],weekOvr:{}},'2026-10-05').weekKey,legacy={day:'수',time:['15:00'],absent:false,source:'legacy',metadata:{retain:true}};
+  const f=fixture(t,{students:[student('s1',{groupId:'shared',sharedSlot:true}),student('peer',{ph:'01000002222',groupId:'shared',sharedSlot:true})],weekOvr:{[wk]:{peer:[legacy]}}});
+  await f.activate();await f.pair(false);await f.event();const card=await pendingCard(f);
+  const options=await responseOK(await f.api('/sms/options',{baseRevision:0,messageId:card.id,studentId:'s1',date:'2026-10-07',startTime:'12:00',endTime:'20:00'}));
+  assert.deepEqual(options.options,[]);assert.ok(options.warnings.length);
+  assert.equal((await f.api('/sms/confirm',{baseRevision:0,entries:[entry(card.id,{time:['15:00']})]})).status,409);
+  await responseOK(await f.api('/sms/confirm',{baseRevision:0,entries:[entry(card.id)]}));
+  assert.deepEqual(f.read().state.weekOvr[wk].peer,[legacy]);assert.equal(scheduleSnapshot(f.read().state,'2026-10-07').conflicts.length,0);
 });
 test('CAS concurrency winner only, dismiss cannot schedule, malformed/past/inactive/ambiguous input fail closed', async t => {
   const f = fixture(t); await f.activate(); await f.pair(false); await f.event(); const card = await pendingCard(f);

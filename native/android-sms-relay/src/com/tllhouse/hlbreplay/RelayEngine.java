@@ -46,7 +46,9 @@ final class RelayEngine {
                 String h = allowed.getString(i);
                 if (!h.matches("[a-f0-9]{64}")) throw new Exception("Invalid allowlist"); hashes.add(h);
             }
-            if (!config.updateHashes(context, hashes)) return false;
+            JSONObject callIntake=pull.optJSONObject("callIntake");
+            if (!config.updatePull(context, hashes, callIntake==null ? null : callIntake.opt("enabled"),
+                callIntake==null ? null : callIntake.opt("includeUnknown"))) return false;
             synchronized (RelayConfig.LOCK) {
                 requireActive(); config = new RelayConfig(context); http = new RelayHttp(config);
             }
@@ -55,7 +57,7 @@ final class RelayEngine {
             scanProvider();
             flushEvents();
             // Every observed reply must reach the server before claiming a queued follow-up.
-            if (store.pendingEvents(config)) return true;
+            if (store.pendingEvents(config)) { flushCalls(); return true; }
             JSONArray pending = pull.getJSONArray("messages");
             if (pending.length()>200) throw new Exception("Invalid outbox");
             for (int i=0;i<pending.length();i++) {
@@ -65,7 +67,7 @@ final class RelayEngine {
                 coordinator().process(new SendCoordinator.Message(id,p,text));
             }
             flushAcks(); config.status(context, "연결됨 · 등록 번호만 처리합니다", true);
-            return false;
+            return flushCalls();
         } catch (RelayHttp.Failure e) {
             if (e.status==401 || e.status==403) { RelayConfig.stop(context, config.generation, "연결 토큰이 만료되거나 취소되었습니다"); return false; }
             config.status(context, "서버 연결 대기 · 저장된 결과는 다시 전송합니다", false); return active();
@@ -74,6 +76,40 @@ final class RelayEngine {
         } catch (Exception e) {
             config.status(context, "처리 대기 · 다음 백그라운드 실행에서 확인합니다", false);
             return config.active(context) && !cancelled.get();
+        }
+    }
+
+    private boolean flushCalls() throws Exception {
+        try {
+            return CallForwarder.flush(() -> {
+                // Cancellation/deadline defers work; it must not retire an otherwise valid call.
+                requireActive();
+                CallPolicy.State current=CallConsent.state(context);
+                // An old job must never forward a new connection's events.
+                return new CallPolicy.State(current.active,current.consent,current.enabled,current.unknown,
+                    current.generation,current.epoch,current.boundary,current.now,current.hashes);
+            },new CallForwarder.Journal() {
+                @Override public List<CallPolicy.Event> pending() { return store.calls(config.generation); }
+                @Override public void retire(String id) { store.callDone(id); }
+            },event -> {
+                requireActive();
+                // Recheck at dispatch, after reading the durable queue. Server also
+                // rechecks auth/settings transactionally for any request in flight.
+                synchronized (RelayConfig.LOCK) {
+                    requireActive();
+                    if (!CallConsent.state(context).accepts(event)) return;
+                }
+                try {
+                    http.request("/device/call",new JSONObject().put("id",event.id).put("phone",event.phone)
+                        .put("receivedAt",event.receivedAt).put("direction","incoming"));
+                } catch (RelayHttp.Failure failure) { throw new CallForwarder.Failure(failure.status); }
+            });
+        } catch (CallForwarder.Failure failure) {
+            // The existing outer handler stops only this request's generation.
+            throw new RelayHttp.Failure(failure.status);
+        } catch (Exception e) {
+            // Optional call-network failures do not interrupt the SMS send/receive path.
+            return active();
         }
     }
 

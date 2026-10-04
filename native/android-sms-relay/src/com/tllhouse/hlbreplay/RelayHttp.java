@@ -16,7 +16,7 @@ final class RelayHttp {
     RelayHttp(RelayConfig config) { this.config = config; }
     JSONObject request(String route, JSONObject body) throws Exception {
         if (!("/device/pull".equals(route) || "/device/event".equals(route)
-            || "/device/claim".equals(route) || "/device/ack".equals(route))) throw new IllegalArgumentException();
+            || "/device/claim".equals(route) || "/device/ack".equals(route) || "/device/call".equals(route))) throw new IllegalArgumentException();
         HttpsURLConnection c = (HttpsURLConnection) new URL(RelayPolicy.origin(config.origin) + route).openConnection();
         try {
             c.setInstanceFollowRedirects(false); c.setConnectTimeout(7000); c.setReadTimeout(7000);

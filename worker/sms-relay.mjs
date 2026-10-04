@@ -1,10 +1,12 @@
 import { DEVICE_ROUTES, deviceBearer, readSmsBody, smsJSON } from './sms.mjs';
+import { STUDIO_PRIVACY_PATH, studioPrivacyResponse } from './studio-privacy.mjs';
 
 // This public Worker has no customer/calendar binding and no owner routes.
 export default {
   async fetch(request, env) {
     try {
       const url = new URL(request.url);
+      if (url.pathname === STUDIO_PRIVACY_PATH && !request.url.includes('?') && !url.hash && (request.method === 'GET' || request.method === 'HEAD')) return studioPrivacyResponse(request.method);
       if (!Object.hasOwn(DEVICE_ROUTES, url.pathname) || DEVICE_ROUTES[url.pathname] !== request.method || url.search) return smsJSON({ error: 'sms-device-route-denied' }, 404);
       const token = deviceBearer(request);
       const body = request.method === 'POST' ? await readSmsBody(request) : null;
