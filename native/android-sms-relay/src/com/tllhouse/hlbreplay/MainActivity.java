@@ -4,6 +4,9 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.role.RoleManager;
+import android.content.ClipData;
+import android.content.ClipDescription;
+import android.content.ClipboardManager;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.ContentObserver;
@@ -13,6 +16,8 @@ import android.os.Looper;
 import android.provider.Settings;
 import android.provider.Telephony;
 import android.text.InputType;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
@@ -24,11 +29,19 @@ import java.text.DateFormat;
 import java.util.Date;
 
 public final class MainActivity extends Activity {
+    private static final String DIAGNOSTIC_STATE="hlb.connectionDiagnostic";
     private EditText url,token;
     private TextView status,callStatus;
-    private Button connect,stop,callEnable,callDisable,contacts;
+    private Button connect,stop,paste,callEnable,callDisable,contacts;
     private ContentObserver observer;
-    private String permissionOrigin,permissionToken;
+    private String permissionGeneration,permissionConfigOrigin,permissionOrigin,permissionToken;
+    private boolean foreground;
+    // Status keeps only non-secret config identity. Permission continuation is memory-only,
+    // as before: one explicit start request, never saved/restored, consumed once below.
+    private String localStatus,localGeneration,localOrigin,localSavedStatus;
+    private boolean localEnabled;
+    private long localLastSync;
+    private int localInput; // 1: URL correction, 2: key correction, 0: explicit retry/config change.
     private String roleRequestGeneration;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private final Runnable refresh=new Runnable() { public void run() { showState(); handler.postDelayed(this,2000); } };
@@ -57,14 +70,40 @@ public final class MainActivity extends Activity {
         label(layout,"HTTPS 연결 주소",16); url=new EditText(this); url.setSingleLine(true); url.setHint("https://…workers.dev");
         url.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI); url.setSaveEnabled(false);
         url.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS); layout.addView(url);
-        label(layout,"연결 토큰",16); token=new EditText(this); token.setSingleLine(true);
-        token.setHint("HLB 설정에서 받은 토큰"); token.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD|InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        label(layout,"연결키",16); token=new EditText(this); token.setSingleLine(true);
+        token.setHint("스튜디오 관리 → 문자 일정에서 만든 연결키"); token.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD|InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         token.setSaveEnabled(false); token.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS);
         token.setLongClickable(false); token.setTextIsSelectable(false); layout.addView(token);
+        label(layout,"스튜디오 관리 → 문자 일정에서 만든 연결키를 사용해 주세요. 무선 디버깅 페어링 코드와 다릅니다.",15);
+        paste=new Button(this); paste.setText("연결키 붙여넣기"); layout.addView(paste);
+        paste.setOnClickListener(v->{
+            if(!foreground || new RelayConfig(this).enabled) return;
+            token.setText("");
+            // Clipboard access happens only here, after the owner's foreground tap.
+            try {
+                ClipboardManager clipboard=(ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+                ClipData clip=clipboard==null ? null : clipboard.getPrimaryClip();
+                if(clip==null) { localStatus("복사된 연결키가 없습니다. 문자 일정에서 연결키를 복사한 뒤 다시 눌러 주세요.",2); return; }
+                if(clip.getItemCount()!=1 || !clip.getDescription().hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)) {
+                    localStatus("연결키 텍스트 하나만 붙여넣을 수 있습니다. 문자 일정에서 연결키를 다시 복사해 주세요.",2); return;
+                }
+                ClipData.Item item=clip.getItemAt(0);
+                if(item.getUri()!=null || item.getIntent()!=null || item.getText()==null) {
+                    localStatus("연결키 텍스트만 붙여넣을 수 있습니다. 파일·링크 공유 대신 연결키를 복사해 주세요.",2); return;
+                }
+                String raw=item.getText().toString();
+                if(!validKey(raw)) { keyError(raw.isEmpty()); return; }
+                token.setText(raw);
+                if(localInput!=1) clearLocalStatus();
+                showState();
+            } catch(Exception e) { localStatus("클립보드를 읽지 못했습니다. 앱 화면에서 연결키 붙여넣기를 다시 눌러 주세요.",2); }
+        });
+        watchInput(url,1); watchInput(token,2);
         connect=new Button(this); connect.setText("연결 시작"); layout.addView(connect); connect.setOnClickListener(v->start());
         stop=new Button(this); stop.setText("연결 중지"); layout.addView(stop); stop.setOnClickListener(v->{
-            try { RelayConfig.stop(this,"연결을 중지했습니다"); token.setText(""); showState(); }
-            catch(Exception e) { status.setText("중지 상태를 저장하지 못했습니다. 앱을 강제 종료한 뒤 확인해 주세요."); }
+            token.setText(""); clearPermissionRequest(); clearLocalStatus();
+            try { RelayConfig.stop(this,"연결을 중지했습니다"); showState(); }
+            catch(Exception e) { localStatus("중지 상태를 저장하지 못했습니다. 앱을 강제 종료한 뒤 확인해 주세요.",0); }
         });
         status=new TextView(this); status.setTextSize(16); status.setPadding(0,dp(16),0,dp(12)); layout.addView(status);
         label(layout,"수신 전화 확인 · 선택 사항",20);
@@ -98,7 +137,74 @@ public final class MainActivity extends Activity {
         permissions.setOnClickListener(v->startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,android.net.Uri.parse("package:"+getPackageName()))));
         RelayConfig config=new RelayConfig(this); url.setText(config.origin.isEmpty() ? RelayConfig.DEFAULT_ORIGIN : config.origin);
         observer=new ContentObserver(handler) { @Override public void onChange(boolean selfChange) { RelayScheduler.soon(MainActivity.this); } };
+        // Populating the default URL is not an owner's correction of the saved error.
+        restoreDiagnostic(saved);
         showState();
+    }
+    private static boolean validKey(String raw) {
+        // Exact deviceBearer/entry contract; do not trim or repair corrupted drafts.
+        return raw!=null && raw.matches("vssms_[A-Za-z0-9_-]{43}");
+    }
+    private void keyError(boolean empty) {
+        localStatus((empty ? "연결키를 입력하거나 붙여넣어 주세요. " : "연결키 형식이 올바르지 않습니다. 공백·줄바꿈 없이 다시 복사해 주세요. ")
+            +"스튜디오 관리 → 문자 일정에서 만든 연결키를 사용해 주세요. 무선 디버깅 페어링 코드와 다릅니다.",2);
+    }
+    private void clearLocalStatus() { localStatus=null; localInput=0; }
+    private void clearPermissionRequest() {
+        permissionGeneration=null; permissionConfigOrigin=null; permissionOrigin=null; permissionToken=null;
+    }
+    private void localStatus(String message,int input) {
+        RelayConfig c=new RelayConfig(this);
+        android.content.SharedPreferences p=getSharedPreferences("relay_private",MODE_PRIVATE);
+        localStatus=message; localInput=input; localGeneration=c.generation; localOrigin=c.origin; localEnabled=c.enabled;
+        localSavedStatus=p.getString("status","연결 중지됨"); localLastSync=p.getLong("lastSync",0);
+        showState();
+    }
+    private boolean diagnosticCurrent(RelayConfig c,android.content.SharedPreferences p) {
+        return localStatus!=null && c.generation.equals(localGeneration) && c.origin.equals(localOrigin)
+            && c.enabled==localEnabled && p.getLong("lastSync",0)==localLastSync
+            && p.getString("status","연결 중지됨").equals(localSavedStatus);
+    }
+    @Override protected void onSaveInstanceState(Bundle saved) {
+        super.onSaveInstanceState(saved);
+        saved.remove(DIAGNOSTIC_STATE);
+        RelayConfig c=new RelayConfig(this);
+        android.content.SharedPreferences p=getSharedPreferences("relay_private",MODE_PRIVATE);
+        if(!diagnosticCurrent(c,p)) { clearLocalStatus(); return; }
+        // Only hardcoded diagnostic text and non-secret persisted config identity.
+        // Never save either input field, a permission request, or clipboard/Intent data.
+        Bundle diagnostic=new Bundle();
+        diagnostic.putInt("version",1); diagnostic.putString("message",localStatus); diagnostic.putInt("input",localInput);
+        diagnostic.putString("generation",localGeneration); diagnostic.putString("origin",localOrigin);
+        diagnostic.putBoolean("enabled",localEnabled); diagnostic.putString("savedStatus",localSavedStatus);
+        diagnostic.putLong("lastSync",localLastSync); saved.putBundle(DIAGNOSTIC_STATE,diagnostic);
+    }
+    private void restoreDiagnostic(Bundle saved) {
+        if(saved==null) return;
+        try {
+            Bundle diagnostic=saved.getBundle(DIAGNOSTIC_STATE);
+            if(diagnostic==null || diagnostic.getInt("version",0)!=1) return;
+            String message=diagnostic.getString("message"),generation=diagnostic.getString("generation"),
+                origin=diagnostic.getString("origin"),savedStatus=diagnostic.getString("savedStatus");
+            int input=diagnostic.getInt("input",-1);
+            if(message==null || generation==null || origin==null || savedStatus==null || input<0 || input>2) return;
+            localStatus=message; localInput=input; localGeneration=generation; localOrigin=origin;
+            localEnabled=diagnostic.getBoolean("enabled",false); localSavedStatus=savedStatus;
+            localLastSync=diagnostic.getLong("lastSync",0);
+            if(!diagnosticCurrent(new RelayConfig(this),getSharedPreferences("relay_private",MODE_PRIVATE))) clearLocalStatus();
+        } catch(RuntimeException invalidState) { clearLocalStatus(); }
+    }
+    private void watchInput(EditText field,int input) {
+        field.addTextChangedListener(new TextWatcher() {
+            public void beforeTextChanged(CharSequence s,int start,int count,int after) {}
+            public void onTextChanged(CharSequence s,int start,int before,int count) {}
+            public void afterTextChanged(Editable value) {
+                if(localStatus==null || localInput!=input) return;
+                if(input==2) { if(!validKey(value.toString())) return; }
+                else { try { RelayPolicy.origin(value.toString()); } catch(Exception e) { return; } }
+                clearLocalStatus(); showState();
+            }
+        });
     }
     private void requestCallConsent() {
         if (android.os.Build.VERSION.SDK_INT<29 || !new RelayConfig(this).enabled) return;
@@ -137,30 +243,48 @@ public final class MainActivity extends Activity {
         }
     }
     private void start() {
-        if(new RelayConfig(this).enabled) return;
-        try { RelayPolicy.origin(url.getText().toString()); RelayPolicy.token(token.getText().toString()); }
-        catch(Exception e) { status.setText("HTTPS 주소(경로 제외)와 연결 토큰을 확인해 주세요."); return; }
+        String raw=token.getText().toString(); token.setText(""); clearPermissionRequest();
+        if(new RelayConfig(this).enabled) { showState(); return; }
+        clearLocalStatus();
+        String origin;
+        try { origin=RelayPolicy.origin(url.getText().toString()); }
+        catch(Exception e) { localStatus("HTTPS 연결 주소를 확인해 주세요. 호스트 주소만 입력하며 경로·쿼리·사용자 정보와 443 이외의 포트는 사용할 수 없습니다.",1); return; }
+        if(!validKey(raw)) { keyError(raw.isEmpty()); return; }
         if(!RelayConfig.permissions(this)) {
-            permissionOrigin=RelayPolicy.origin(url.getText().toString()); permissionToken=RelayPolicy.token(token.getText().toString());
-            requestPermissions(new String[]{Manifest.permission.READ_SMS,Manifest.permission.RECEIVE_SMS,Manifest.permission.SEND_SMS},42); return;
+            RelayConfig c=new RelayConfig(this);
+            permissionGeneration=c.generation; permissionConfigOrigin=c.origin; permissionOrigin=origin; permissionToken=raw;
+            localStatus("문자 읽기·수신·발송 권한을 모두 허용해야 연결할 수 있습니다. 권한 선택을 완료해 주세요.",0);
+            try { requestPermissions(new String[]{Manifest.permission.READ_SMS,Manifest.permission.RECEIVE_SMS,Manifest.permission.SEND_SMS},42); }
+            catch(Exception e) { clearPermissionRequest(); localStatus("문자 권한 선택을 열지 못했습니다. 앱 권한 설정에서 문자 읽기·수신·발송 권한을 확인한 뒤 다시 시작해 주세요.",0); }
+            return;
         }
-        connect(RelayPolicy.origin(url.getText().toString()),RelayPolicy.token(token.getText().toString()));
+        connect(origin,raw);
     }
     private void connect(String origin,String pairToken) {
+        String stage="연결 설정을 저장하지 못했습니다. 연결키를 다시 입력한 뒤 연결 시작을 눌러 주세요.";
         try {
             RelayConfig.start(this,origin,pairToken);
-            token.setText(""); RelayScheduler.ensure(this); RelayScheduler.soon(this); showState(); registerObserver();
+            stage="백그라운드 연결 작업을 준비하지 못했습니다. 연결키를 다시 입력한 뒤 연결 시작을 눌러 주세요.";
+            RelayScheduler.ensure(this); RelayScheduler.soon(this);
+            stage="문자 수신 상태 확인을 준비하지 못했습니다. 문자 권한을 확인한 뒤 연결키를 다시 입력하고 시작해 주세요.";
+            registerObserver(); clearLocalStatus(); showState();
         } catch(Exception e) {
             try { RelayConfig.stop(this,"연결 준비에 실패했습니다"); } catch(Exception ignored) {}
-            status.setText("문자 권한과 기본 문자 SIM, 연결 정보를 확인해 주세요.");
+            localStatus(!RelayConfig.permissions(this) ? "문자 읽기·수신·발송 권한을 모두 허용해야 연결할 수 있습니다. 권한 확인 후 다시 시작해 주세요." : stage,0);
         }
     }
     @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] results) {
         super.onRequestPermissionsResult(request,permissions,results);
         if(request==42) {
-            if(RelayConfig.permissions(this) && permissionOrigin!=null && permissionToken!=null) connect(permissionOrigin,permissionToken);
-            else status.setText("문자 읽기·수신·발송 권한을 모두 허용해야 연결할 수 있습니다.");
-            permissionOrigin=null; permissionToken=null;
+            RelayConfig c=new RelayConfig(this);
+            boolean current=permissionGeneration!=null && permissionGeneration.equals(c.generation)
+                && c.origin.equals(permissionConfigOrigin) && !c.enabled;
+            String origin=permissionOrigin,pairToken=permissionToken;
+            clearPermissionRequest(); // Never retain a completed/denied/stale request or replay it.
+            if(current) {
+                if(RelayConfig.permissions(this) && origin!=null && validKey(pairToken)) connect(origin,pairToken);
+                else localStatus("문자 읽기·수신·발송 권한을 모두 허용해야 연결할 수 있습니다. 앱 권한 설정을 확인한 뒤 다시 시작해 주세요.",0);
+            }
         }
         if(request==44) {
             showState();
@@ -176,8 +300,11 @@ public final class MainActivity extends Activity {
         RelayConfig c=new RelayConfig(this);
         android.content.SharedPreferences p=getSharedPreferences("relay_private",MODE_PRIVATE);
         long last=p.getLong("lastSync",0);
-        status.setText(p.getString("status","연결 중지됨")+(last>0 ? "\n최근 확인: "+DateFormat.getDateTimeInstance().format(new Date(last)) : ""));
+        String savedStatus=p.getString("status","연결 중지됨");
+        if(localStatus!=null && !diagnosticCurrent(c,p)) clearLocalStatus();
+        status.setText(localStatus!=null ? localStatus : savedStatus+(last>0 ? "\n최근 확인: "+DateFormat.getDateTimeInstance().format(new Date(last)) : ""));
         connect.setEnabled(!c.enabled); stop.setEnabled(c.enabled); url.setEnabled(!c.enabled); token.setEnabled(!c.enabled);
+        paste.setEnabled(!c.enabled);
         boolean supported=android.os.Build.VERSION.SDK_INT>=29;
         callEnable.setEnabled(supported && c.enabled && !c.callOptIn);
         callDisable.setEnabled(c.callOptIn);
@@ -190,10 +317,10 @@ public final class MainActivity extends Activity {
                 +(contactPermission ? " · 저장 연락처 전화 전달 허용" : " · 저장 연락처 전화는 전달되지 않을 수 있음"));
     }
     @Override public void onResume() {
-        super.onResume();
-        try { CallConsent.state(this); registerObserver(); RelayScheduler.ensure(this); RelayScheduler.soon(this); } catch(Exception e) { status.setText("백그라운드 연결을 다시 확인해 주세요."); }
+        super.onResume(); foreground=true;
+        try { CallConsent.state(this); registerObserver(); RelayScheduler.ensure(this); RelayScheduler.soon(this); } catch(Exception e) { localStatus("백그라운드 연결을 다시 확인해 주세요. 앱 권한을 확인하고 연결 시작 또는 앱 화면 복귀로 다시 시도해 주세요.",0); }
         handler.post(refresh);
     }
-    @Override public void onPause() { handler.removeCallbacks(refresh); token.setText(""); super.onPause(); }
-    @Override public void onDestroy() { handler.removeCallbacks(refresh); getContentResolver().unregisterContentObserver(observer); super.onDestroy(); }
+    @Override public void onPause() { foreground=false; handler.removeCallbacks(refresh); token.setText(""); super.onPause(); }
+    @Override public void onDestroy() { clearPermissionRequest(); handler.removeCallbacks(refresh); getContentResolver().unregisterContentObserver(observer); super.onDestroy(); }
 }

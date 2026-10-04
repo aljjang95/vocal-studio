@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-10-04T08:56:08.411Z",
+  "status": "REVIEWED_SIGNED_PHONE_UPDATED_PAIRING_PENDING",
+  "base": "fd1e1311ff8573a60dfb7402c07159921627b7c5",
+  "branch": "codex/android-connection-fix-20261004",
+  "pullRequest": "https://github.com/aljjang95/vocal-studio/pull/28",
+  "files": [
+    {
+      "path": "native/android-sms-relay/src/com/tllhouse/hlbreplay/MainActivity.java",
+      "sha256": "97710d33a1d2ab097a0e1b8432d270078a2bb2ec03f1d7eed478e81f7835b986"
+    },
+    {
+      "path": "native/android-sms-relay/README.md",
+      "sha256": "ff2e6b4ed8035ee953b871d63baa8f181d9a1afd271d333970585ed6819d13fe"
+    },
+    {
+      "path": "native/android-sms-relay/tests/verify-native.mjs",
+      "sha256": "ce7e6fce5031729fb33a65d960b0ff34a4e1aa301d0c17876cfc1b4b2d489ad4"
+    },
+    {
+      "path": "native/android-sms-relay/tests/verify-connection.mjs",
+      "sha256": "e110f43890b9e5c8ffa3622b651eabe4339df94da3721d446658a9e1d4233d7c"
+    },
+    {
+      "path": "native/android-sms-relay/tests/connection/ConnectionActivityTest.java",
+      "sha256": "31767baa7caff4909cb166cdf4819e5454aaf95266676154b18e3afc9c883750"
+    },
+    {
+      "path": "native/android-sms-relay/tests/connection/host-stubs.mjs",
+      "sha256": "a56eca4fefd25cae53f032fc6fabff59794ce90cc601fdde8939e69990ef5f80"
+    }
+  ],
+  "validation": {
+    "connectionSynthetic": 78,
+    "coreSynthetic": 72,
+    "callSynthetic": 82,
+    "independentRecreation": 3,
+    "androidApi": 36,
+    "signaturesVerified": true,
+    "sameCertificate": true,
+    "independent": "PASS_BOUNDED_REVIEW"
+  },
+  "artifacts": {
+    "apk": {
+      "path": "hlb-sms-relay.apk",
+      "sha256": "aa90f0e64ecfefd98d9d2e12ecfc71ab0a811d582ac4a6b2b8d3d1de1cc319f6",
+      "versionCode": 3,
+      "versionName": "1.2"
+    },
+    "aab": {
+      "sha256": "bc19e6fd05d0e38633d98c86b2af67cdb265b487d964efdc452c8be010db5ce0",
+      "versionCode": 3,
+      "versionName": "1.2"
+    }
+  },
+  "physicalDevice": {
+    "model": "SM-S948N",
+    "androidApi": 36,
+    "installedApkSha256": "aa90f0e64ecfefd98d9d2e12ecfc71ab0a811d582ac4a6b2b8d3d1de1cc319f6",
+    "updateVerified": true,
+    "dataPreserved": true,
+    "smsPermissionsPreserved": true,
+    "ownScreenVerified": true,
+    "connection": "STOPPED_PENDING_OWNER_KEY",
+    "actualPairing": false
+  },
+  "preserved": [
+    "R2 vocal-studio-media / MEDIA",
+    "StudioState SQLite Durable Object",
+    "backend/SMS/schedule/sync/UI source hashes unchanged",
+    "private signing and unrelated untracked work"
+  ],
+  "pending": [
+    "Owner-local HLB key/server pairing and exact original connection error",
+    "Physical clipboard/lifecycle/SMS/calls/background",
+    "Google Play testing/permission declaration/review",
+    "Authenticated public APK download journey"
+  ],
+  "buildReceiptSha256": "a32107286b2e0a3db7721510f9a17461f841fdbd58ce12a40eb63c8d35622571",
+  "authorReceiptSha256": "438934680a15da32bea9dfb59ea58fe0e86e7c39d4cea734df438d0e3a3abd0f",
+  "reviewReceiptSha256": "148e586d121451eb4c1d42b5cc5435b13f3e6cf192a74e264d75f8e7cb49e92f"
+}

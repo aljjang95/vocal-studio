@@ -12,6 +12,10 @@
 & './scripts/build-android-sms-relay.ps1' -TestsOnly
 # 네이티브 확장의 실제 production Java 합성 검사, SQLite DDL 검사, 전체 Android API 컴파일
 node native/android-sms-relay/tests/verify-native.mjs
+# 연결 설정만 검증: 실제 MainActivity 합성 실행 + API36 컴파일, APK 생성 없음
+node native/android-sms-relay/tests/verify-connection.mjs
+# 같은 회귀 검사를 기준 commit의 production 소스에 실행 (예상 RED, checkout 변경 없음)
+node native/android-sms-relay/tests/verify-connection.mjs --baseline
 ```
 
 설치된 `OpenJDK/bin/javac.exe`, `java.exe`, `jar.exe`, `keytool.exe`, SDK36 `aapt2`, `core-lambda-stubs.jar`, D8, zipalign, apksigner만 사용합니다. 다운로드나 전역 설치를 하지 않습니다. 빌드 스크립트와 versionCode 옵션은 별도 빌드 담당자가 소유하며, 메인이 최종 소스를 동결한 뒤 동일 후보의 APK/AAB·서명·버전·bundle 검사를 수용합니다. 확장 검사기는 `work/android-studio-release/native-checks/<run>/`에 검증 소스 사본, SHA-256, 실제 명령과 출력, SQLite 파일, unsigned 리소스 검사 APK 및 결과를 보존합니다. 이 APK는 설치·배포용이 아닙니다.
@@ -23,6 +27,10 @@ RSA3072 서명 키는 `work/sms-flex-bridge/private-signing/relay-release.p12`�
 - **스튜디오 관리 열기**는 `https://hlb.tllhouse.com/`만 열고 **개인정보 처리방침**은 `https://vocal-studio-sms-relay.affinity-agent-studio.workers.dev/privacy`만 엽니다. 기본 브라우저가 Custom Tabs를 지원하면 해당 브라우저의 일반 세션을 사용하고, 사용할 수 없으면 일반 브라우저로 돌아갑니다. 쿠키·인증 정보를 앱으로 추출하거나 토큰을 URL에 넣지 않으며, WebView/JavaScript bridge를 사용하지 않습니다. exported MainActivity는 외부 intent의 자격 정보나 URL을 소비하지 않습니다.
 - 연결 주소가 비어 있을 때만 공개 relay origin을 입력칸에 미리 표시합니다. 저장된 다른 origin은 보존하며, 미리 채운 주소로 자동 연결·자동 토큰 생성·권한 동의는 하지 않습니다. 관리/개인정보 URL은 사용자가 입력한 relay origin과 분리되어 있습니다.
 - 소유자가 HTTPS relay **origin**과 별도 pair token을 입력하고 문자 읽기·수신·발송 권한을 모두 허용한 뒤 **연결 시작**을 누릅니다. token은 비밀번호 필드와 앱 private prefs에만 존재합니다. URL query/path, 인증 토큰 출력, 클립보드 복사, 자동 완성, 스크린샷, Android 백업/기기 전송은 차단합니다.
+- 연결키는 **스튜디오 관리 → 문자 일정**에서 만든 `vssms_` 접두사와 43자 영문·숫자·`_`·`-` 형식만 받습니다. 무선 디버깅의 6자리 페어링 코드와 다릅니다. 빈 키, 형식 오류, HTTPS origin 오류는 입력값을 표시하지 않는 별도 안내이며 2초 상태 갱신에도 유지됩니다. 해당 입력을 올바르게 고치거나 다시 시작하면 안내를 갱신하며, 다른 연결 세대/설정 또는 현재 연결의 새 동기화 결과에는 오래된 로컬 오류를 덮어씌우지 않습니다.
+- Android가 Activity를 재생성할 때도 공식 `savedInstanceState`의 비밀 없는 진단 상태만 복원합니다. 진단 문구/입력 종류와 기존 config의 generation·origin·enabled·status·lastSync가 모두 현재 값과 일치해야 안내를 유지하며, 새 연결/설정/동기화 결과에는 폐기합니다. 입력 URL·draft 연결키·권한 대기 키·클립보드·Intent는 저장/복원하지 않습니다. 새 화면의 기본 URL 표시만으로는 이전 오류를 지우지 않으며, 소유자의 올바른 입력 또는 다시 시작으로 해제합니다.
+- **연결키 붙여넣기**는 소유자가 활성 앱 화면에서 버튼을 누른 경우에만 공식 Android `ClipboardManager.getPrimaryClip()`을 읽습니다. 일반 텍스트 하나만 받으며 URI·Intent·여러 항목·텍스트가 없는 항목은 변환/조회하지 않습니다. 앞뒤 공백·줄바꿈·내부 공백·깨진 문자를 제거하거나 수정하지 않고 거절하며 기존 입력 키도 비웁니다. 자동 클립보드 조회, URL/deeplink 연결키 가져오기, 토큰 복사/내보내기, draft 로그/저장 기능은 없습니다. 붙여넣기는 연결을 시작하지 않습니다. `FLAG_SECURE`, 비밀번호 표시, 복사 메뉴 차단, no-autofill/no-save는 유지합니다.
+- 연결 시작 시도·중지 시도·앱 화면 이탈(`onPause`)에는 입력칸의 키를 비웁니다. 기존처럼 소유자가 **연결 시작**을 누른 요청의 권한 대기 값만 메모리에 유지하며 저장·로그·상태 복원은 하지 않습니다. 공식 권한 결과에서 현재 설정 origin/세대와 세 가지 문자 권한이 모두 일치해야 한 번만 연결을 계속합니다. 거절·오래된 결과·중지·새 시작·Activity 종료에는 대기 키를 폐기합니다. 새 Activity는 키 없이 다시 입력해야 하며 누락된 문자 권한을 우회하지 않습니다. 연결 시작을 완료했을 때만 기존 private prefs 계약으로 키를 저장합니다.
 - 네트워크가 가능한 약 15분 주기 JobScheduler와 수신/발송 결과/살아 있는 앱의 SMS provider observer가 요청하는 일회성 작업을 사용합니다. 부팅/업데이트 후 등록된 작업을 복구합니다. Doze·절전·강제 종료·제조사 정책·네트워크 상태에 따라 지연될 수 있으며 정확한 시각이나 상시 실행을 보장하지 않습니다.
 - `/device/pull`에서 **새로운 전화번호 해시 allowlist**를 먼저 받습니다. `+82`/`0082`를 `0`으로 정규화하고 SHA-256을 비교한 뒤에만 본문을 큐에 저장/전송합니다. 수신 시 캐시 allowlist가 없으면 provider를 다음 작업에서 읽어 복구합니다. 전송 직전에도 최신 allowlist를 다시 검사합니다.
 - SMS provider 쿼리는 **연결 시작 이후** `date>=boundary AND type IN (1,2)`로 제한합니다. 전체 휴대폰 과거 문자, 연락처, 다른 앱 알림을 읽지 않습니다. 해당 시작 구간의 현재 받은 문자와 native 문자 앱의 수동 발신을 처리합니다. multipart 수신은 방송의 순서대로 합칩니다. 표준 provider의 `date_sent`와 방송 PDU 시각으로 이벤트를 식별하며, 저장된 동일 ID/payload를 재전송합니다. OEM provider의 timestamp/creator 동작은 기기 검증이 필요합니다.
@@ -49,6 +57,10 @@ SQLite v2는 기존 SMS 테이블을 유지하고 별도 `calls` 테이블을 �
 공식 근거: [CallScreeningService](https://developer.android.com/reference/android/telecom/CallScreeningService), 2026-10-04 확인. 공식 문서는 user-selected role, 수신 응답 5초 제한, 연락처 권한 조건, tel/번호 표시 조건을 명시합니다. 이 구현의 API 컴파일은 전화 수신·역할 UI·브라우저 로그인 유지의 물리 기기 증거가 아닙니다.
 
 ## 검증 경계와 실제 기기 게이트
+
+연결 설정 재생성 검사는 production `onSaveInstanceState` → `onPause`/`onDestroy` → 새 `onCreate(Bundle)`/`onResume`을 실행합니다. URL/빈 키/잘못된 키 오류 유지, 입력 수정·재시도·성공 연결의 오류 해제, 각각의 config 상태 변경 시 오래된 오류 폐기, Bundle에 draft/권한 대기 키가 없는지, 재생성 시 자동 클립보드 접근이 없는지를 확인합니다. 실제 Android의 Bundle 직렬화·OS process death 복원·OEM lifecycle은 통합 후보의 기기 수용 검사에 남아 있습니다.
+
+`ConnectionActivityTest`는 실제 production `MainActivity`, `RelayConfig`, `RelayPolicy`, `CallConsent`를 합성 UI·ClipboardManager·SharedPreferences·Handler에서 실행합니다. 오류 유지/입력별 수정/세대 및 동기화 상태 갱신, 명시적 붙여넣기/잘못된 키/외부 항목 거절/자동 조회 부재, pause/start/stop draft 삭제, 세 가지 문자 권한, 성공한 연결의 컨트롤, 저장·스케줄러·observer 준비 실패 안내를 확인합니다. `verify-native.mjs`도 이 scoped runner의 `--host-only` 경로를 실행하며 자체 API36 검사와 중복 컴파일하지 않습니다. 별도 runner는 `work/android-connection-fix/<run>/`에 소스 해시·명령·로그를 남기고 APK를 만들지 않습니다. 실제 소유자의 클립보드·키 발급/서버 페어링·Android 권한 화면과 IME 동작은 미검증이며 통합 후보의 물리 기기 수용은 메인 담당입니다. 이 로컬 UX 수정은 아직 확인되지 않은 소유자 연결 실패 원인을 확정하지 않습니다.
 
 `RelayCoreTest`는 실제 production `RelayPolicy`/`SendCoordinator`/`RelayConfig`를 JVM에서 실행합니다. 기존 55개 privacy/multipart/crash 순서 검사를 유지하며, 메모리 SharedPreferences와 scheduler double 및 held thread로 이전 401/403과 새 연결의 경쟁 조건을 추가 검증합니다. `NativeCallTest`는 production call 정책·설정·서비스·forwarder·RelayEngine·ManagementLauncher를 합성 Android/transport/storage 표면에서 실행합니다. I/O가 허용 응답보다 먼저 실행되면 실패하고 API26에서 API29 silence 메서드를 호출해도 실패합니다. 동의/역할 철회, 오래된 generation401, strict booleans/구형 pull, 정확한 API body, retry payload와 고정 URL/fallback을 확인합니다. 별도 Node SQLite 검사는 production DDL의 추가 migration, 중복 불변성, reopen과 generation/boundary를 실행합니다. host double은 APK에 포함하지 않습니다. provider 쿼리의 시작 경계와 반복 수동 문자 사례는 `node --test scripts/sms-manager.test.mjs`의 in-memory SQLite 및 source guard로 확인합니다. 실제 Android SQLite fsync, process death, JobScheduler, permission UI, broadcast PDU, native provider observer, SIM/modem은 이 검사의 대상이 아닙니다.
 
