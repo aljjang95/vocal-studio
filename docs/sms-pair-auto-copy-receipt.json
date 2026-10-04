@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "at": "2026-10-04T10:17:37.723Z",
-  "status": "REVIEWED_PHONE_UPDATED_AUTO_COPY_PENDING_DEPLOY",
+  "at": "2026-10-04T10:30:40.778Z",
+  "status": "AUTO_COPY_DEPLOYED_PHONE_CONNECTION_CONFIRMED",
   "base": "4112cba05c0db6eb016a067a63414d57622dcaec",
   "branch": "codex/sms-pair-auto-copy-20261004",
   "files": [
@@ -52,11 +52,14 @@
     "model": "SM-S948N",
     "installedApkMatches": true,
     "existingDataInodeAndSmsPermissionsPreserved": true,
-    "ownScreenVerified": false,
-    "actualKeyPairing": false
+    "ownScreenVerified": true,
+    "actualKeyPairing": true,
+    "connectionStatus": "연결됨 · 등록 번호만 처리합니다\n최근 확인: 2026. 10. 4. 오후 7:23:00",
+    "periodicJob": "registered/waiting",
+    "inputMethod": "Not observed; no agent key read or remote key entry"
   },
   "pending": [
-    "Real browser and OS clipboard and phone server pairing",
+    "Real browser/OS automatic clipboard acceptance remains unverified",
     "Current browser URL cannot be determined by Computer Use; tool stopped this turn",
     "Original remote Android setup input tool rejection remains, no bypass",
     "Physical SMS/calls/lifecycle/power and Play testing review"
