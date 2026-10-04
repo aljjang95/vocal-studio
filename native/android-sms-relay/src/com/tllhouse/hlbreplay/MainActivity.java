@@ -29,6 +29,7 @@ import java.text.DateFormat;
 import java.util.Date;
 
 public final class MainActivity extends Activity {
+    private static final String DIAGNOSTIC_STATE="hlb.connectionDiagnostic";
     private EditText url,token;
     private TextView status,callStatus;
     private Button connect,stop,paste,callEnable,callDisable,contacts;
@@ -136,6 +137,8 @@ public final class MainActivity extends Activity {
         permissions.setOnClickListener(v->startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,android.net.Uri.parse("package:"+getPackageName()))));
         RelayConfig config=new RelayConfig(this); url.setText(config.origin.isEmpty() ? RelayConfig.DEFAULT_ORIGIN : config.origin);
         observer=new ContentObserver(handler) { @Override public void onChange(boolean selfChange) { RelayScheduler.soon(MainActivity.this); } };
+        // Populating the default URL is not an owner's correction of the saved error.
+        restoreDiagnostic(saved);
         showState();
     }
     private static boolean validKey(String raw) {
@@ -156,6 +159,40 @@ public final class MainActivity extends Activity {
         localStatus=message; localInput=input; localGeneration=c.generation; localOrigin=c.origin; localEnabled=c.enabled;
         localSavedStatus=p.getString("status","연결 중지됨"); localLastSync=p.getLong("lastSync",0);
         showState();
+    }
+    private boolean diagnosticCurrent(RelayConfig c,android.content.SharedPreferences p) {
+        return localStatus!=null && c.generation.equals(localGeneration) && c.origin.equals(localOrigin)
+            && c.enabled==localEnabled && p.getLong("lastSync",0)==localLastSync
+            && p.getString("status","연결 중지됨").equals(localSavedStatus);
+    }
+    @Override protected void onSaveInstanceState(Bundle saved) {
+        super.onSaveInstanceState(saved);
+        saved.remove(DIAGNOSTIC_STATE);
+        RelayConfig c=new RelayConfig(this);
+        android.content.SharedPreferences p=getSharedPreferences("relay_private",MODE_PRIVATE);
+        if(!diagnosticCurrent(c,p)) { clearLocalStatus(); return; }
+        // Only hardcoded diagnostic text and non-secret persisted config identity.
+        // Never save either input field, a permission request, or clipboard/Intent data.
+        Bundle diagnostic=new Bundle();
+        diagnostic.putInt("version",1); diagnostic.putString("message",localStatus); diagnostic.putInt("input",localInput);
+        diagnostic.putString("generation",localGeneration); diagnostic.putString("origin",localOrigin);
+        diagnostic.putBoolean("enabled",localEnabled); diagnostic.putString("savedStatus",localSavedStatus);
+        diagnostic.putLong("lastSync",localLastSync); saved.putBundle(DIAGNOSTIC_STATE,diagnostic);
+    }
+    private void restoreDiagnostic(Bundle saved) {
+        if(saved==null) return;
+        try {
+            Bundle diagnostic=saved.getBundle(DIAGNOSTIC_STATE);
+            if(diagnostic==null || diagnostic.getInt("version",0)!=1) return;
+            String message=diagnostic.getString("message"),generation=diagnostic.getString("generation"),
+                origin=diagnostic.getString("origin"),savedStatus=diagnostic.getString("savedStatus");
+            int input=diagnostic.getInt("input",-1);
+            if(message==null || generation==null || origin==null || savedStatus==null || input<0 || input>2) return;
+            localStatus=message; localInput=input; localGeneration=generation; localOrigin=origin;
+            localEnabled=diagnostic.getBoolean("enabled",false); localSavedStatus=savedStatus;
+            localLastSync=diagnostic.getLong("lastSync",0);
+            if(!diagnosticCurrent(new RelayConfig(this),getSharedPreferences("relay_private",MODE_PRIVATE))) clearLocalStatus();
+        } catch(RuntimeException invalidState) { clearLocalStatus(); }
     }
     private void watchInput(EditText field,int input) {
         field.addTextChangedListener(new TextWatcher() {
@@ -264,8 +301,7 @@ public final class MainActivity extends Activity {
         android.content.SharedPreferences p=getSharedPreferences("relay_private",MODE_PRIVATE);
         long last=p.getLong("lastSync",0);
         String savedStatus=p.getString("status","연결 중지됨");
-        if(localStatus!=null && (!c.generation.equals(localGeneration) || !c.origin.equals(localOrigin)
-            || c.enabled!=localEnabled || last!=localLastSync || !savedStatus.equals(localSavedStatus))) clearLocalStatus();
+        if(localStatus!=null && !diagnosticCurrent(c,p)) clearLocalStatus();
         status.setText(localStatus!=null ? localStatus : savedStatus+(last>0 ? "\n최근 확인: "+DateFormat.getDateTimeInstance().format(new Date(last)) : ""));
         connect.setEnabled(!c.enabled); stop.setEnabled(c.enabled); url.setEnabled(!c.enabled); token.setEnabled(!c.enabled);
         paste.setEnabled(!c.enabled);

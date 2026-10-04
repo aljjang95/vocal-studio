@@ -27,7 +27,10 @@ function invoke(executable,args,name){
  writeFileSync(join(run,name+'.log'),log);commands.push({executable,args,exitCode:output.status,log:name+'.log'});
  writeFileSync(join(run,'commands.json'),JSON.stringify(commands,null,2));
  if(output.status!==0)throw new Error(name+' failed: '+log);
- console.log(name+': PASS'+(log.trim()?'\n'+log.trim():''));
+ // The builder expects one canonical Evidence line from this verifier. Keep the
+ // child's raw receipt/log intact, but label its console pointer separately.
+ const displayLog=name==='connection-activity' ? log.replace(/^Evidence: /gm,'ConnectionEvidence: ') : log;
+ console.log(name+': PASS'+(displayLog.trim()?'\n'+displayLog.trim():''));
 }
 try {
  const manifest=readFileSync(join(source,'AndroidManifest.xml'),'utf8'),activity=readFileSync(join(packageDir,'MainActivity.java'),'utf8');
