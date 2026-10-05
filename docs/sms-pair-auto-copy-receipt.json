@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-10-04T10:30:40.778Z",
+  "status": "AUTO_COPY_DEPLOYED_PHONE_CONNECTION_CONFIRMED",
+  "base": "4112cba05c0db6eb016a067a63414d57622dcaec",
+  "branch": "codex/sms-pair-auto-copy-20261004",
+  "files": [
+    {
+      "path": "sms-manager.js",
+      "sha256": "3b83b43513cf0e879e45ee4a9392837929ebfba9b745c7678acdf64df5ec54e1"
+    },
+    {
+      "path": "scripts/sms-manager.test.mjs",
+      "sha256": "91f09610327d58de7504b1e6915b742544ada514f4b87f99859708c847d177b8"
+    },
+    {
+      "path": "native/android-sms-relay/src/com/tllhouse/hlbreplay/MainActivity.java",
+      "sha256": "72d6bdc222f69fd443690423118f9b4beed821f3e837d38d822d7f0b82f9c26a"
+    }
+  ],
+  "behavior": [
+    "Confirmed creation gesture automatically writes newly validated one-time key to same-device clipboard",
+    "ClipboardItem deferred data preserves generation gesture when supported; writeText fallback otherwise",
+    "Denied or unavailable clipboard preserves manual copy and truthful error; no extra key rotation",
+    "Owner/epoch/modal-close guards prevent stale payload/notice resurrection; already-submitted OS write is not cancelable",
+    "Native guidance only: two literals changed, technical debug-code warning removed"
+  ],
+  "validation": {
+    "syntheticSmsManager": 54,
+    "independentBoundaryProbes": 4,
+    "nativeCore": 72,
+    "nativeCalls": 82,
+    "nativeActivity": 78,
+    "api": 36,
+    "signaturesAndPackage": true,
+    "freezeMatches": true
+  },
+  "artifact": {
+    "apk": {
+      "path": "hlb-sms-relay.apk",
+      "sha256": "86469accbce9117d10e97308b8ab34c17cc5b9b5e132b6a76baf104682999b9f",
+      "versionCode": 4,
+      "versionName": "1.3"
+    },
+    "aab": {
+      "sha256": "69eca8a485ae4f8fac73bd66623f66a947721af09d522fc355869552a20450c5",
+      "versionCode": 4,
+      "versionName": "1.3"
+    }
+  },
+  "physical": {
+    "model": "SM-S948N",
+    "installedApkMatches": true,
+    "existingDataInodeAndSmsPermissionsPreserved": true,
+    "ownScreenVerified": true,
+    "actualKeyPairing": true,
+    "connectionStatus": "연결됨 · 등록 번호만 처리합니다\n최근 확인: 2026. 10. 4. 오후 7:23:00",
+    "periodicJob": "registered/waiting",
+    "inputMethod": "Not observed; no agent key read or remote key entry"
+  },
+  "pending": [
+    "Real browser/OS automatic clipboard acceptance remains unverified",
+    "Current browser URL cannot be determined by Computer Use; tool stopped this turn",
+    "Original remote Android setup input tool rejection remains, no bypass",
+    "Physical SMS/calls/lifecycle/power and Play testing review"
+  ],
+  "buildReceiptSha256": "522342630e0ae6273c569d38a4ad1d19e484e40ce1c2ef3a767cc10b02205cd9",
+  "reviewReceiptSha256": "709142824946374d8f61036928d5b80a19198bd8910e31d6f2a8aa155edd9bad"
+}

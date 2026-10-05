@@ -4,6 +4,7 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import syncRuntime from '../vs-sync.js';
 import {DatabaseSync} from 'node:sqlite';
+import {StudioState} from '../worker/state.mjs';
 
 // Synthetic DOM + owner API only. No real SMS, browser session or credentials.
 const source = readFileSync(new URL('../sms-manager.js', import.meta.url), 'utf8');
@@ -41,7 +42,7 @@ function fixture(extra={}) {
   const document={createElement(tag){return new Element(tag,this);},querySelector(selector){return this.body.querySelector(selector);},addEventListener(){},removeEventListener(){}};
   document.body=new Element('body',document); document.body.style.overflow='auto'; document.activeElement=document.body;
   const calls=[], clipboard=[];
-  const data={ok:true,settings:{enabled:false,mondayTime:'10:00',tuesdayTime:'14:00',mondayText:'{name}님 가능 시간을 알려 주세요.',tuesdayText:'{name}님 일정 확인 부탁드립니다.'},device:{paired:false,lastSeen:null,relayOrigin:'https://synthetic-relay.example'},revision:7,weekStart:'2026-09-28',unassigned:[{id:'student-1',name:'신뢰하지 않을 별명'}],messages:[message()],outbox:[],aliasChanges:[],...extra};
+  const data={ok:true,settings:{enabled:false,mondayTime:'10:00',tuesdayTime:'14:00',mondayText:'{name}님 가능 시간을 알려 주세요.',tuesdayText:'{name}님 일정 확인 부탁드립니다.'},device:{paired:false,lastSeen:null,relayOrigin:'https://synthetic-relay.example'},revision:7,weekStart:'2026-09-28',unassigned:[{id:'student-1',name:'신뢰하지 않을 별명'}],messages:[message()],outbox:[],aliasChanges:[],callSettings:{enabled:false,includeUnknown:false},calls:[],...extra};
   const control={handler:null, retry:true, confirm:true, retryRevision:null};
   const sync={owner:'synthetic-owner',ready:true,confirmed:true,blocked:false,state:{revision:data.revision,base:{students:[student()]}},pending:()=>0,
     async retry(){calls.push({kind:'retry'}); if(control.retry){this.state.revision=control.retryRevision ?? data.revision;this.displayRequired=false;this.viewBase=clone(this.state.local);} return control.retry;}};
@@ -58,10 +59,13 @@ function fixture(extra={}) {
       if(route==='confirm'){data.revision++; for(const entry of options.body.entries){const m=data.messages.find(m=>m.id===entry.messageId);m.status='scheduled';m.confirmation={date:entry.date,time:entry.time,studentId:entry.studentId};}return ok({ok:true,revision:data.revision,count:options.body.entries.length});}
       if(route==='alias'){data.revision++;data.aliasChanges=[];return ok({ok:true,revision:data.revision});}
       if(route==='settings'){data.settings=clone(options.body);return ok({ok:true});}
+      if(route==='call-settings'){data.callSettings=clone(options.body);return ok({ok:true});}
+      if(route==='call-dismiss'){data.calls.find(c=>c.id===options.body.callId).status='acknowledged';return ok({ok:true});}
+      if(route==='options'){return ok({ok:true,revision:data.revision,messageId:options.body.messageId,options:[{date:options.body.date,time:'15:15',reason:'요청한 시간이 가능해요.'}],warnings:[]});}
       if(route==='prepare'){return ok({ok:true,count:1});}
       if(route==='dismiss'){data.messages.find(m=>m.id===options.body.messageId).status='dismissed';return ok({ok:true});}
-      if(route==='revoke'){data.device.paired=false;data.settings.enabled=false;return ok({ok:true});}
-      if(route==='pair'){data.device.paired=true;return ok({ok:true,token:'synthetic-one-time-token',deviceId:'device-test',relayOrigin:data.device.relayOrigin});}
+      if(route==='revoke'){data.device.paired=false;data.settings.enabled=false;data.callSettings={enabled:false,includeUnknown:false};return ok({ok:true});}
+      if(route==='pair'){data.device.paired=true;data.callSettings={enabled:false,includeUnknown:false};return ok({ok:true,token:'synthetic-one-time-token',deviceId:'device-test',relayOrigin:data.device.relayOrigin});}
       throw Error('Unexpected test route');
     }}});
   vm.runInContext(source,ctx);
@@ -76,6 +80,36 @@ function fixture(extra={}) {
 function ok(data) { return {response:{ok:true,status:200},data}; }
 function failure(status) { return {response:{ok:false,status},data:{ok:false,error:'synthetic-secret-error-never-display'}}; }
 async function settle() { for(let i=0;i<4;i++) await new Promise(resolve=>setImmediate(resolve)); }
+function deferred() {
+  let resolve, reject;
+  const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});
+  return {promise,resolve,reject};
+}
+function promisedClipboard(f,{requireGesture=false,denied=false,completion=null,constructorThrows=false,writeThrows=false}={}) {
+  let gesture=false;
+  f.ctx.Blob=Blob;
+  f.ctx.ClipboardItem=class {
+    constructor(data) { if(constructorThrows)throw Error('unsupported promised item');this.data=data; }
+  };
+  f.ctx.navigator.clipboard={
+    async write(items) {
+      f.calls.push({kind:'clipboard-write',gesture});
+      if(requireGesture&&!gesture)throw Error('activation lost');
+      if(writeThrows)throw Error('unsupported promised write');
+      const blob=await items[0].data['text/plain'];
+      const value=await blob.text();
+      if(completion)await completion.promise;
+      if(denied)throw Error('synthetic clipboard denied');
+      f.clipboard.push(value);
+    },
+    async writeText(value) {
+      f.calls.push({kind:'clipboard-writeText',gesture});
+      if(requireGesture&&!gesture||denied)throw Error('synthetic clipboard denied');
+      f.clipboard.push(value);
+    }
+  };
+  return {click(key){gesture=true;try{f.action(key).emit('click');}finally{gesture=false;}}};
+}
 
 test('disconnected empty overview is usable, default disabled, setup origin + protected APK and no native phone requirement',async()=>{
   const f=fixture({messages:[],unassigned:[]});await f.open();
@@ -163,12 +197,146 @@ test('name alias requires owner confirmation and unique current canonical name, 
   const g=fixture({aliasChanges:[{...alias,newName:'invented name'}]});await g.open();await g.click('alias');assert.equal(g.calls.filter(c=>c.route==='alias').length,0);
   const h=fixture({aliasChanges:[alias]});await h.open();h.sync.state.base.students.push(student('dup'));await h.click('alias');assert.equal(h.calls.filter(c=>c.route==='alias').length,0);
 });
-test('one-time pairing uses password value only, copies explicitly, clears on close and cannot rotate without confirmation',async()=>{
+test('one-time pairing auto-copies once, uses password value only, clears on close and cannot rotate without confirmation',async()=>{
   const f=fixture();await f.open();f.control.confirm=false;await f.click('pair');assert.equal(f.calls.filter(c=>c.route==='pair').length,0);
+  assert.deepEqual(f.clipboard,[]);
   f.control.confirm=true;await f.click('pair');const token=f.field('token');assert.equal(token.type,'password');assert.equal(token.value,'synthetic-one-time-token');
   assert.equal(token.getAttribute('value'),undefined);assert.ok(!f.text().includes(token.value));assert.equal(f.action('copy-token').disabled,false);
-  await f.click('copy-token');assert.deepEqual(f.clipboard,['synthetic-one-time-token']);
+  assert.deepEqual(f.clipboard,['synthetic-one-time-token']);assert.match(f.text(),/이 기기의 클립보드에 복사/);
+  await f.click('refresh');assert.deepEqual(f.clipboard,['synthetic-one-time-token']);
+  await f.click('copy-token');assert.deepEqual(f.clipboard,['synthetic-one-time-token','synthetic-one-time-token']);
+  f.control.confirm=false;await f.click('pair');assert.equal(f.calls.filter(c=>c.route==='pair').length,1);assert.equal(token.value,'synthetic-one-time-token');
   f.ctx.VSSms.close();assert.equal(token.value,'');await f.open();assert.equal(f.field('token'),null);
+});
+test('promised ClipboardItem is requested inside generation gesture and receives key only after guarded API response',async()=>{
+  const f=fixture(),gate=deferred();const clip=promisedClipboard(f,{requireGesture:true});await f.open();
+  f.control.handler=async route=>{if(route==='pair'){await gate.promise;return ok({ok:true,token:'synthetic-gesture-token',relayOrigin:f.data.device.relayOrigin});}};
+  clip.click('pair');assert.equal(f.calls.filter(c=>c.kind==='clipboard-write').length,1);assert.equal(f.field('token'),null);
+  await settle();assert.deepEqual(f.clipboard,[]);gate.resolve();await settle();
+  assert.deepEqual(f.clipboard,['synthetic-gesture-token']);assert.match(f.text(),/이 기기의 클립보드에 복사/);
+  assert.equal(f.calls.filter(c=>c.kind==='clipboard-writeText').length,0);assert.equal(f.calls.filter(c=>c.route==='pair').length,1);
+});
+test('cancelled, failed, malformed and wrong-origin pair never place data into clipboard',async()=>{
+  for(const mode of ['cancel','failure','transport','empty','wrong-origin']) {
+    const f=fixture();promisedClipboard(f);await f.open();
+    if(mode==='cancel')f.control.confirm=false;
+    else f.control.handler=route=>{if(route==='pair') {
+      if(mode==='failure')return failure(500);
+      if(mode==='transport')throw Error('synthetic private error');
+      return ok({ok:true,token:mode==='empty'?'':'synthetic-invalid-origin-token',relayOrigin:mode==='wrong-origin'?'https://another.example':f.data.device.relayOrigin});
+    }};
+    await f.click('pair');assert.deepEqual(f.clipboard,[],mode);assert.equal(f.field('token'),null,mode);
+    assert.ok(!f.text().includes('이 기기의 클립보드에 복사'));assert.ok(!f.text().includes('synthetic private error'));
+    assert.equal(f.calls.filter(c=>c.kind==='clipboard-writeText').length,0);
+    if(mode==='cancel')assert.equal(f.calls.filter(c=>c.kind==='clipboard-write'||c.route==='pair').length,0);
+  }
+});
+test('missing, denied and unsupported clipboard retain generated password plus explicit copy retry without new pair',async()=>{
+  for(const mode of ['missing','writeText-denied','item-denied','item-constructor','item-write']) {
+    const f=fixture();await f.open();
+    if(mode==='missing')delete f.ctx.navigator.clipboard;
+    if(mode==='writeText-denied')f.ctx.navigator.clipboard.writeText=async()=>{throw Error('synthetic denied');};
+    if(mode==='item-denied')promisedClipboard(f,{denied:true});
+    if(mode==='item-constructor')promisedClipboard(f,{constructorThrows:true});
+    if(mode==='item-write')promisedClipboard(f,{writeThrows:true});
+    await f.click('pair');assert.equal(f.field('token').value,'synthetic-one-time-token');assert.equal(f.action('copy-token').disabled,false);
+    if(mode==='item-constructor')assert.deepEqual(f.clipboard,['synthetic-one-time-token']);
+    else {assert.deepEqual(f.clipboard,[]);assert.match(f.text(),/자동 복사하지 못/);assert.ok(!f.text().includes('클립보드에 복사했습니다'));}
+    f.ctx.navigator.clipboard={async writeText(value){f.clipboard.push(value);}};
+    await f.click('copy-token');assert.equal(f.clipboard.at(-1),'synthetic-one-time-token');assert.match(f.text(),/이 기기의 클립보드에 복사/);
+    assert.equal(f.calls.filter(c=>c.route==='pair').length,1,mode);
+  }
+});
+test('clipboard outcome remains truthful when overview succeeds or fails after key creation',async()=>{
+  for(const denied of [false,true])for(const overviewFails of [false,true]) {
+    const f=fixture();await f.open();if(denied)f.ctx.navigator.clipboard.writeText=async()=>{throw Error('denied');};
+    if(overviewFails)f.control.handler=route=>route==='overview'?failure(500):undefined;
+    await f.click('pair');assert.equal(f.field('token').value,'synthetic-one-time-token');assert.equal(f.action('copy-token').disabled,false);
+    if(denied){assert.match(f.text(),/자동 복사하지 못/);assert.deepEqual(f.clipboard,[]);assert.ok(!f.text().includes('클립보드에 복사했습니다'));}
+    else{assert.match(f.text(),/이 기기의 클립보드에 복사/);assert.deepEqual(f.clipboard,['synthetic-one-time-token']);}
+    if(overviewFails)assert.match(f.text(),/연결 상태.*새로고침/);
+    assert.equal(f.calls.filter(c=>c.route==='pair').length,1);
+  }
+});
+test('activation-limited writeText fallback can be retried by explicit copy gesture without rotating the key',async()=>{
+  const f=fixture(),clip=promisedClipboard(f,{requireGesture:true,constructorThrows:true});await f.open();
+  clip.click('pair');await settle();assert.deepEqual(f.clipboard,[]);assert.match(f.text(),/자동 복사하지 못/);
+  clip.click('copy-token');await settle();assert.deepEqual(f.clipboard,['synthetic-one-time-token']);assert.match(f.text(),/이 기기의 클립보드에 복사/);
+  assert.equal(f.calls.filter(c=>c.route==='pair').length,1);
+});
+test('each confirmed rotation copies only its new key and wipes retained prior-key handlers without secret attributes or globals',async()=>{
+  const f=fixture();await f.open();const globals=Object.keys(f.ctx).sort();let keys=0;
+  f.control.handler=route=>route==='pair'?ok({ok:true,token:'synthetic-rotation-'+(++keys),relayOrigin:f.data.device.relayOrigin}):undefined;
+  await f.click('pair');const old=f.field('token'),oldCopy=f.action('copy-token');
+  await f.click('pair');assert.equal(old.value,'');assert.equal(f.field('token').value,'synthetic-rotation-2');
+  assert.deepEqual(f.clipboard,['synthetic-rotation-1','synthetic-rotation-2']);assert.deepEqual(Object.keys(f.ctx).sort(),globals);
+  const before=f.text();oldCopy.emit('click');await settle();assert.equal(f.text(),before);assert.equal(f.clipboard.length,2);
+  for(const el of f.query('.vs-sms-modal').querySelectorAll('input,textarea,select,button,label,p,a,section')) {
+    assert.ok(!JSON.stringify(el.attributes).includes('synthetic-rotation-'));assert.ok(!JSON.stringify(el.dataset).includes('synthetic-rotation-'));
+    assert.ok(!String(el.href||'').includes('synthetic-rotation-'));
+  }
+  assert.ok(!f.text().includes('synthetic-rotation-'));assert.ok(!JSON.stringify(f.calls).includes('synthetic-rotation-'));
+  const password=f.field('token'),copy=f.action('copy-token');f.query('[data-secret]').querySelectorAll('button').find(el=>el.textContent==='연결 키 닫기').emit('click');
+  assert.equal(password.value,'');assert.equal(f.field('token'),null);copy.emit('click');await settle();assert.equal(f.clipboard.length,2);
+});
+test('pair busy prevents duplicate generation gestures while allowing modal close and fresh reopen',async()=>{
+  const f=fixture(),gate=deferred();promisedClipboard(f);await f.open();
+  f.control.handler=async route=>{if(route==='pair'){await gate.promise;return ok({ok:true,token:'synthetic-double-gesture',relayOrigin:f.data.device.relayOrigin});}};
+  const pair=f.action('pair');pair.emit('click');pair.emit('click');await settle();
+  assert.equal(f.calls.filter(c=>c.route==='pair').length,1);assert.equal(f.calls.filter(c=>c.kind==='clipboard-write').length,1);
+  await f.click('close');assert.equal(f.query('.vs-sms-modal'),null);await f.open();const before=f.text();
+  gate.resolve();await settle();assert.equal(f.field('token'),null);assert.deepEqual(f.clipboard,[]);assert.equal(f.text(),before);
+});
+test('explicit copy retry pending native completion cannot revive a hidden key or overwrite owner and close feedback',async()=>{
+  for(const transition of ['hide','owner','logout','close']) {
+    const f=fixture();await f.open();await f.click('pair');assert.deepEqual(f.clipboard,['synthetic-one-time-token']);f.clipboard.length=0;
+    const completion=deferred();let submitted=0;
+    f.ctx.navigator.clipboard.writeText=async value=>{submitted++;await completion.promise;f.clipboard.push(value);};
+    f.action('copy-token').emit('click');await settle();const old=f.field('token');
+    if(transition==='hide')f.query('[data-secret]').querySelectorAll('button').find(el=>el.textContent==='연결 키 닫기').emit('click');
+    if(transition==='close')f.ctx.VSSms.close();
+    if(transition==='owner'||transition==='logout'){f.sync.owner=transition==='owner'?'another-owner':null;await f.open();}
+    assert.equal(old.value,'');const before=f.text();completion.resolve();await settle();
+    assert.equal(f.field('token'),null);assert.equal(old.value,'');assert.equal(f.text(),before);assert.equal(submitted,1);assert.equal(f.calls.filter(c=>c.route==='pair').length,1);
+  }
+});
+test('owner, logout, epoch, sync replacement and modal close discard pending pair before any clipboard data',async()=>{
+  for(const promised of [false,true])for(const transition of ['owner','logout','epoch','sync','close']) {
+    const f=fixture(),gate=deferred();f.sync.epoch=1;if(promised)promisedClipboard(f);await f.open();
+    f.control.handler=async route=>{if(route==='pair'){await gate.promise;return ok({ok:true,token:'synthetic-stale-key',relayOrigin:f.data.device.relayOrigin});}};
+    f.action('pair').emit('click');await settle();
+    if(transition==='owner')f.sync.owner='new-owner';
+    if(transition==='logout')f.sync.owner=null;
+    if(transition==='epoch')f.sync.epoch++;
+    if(transition==='sync')f.ctx._vsSync={...f.sync};
+    if(transition==='close'){assert.equal(f.action('close').disabled,false);f.ctx.VSSms.close();assert.equal(f.query('.vs-sms-modal'),null);}
+    else await f.open();
+    gate.resolve();await settle();assert.deepEqual(f.clipboard,[],`${promised}/${transition}`);assert.equal(f.field('token'),null);
+    assert.equal(f.calls.filter(c=>c.kind==='clipboard-writeText').length,0);assert.ok(!f.text().includes('클립보드에 복사했습니다'));
+  }
+});
+test('pending native clipboard success or refusal after owner/logout/close cannot restore secret, feedback or initiate retry',async()=>{
+  for(const promised of [false,true])for(const denied of [false,true])for(const transition of ['owner','logout','epoch','sync','close']) {
+    const f=fixture(),completion=deferred();f.sync.epoch=1;let submitted=0;
+    if(promised)promisedClipboard(f,{completion,denied});
+    else f.ctx.navigator.clipboard.writeText=async value=>{submitted++;await completion.promise;if(denied)throw Error('denied');f.clipboard.push(value);};
+    await f.open();f.action('pair').emit('click');await settle();const old=f.field('token');assert.ok(old);
+    assert.ok(!f.text().includes('클립보드에 복사했습니다'));
+    if(transition==='close'){assert.equal(f.action('close').disabled,false);f.ctx.VSSms.close();}
+    else {
+      if(transition==='owner')f.sync.owner='new-owner';
+      if(transition==='logout')f.sync.owner=null;
+      if(transition==='epoch')f.sync.epoch++;
+      if(transition==='sync')f.ctx._vsSync={...f.sync};
+      await f.open();
+    }
+    assert.equal(old.value,'');const before=f.text(),overviews=f.calls.filter(c=>c.route==='overview').length;
+    completion.resolve();await settle();assert.equal(old.value,'');assert.equal(f.field('token'),null);assert.equal(f.text(),before);
+    assert.equal(f.calls.filter(c=>c.route==='overview').length,overviews);assert.equal(f.calls.filter(c=>c.route==='pair').length,1);
+    assert.equal(promised?f.calls.filter(c=>c.kind==='clipboard-write').length:submitted,1);
+    // Clipboard API has no abort contract once data is submitted: late native completion is not a new JS write.
+    assert.equal(f.clipboard.length,denied?0:1);
+  }
 });
 test('disabled settings, explicit enable preview, prepare stages and dismiss remain narrow APIs',async()=>{
   const f=fixture({device:{paired:true,relayOrigin:'https://synthetic-relay.example'}});await f.open();
@@ -287,6 +455,7 @@ test('every stale action and retained input/copy handler rejects owner changes b
     const f=fixture({settings:{enabled:true,mondayTime:'10:00',tuesdayTime:'14:00',mondayText:'{name} A',tuesdayText:'{name} A'},
       device:{paired:true,relayOrigin:'https://synthetic-relay.example'},aliasChanges:[{id:'a',studentId:'student-1',oldName:'A',newName:'합성 정본 이름'}]});
     await f.open();await f.click('pair');const token=f.field('token'),oldInput=f.field('mondayText'),oldButton=f.action(key);
+    assert.deepEqual(f.clipboard,['synthetic-one-time-token']);f.clipboard.length=0;
     f.calls.length=0;f.sync.owner='owner-B';oldButton.emit('click');oldInput.value='{name} stale';oldInput.emit('input');await settle();
     assert.equal(token.value,'');assert.equal(f.clipboard.length,0);assert.equal(f.calls.filter(c=>c.body).length,0,key);
     assert.ok(!f.text().includes('합성 원문'));assert.equal(f.field('mondayText'),null);
@@ -314,8 +483,8 @@ test('logout and same-owner reconnection cannot resurrect drafts or a late pairi
   assert.equal(f.field('mondayText').value,'{name} fresh same owner');
 });
 
-function actualDisplayFixture({lateEdit=false,skipDisplay=false,held=false,localMedia=false}={}) {
-  const f=fixture(),memory=new Map(),host=f.document.createElement('input');host.value='uncommitted host draft';f.document.body.appendChild(host);
+function actualDisplayFixture({lateEdit=false,skipDisplay=false,held=false,localMedia=false,providedFixture=null,canonicalRead=null}={}) {
+  const f=providedFixture || fixture(),baseRevision=f.data.revision,memory=new Map(),host=f.document.createElement('input');host.value='uncommitted host draft';f.document.body.appendChild(host);
   const store={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k),key:i=>[...memory.keys()][i]??null,get length(){return memory.size;}};
   const photo='data:image/png;base64,'+'p'.repeat(6000),audio='data:audio/webm;base64,'+'a'.repeat(60000);
   if(localMedia) {
@@ -328,7 +497,7 @@ function actualDisplayFixture({lateEdit=false,skipDisplay=false,held=false,local
   let ui={students:[student('student-1',localMedia ? {photo:'',_photoKey:'synthetic-photo',audios:[{id:'audio-1',data:audio,_mediaKey:'synthetic-audio'}]} : {})],logs:[],payments:[],consults:[],inquiries:[],weekOvr:{}},allowEdit=lateEdit;
   let enterPut,releasePut;const entered=new Promise(resolve=>{enterPut=resolve;});
   const controller=syncRuntime.create({namespace:'sms-synthetic',instanceId:'one',store,backupStore:{...store,setItem(){throw Error('synthetic quota');}},
-    overflowStore:{async put(key,text){if(JSON.parse(text).revision===8&&allowEdit){
+    overflowStore:{async put(key,text){if(JSON.parse(text).revision===baseRevision+1&&allowEdit){
       if(held){const wait=new Promise(resolve=>{releasePut=()=>resolve(text);});enterPut();return wait;}
       await new Promise(resolve=>setImmediate(resolve));host.focus();
     }return text;}},
@@ -341,8 +510,9 @@ function actualDisplayFixture({lateEdit=false,skipDisplay=false,held=false,local
       ui=data;
     },render:()=>f.calls.push({kind:'adapter-render'}),status:()=>{},ready:()=>{},later:fn=>queueMicrotask(fn)});
   controller.owner='synthetic-owner';controller.key='synthetic-journal';controller.ready=controller.confirmed=true;controller.unsubscribe=()=>{};
-  controller.state={version:1,namespace:'sms-synthetic',owner:controller.owner,revision:7,base:syncRuntime.normalize(ui),local:syncRuntime.normalize(ui),recovery:[]};
-  controller.doc={async get(){const data={...syncRuntime.normalize(ui),_vsSyncRevision:f.data.revision};if(f.data.revision===8){const receipt=f.data.messages[0].confirmation;
+  controller.state={version:1,namespace:'sms-synthetic',owner:controller.owner,revision:baseRevision,base:syncRuntime.normalize(ui),local:syncRuntime.normalize(ui),recovery:[]};
+  controller.doc={async get(){if(canonicalRead){const record=canonicalRead();return {exists:true,data:()=>({...clone(record.state),_vsSyncRevision:record.revision})};}
+    const data={...syncRuntime.normalize(ui),_vsSyncRevision:f.data.revision};if(f.data.revision===8){const receipt=f.data.messages[0].confirmation;
     data.weekOvr={[receipt.date]:{[receipt.studentId]:[{day:'월',time:receipt.time,source:'sms-confirmed'}]}};}return {exists:true,data:()=>data};}};
   const display=controller.display;if(skipDisplay)controller.display=function(){this.displayRequired=false;};
   f.ctx._vsSync=controller;
@@ -422,4 +592,169 @@ test('all automatic native stop paths carry the failed engine generation to the 
   const engine=readFileSync(new URL('../native/android-sms-relay/src/com/tllhouse/hlbreplay/RelayEngine.java',import.meta.url),'utf8');
   const calls=engine.match(/RelayConfig\.stop\([^;]+/g);assert.equal(calls.length,4);
   for(const call of calls)assert.match(call,/RelayConfig\.stop\(context, config\.generation,/);
+});
+
+const callCard=(id='call-1',extra={})=>({id,phone:'01000009999',receivedAt:Date.parse('2026-10-05T09:00:00+09:00'),name:'',studentId:null,matchStatus:'unknown',status:'pending',...extra});
+
+test('call consent requires owner opt-in, preserves all same-owner drafts and only writes call settings',async()=>{
+  const f=fixture({device:{paired:true,relayOrigin:'https://synthetic-relay.example'},calls:[callCard()]});await f.open();
+  assert.equal(f.field('callEnabled').checked,false);assert.equal(f.field('includeUnknown').checked,false);
+  assert.match(f.text(),/발신자 표시 제공자가 변경/);assert.equal(f.field('callName').value,'');
+  f.fill('callEnabled',true);f.fill('includeUnknown',true);f.fill('callName','owner draft');f.fill('callMemo','memo draft');
+  f.fill('mondayText','{name} SMS retained');f.fill('date','2099-10-06');f.fill('time','15:15');f.fill('checked',true);await f.click('refresh');
+  assert.equal(f.field('callEnabled').checked,true);assert.equal(f.field('includeUnknown').checked,true);
+  assert.equal(f.field('callName').value,'owner draft');assert.equal(f.field('callMemo').value,'memo draft');assert.equal(f.field('time').value,'15:15');assert.equal(f.field('checked').checked,true);
+  f.control.confirm=false;await f.click('call-settings');assert.equal(f.calls.filter(c=>c.route==='call-settings').length,0);
+  f.control.confirm=true;await f.click('call-settings');assert.deepEqual(f.calls.find(c=>c.route==='call-settings').body,{enabled:true,includeUnknown:true});
+  assert.equal(f.calls.filter(c=>c.route==='settings'||c.route==='confirm').length,0);assert.equal(f.field('mondayText').value,'{name} SMS retained');
+  f.fill('callEnabled',false);f.control.confirm=false;await f.click('call-settings');assert.equal(f.data.callSettings.enabled,false);
+  await f.click('call-dismiss');assert.equal(f.data.calls[0].status,'acknowledged');assert.match(f.text(),/확인 완료/);assert.equal(f.action('call-dismiss').disabled,true);
+  assert.equal(f.field('callName').value,'owner draft');assert.equal(f.calls.filter(c=>c.route==='confirm').length,0);
+});
+
+test('call names use current explicit person links and text nodes; no guesses for unlinked duplicate or stale revision',async()=>{
+  const hostile='<img src=x onerror="bad()"><script>bad()</script>';
+  const f=fixture({calls:[callCard('one',{phone:'01000001234',name:'untrusted alias',studentId:'student-1',matchStatus:'matched'}),callCard('two',{phone:'01000003333',name:hostile,matchStatus:'known-contact'})]});
+  f.sync.state.base.students[0].consultData={id:'c1'};
+  f.sync.state.base.consults=[{id:'c1',phone:'01000001234',name:'old alias'},{id:'c3',phone:'01000003333',name:hostile}];
+  f.sync.state.base.inquiries=[{id:'q1',phone:'01000001234',studentId:'student-1',name:'inquiry alias'}];
+  await f.open();assert.match(f.query('[data-call-id="one"]').textContent,/합성 정본 이름/);assert.ok(!f.text().includes('untrusted alias'));
+  assert.ok(f.query('[data-call-id="two"]').textContent.includes(hostile));assert.equal(f.query('img'),null);assert.equal(f.query('script'),null);
+  f.sync.state.base.consults.push({id:'not-linked',phone:'01000001234',name:'합성 정본 이름'});await f.click('refresh');
+  assert.match(f.query('[data-call-id="one"]').textContent,/여러 연락처와 일치/);
+  f.data.revision++;f.control.retry=false;await f.click('refresh');assert.ok(!f.query('[data-call-id="two"]').textContent.includes(hostile));
+});
+
+test('call actions, inputs and late responses are isolated on owner/epoch changes including overview failure',async()=>{
+  const f=fixture({device:{paired:true,relayOrigin:'https://synthetic-relay.example'},calls:[callCard()]});await f.open();
+  f.fill('callName','owner A private');f.fill('callEnabled',true);f.fill('includeUnknown',true);
+  const staleDismiss=f.action('call-dismiss'),staleInquiry=f.action('call-inquiry'),staleSettings=f.action('call-settings'),staleInput=f.field('callName');
+  f.calls.length=0;f.sync.owner='owner B';staleDismiss.emit('click');staleInquiry.emit('click');staleSettings.emit('click');staleInput.value='retained private';staleInput.emit('input');await settle();
+  assert.equal(f.calls.filter(c=>c.body).length,0);assert.ok(!f.text().includes('owner A private'));assert.equal(f.field('callName'),null);
+  f.data.calls=[];f.data.messages=[];f.control.handler=route=>route==='overview'?failure(401):undefined;await f.click('refresh');assert.equal(f.field('callEnabled'),null);
+  f.control.handler=null;await f.click('refresh');assert.equal(f.field('callEnabled').checked,false);assert.equal(f.field('includeUnknown').checked,false);
+  const g=fixture({device:{paired:true,relayOrigin:'https://synthetic-relay.example'},calls:[callCard()]});g.sync.epoch=1;await g.open();g.fill('callName','private old login');
+  let release;const held=new Promise(resolve=>{release=resolve;});g.control.handler=async route=>{if(route==='call-dismiss'){await held;return ok({ok:true});}};
+  g.action('call-dismiss').emit('click');await settle();g.sync.epoch+=2;g.data.calls=[];await g.ctx.VSSms.refresh();release();await settle();
+  assert.equal(g.field('callName'),null);assert.ok(!g.text().includes('private old login'));
+});
+
+test('schedule window suggestions require click, preserve off-grid request, manual final confirmation and stale handlers',async()=>{
+  const f=fixture();await f.open();f.fill('date','2099-10-06');f.fill('time','15:15');f.fill('startTime','12:00');f.fill('endTime','20:00');
+  assert.equal(f.field('time').step,'60');await f.click('options');
+  assert.deepEqual(f.calls.find(c=>c.route==='options').body,{baseRevision:7,messageId:'message-1',studentId:'student-1',date:'2099-10-06',startTime:'12:00',endTime:'20:00',preferredTime:'15:15'});
+  assert.equal(f.calls.filter(c=>c.route==='confirm').length,0);assert.equal(f.field('checked').checked,false);
+  const stale=f.action('choose-option');f.fill('endTime','19:00');stale.emit('click');await settle();assert.match(f.text(),/시간 후보를 다시/);
+  await f.click('options');await f.click('choose-option');assert.equal(f.field('time').value,'15:15');assert.equal(f.calls.filter(c=>c.route==='confirm').length,0);
+  f.fill('checked',true);f.control.confirm=false;await f.click('confirm');assert.equal(f.calls.filter(c=>c.route==='confirm').length,0);
+  f.control.confirm=true;await f.click('confirm');assert.equal(f.calls.find(c=>c.route==='confirm').body.entries[0].time,'15:15');assert.match(f.text(),/일정 1건이 등록/);
+  const g=fixture();await g.open();g.fill('startTime','12:00');g.fill('endTime','20:00');await g.click('options');const old=g.action('choose-option');
+  g.sync.owner='other';old.emit('click');await settle();assert.equal(g.field('time'),null);assert.equal(g.calls.filter(c=>c.route==='confirm').length,0);
+});
+
+async function studioOwnerFixture(t,{lateEdit=false,held=false}={}) {
+  const f=fixture({revision:0,messages:[],calls:[],unassigned:[]}),db=new DatabaseSync(':memory:');t.after(()=>db.close());let tail=Promise.resolve();
+  const ctx={storage:{sql:{exec(query,...params){const rows=db.prepare(query).all(...params);return {toArray:()=>rows};}},
+    transactionSync(fn){db.exec('BEGIN');try{const result=fn();db.exec('COMMIT');return result;}catch(e){db.exec('ROLLBACK');throw e;}},async getAlarm(){return null;},async setAlarm(){}},
+    blockConcurrencyWhile(fn){const result=tail.then(fn);tail=result.catch(()=>{});return result;},getWebSockets(){return [];}};
+  const state=new StudioState(ctx,{ENVIRONMENT:'local-test',SMS_RELAY_ORIGIN:'http://127.0.0.1:8837'});
+  const owner=(route,body)=>state.fetch(new Request('https://studio.internal/'+route,{method:body===undefined?'GET':'POST',headers:{'X-VS-Principal':'synthetic-owner'},...(body===undefined?{}:{body:JSON.stringify(body)})}));
+  assert.equal((await owner('import',{state:{students:[student()],consults:[],inquiries:[],weekOvr:{}}})).status,201);
+  const exp=await (await owner('export')).json();assert.equal((await owner('activate',{hash:exp.hash})).status,200);
+  const paired=await (await owner('sms/pair',{relayOrigin:'http://127.0.0.1:8837'})).json();await owner('sms/call-settings',{enabled:true,includeUnknown:true});
+  const send=(path,body)=>state.fetch(new Request('https://studio.internal/sms-device/'+path,{method:'POST',headers:{Authorization:'Bearer '+paired.token},body:JSON.stringify(body)}));
+  const call=await send('call',{id:'observed-call',phone:'01000009999',receivedAt:Date.now(),direction:'incoming'});assert.equal(call.status,200);
+  Object.assign(f.data,await (await owner('sms/overview')).json());
+  f.ctx.VCFTransport.api=async(path,options)=>{
+    const route=path.split('/').at(-1);f.calls.push({kind:'api',route,body:options.body&&clone(options.body),options});
+    if(f.control.handler){const custom=await f.control.handler(route,options.body);if(custom!==undefined)return custom;}
+    const response=await owner('sms/'+route,options.body),data=await response.json();if(route==='overview'&&response.ok)Object.assign(f.data,clone(data));return {response,data};
+  };
+  const actual=actualDisplayFixture({providedFixture:f,canonicalRead:()=>state.record(),lateEdit,held});
+  return {...actual,state,send,owner,db};
+}
+
+test('real SQLite StudioState + actual VSSync owner call-to-inquiry CAS and durable display readback',async t=>{
+  const {f,state,controller,ui}=await studioOwnerFixture(t);await f.open();await f.click('call-inquiry');assert.match(f.text(),/문의자 이름을 직접/);assert.equal(state.record().revision,0);
+  f.fill('callName','Owner explicit <name>');f.fill('callMemo','explicit memo');f.control.confirm=false;await f.click('call-inquiry');assert.equal(state.record().revision,0);
+  f.control.confirm=true;await f.click('call-inquiry');assert.equal(state.record().revision,1);assert.equal(controller.state.revision,1);
+  assert.equal(ui().inquiries[0].name,'Owner explicit <name>');assert.equal(ui().inquiries[0].memo,'explicit memo');assert.equal(ui().inquiries[0].visitDate,'');assert.deepEqual(clone(ui().weekOvr),{});
+  assert.match(f.text(),/문의자 등록 결과를 확인/);assert.equal(f.field('callName'),null);assert.equal(f.data.calls[0].status,'acknowledged');
+  const accepted=f.calls.find(c=>c.route==='call-inquiry');assert.equal(accepted.body.baseRevision,0);assert.equal(f.calls.filter(c=>c.route==='call-inquiry').length,1);
+});
+
+test('real StudioState call inquiry + actual async VSSync overflow host-edit race retains drafts until authoritative display',{timeout:5000},async t=>{
+  const {f,state,controller,host,ui,recover,entered,release}=await studioOwnerFixture(t,{lateEdit:true,held:true});await f.open();
+  f.fill('callName','retained inquiry name');f.fill('callMemo','retained inquiry memo');f.fill('mondayText','{name} retained reminder');
+  const pending=f.click('call-inquiry');await entered;assert.equal(controller.hold,'durability');host.focus();release();await pending;
+  assert.equal(state.record().revision,1);assert.equal(controller.state.revision,1);assert.equal(ui().inquiries.length,0);assert.equal(host.value,'uncommitted host draft');assert.equal(f.document.activeElement,host);
+  assert.match(f.text(),/등록 결과를 아직 확인하지 못/);assert.equal(f.field('callName').value,'retained inquiry name');assert.equal(f.field('callMemo').value,'retained inquiry memo');
+  assert.equal(f.field('mondayText').value,'{name} retained reminder');assert.equal(f.action('call-inquiry').disabled,true);assert.equal(controller.displayRequired,true);
+  assert.equal(f.calls.filter(c=>c.kind==='render'||c.kind==='adapter-render').length,0);assert.equal(f.calls.filter(c=>c.route==='call-inquiry').length,1);
+  recover();await f.click('refresh');assert.equal(ui().inquiries[0].name,'retained inquiry name');assert.equal(controller.displayRequired,false);assert.equal(f.field('callName'),null);
+  assert.equal(f.calls.filter(c=>c.route==='call-inquiry').length,1);assert.equal(f.field('mondayText').value,'{name} retained reminder');assert.equal(f.data.calls[0].status,'acknowledged');
+});
+
+test('real StudioState schedule options never book; actual VSSync final confirmation reads exact off-grid accepted time',async t=>{
+  const {f,state,send,controller,ui}=await studioOwnerFixture(t);
+  assert.equal((await send('event',{id:'student-sms',phone:'01000001234',text:'unambiguous owner window',receivedAt:Date.now(),direction:'received'})).status,200);
+  await f.open();f.fill('date','2099-10-06');f.fill('time','15:15');f.fill('startTime','12:00');f.fill('endTime','20:00');await f.click('options');
+  assert.equal(state.record().revision,0);assert.equal(f.action('choose-option').textContent.includes('15:15'),true);await f.click('choose-option');assert.equal(f.field('time').value,'15:15');
+  assert.equal(state.record().revision,0);f.fill('checked',true);await f.click('confirm');assert.equal(state.record().revision,1);assert.equal(controller.state.revision,1);
+  const slots=Object.values(ui().weekOvr).flatMap(week=>Object.values(week).flat());assert.equal(slots[0].time,'15:15');assert.match(f.text(),/일정 1건이 등록/);
+  assert.equal(f.calls.filter(c=>c.route==='confirm').length,1);
+});
+
+test('pending suggestion response and retained choice invalidate on each edited date/window/requested time',async()=>{
+  for(const [key,value] of [['date','2099-10-07'],['startTime','13:00'],['endTime','19:00'],['time','16:15']]) {
+    const f=fixture();await f.open();f.fill('date','2099-10-06');f.fill('time','15:15');f.fill('startTime','12:00');f.fill('endTime','20:00');
+    f.control.handler=route=>{if(route==='options')f.fill(key,value);};await f.click('options');assert.equal(f.action('choose-option'),null);assert.equal(f.field(key).value,value);
+    f.control.handler=null;await f.click('options');const stale=f.action('choose-option');f.fill(key,key==='date'?'2099-10-08':key==='time'?'17:15':key==='startTime'?'14:00':'18:00');
+    stale.emit('click');await settle();assert.match(f.text(),/시간 후보를 다시/);assert.equal(f.calls.filter(c=>c.route==='confirm').length,0);
+  }
+});
+
+test('real StudioState concurrent call-inquiry CAS409 keeps explicit owner fields and never guesses identity',async t=>{
+  const {f,state,owner}=await studioOwnerFixture(t);await f.open();f.fill('callName','Owner exact');f.fill('callMemo','retained memo');
+  f.control.handler=async route=>{if(route==='call-inquiry'){const r=state.record();assert.equal((await owner('commit',{requestId:'synthetic-host-edit',baseRevision:r.revision,state:{...r.state,hostFlag:'retain'}})).status,200);}};
+  await f.click('call-inquiry');assert.equal(state.record().revision,1);assert.equal(state.record().state.inquiries.length,0);assert.match(f.text(),/자료가 변경/);
+  assert.equal(f.field('callName').value,'Owner exact');assert.equal(f.field('callMemo').value,'retained memo');
+  f.control.handler=null;await f.click('refresh');assert.equal(f.field('callName').value,'Owner exact');await f.click('call-inquiry');assert.equal(state.record().revision,2);assert.equal(state.record().state.inquiries[0].name,'Owner exact');
+});
+
+test('real accepted call inquiry response discarded after owner changes, without leaking drafts or readback',async t=>{
+  const {f,state,owner}=await studioOwnerFixture(t);await f.open();f.fill('callName','Owner A private');f.fill('callMemo','private memo');
+  let release,entered;const ready=new Promise(resolve=>{entered=resolve;});
+  f.control.handler=async(route,body)=>{if(route==='call-inquiry'){
+    const response=await owner('sms/call-inquiry',body),data=await response.json();assert.equal(response.status,200);entered();await new Promise(resolve=>{release=resolve;});return {response,data};
+  }if(route==='overview'&&f.ctx._vsSync.owner==='other-owner')return failure(401);};
+  f.action('call-inquiry').emit('click');await ready;f.ctx._vsSync={owner:'other-owner',ready:false,confirmed:false};await f.ctx.VSSms.refresh();release();await settle();
+  assert.equal(state.record().revision,1);assert.equal(f.field('callName'),null);assert.ok(!f.text().includes('Owner A private'));assert.ok(!f.text().includes('private memo'));
+  assert.equal(f.calls.filter(c=>c.kind==='adapter-render'||c.kind==='render').length,0);assert.ok(!f.text().includes('문의자 등록 결과를 확인'));
+});
+
+test('UI reciprocal host inquiry-consult-student chain shows canonical name only with unique consistent IDs',async()=>{
+  const base={students:[student('student-1',{consultData:{id:'c1'}})],consults:[{id:'c1',phone:'01000001234',name:'consult alias',_inquiryId:'q1'}],
+    inquiries:[{id:'q1',phone:'01000001234',name:'inquiry alias',consultId:'c1'}]};
+  for(const mutate of [()=>{},s=>delete s.inquiries[0].consultId,s=>delete s.consults[0]._inquiryId,s=>s.inquiries[0].consultId='missing',
+    s=>s.inquiries.push({...s.inquiries[0],id:'q2'}),s=>s.consults.push({...s.consults[0]}),s=>s.inquiries.push({...s.inquiries[0]}),
+    s=>s.students.push(student('student-2',{consultData:{id:'c1'}})),s=>s.inquiries[0].studentId='missing',
+    s=>{s.students.push(student('student-2'));s.inquiries[0].studentId='student-2';}]) {
+    const f=fixture({calls:[callCard('chain',{phone:'01000001234',name:'untrusted server alias',studentId:'student-1',matchStatus:'matched'})]});
+    const canonical=clone(base);mutate(canonical);f.sync.state.base=canonical;await f.open();const text=f.query('[data-call-id="chain"]').textContent;
+    if(JSON.stringify(canonical)===JSON.stringify(base))assert.match(text,/합성 정본 이름/);else{assert.match(text,/여러 연락처와 일치/);assert.ok(!text.includes('합성 정본 이름'));}
+    assert.ok(!text.includes('consult alias'));assert.ok(!text.includes('inquiry alias'));assert.ok(!text.includes('untrusted server alias'));
+  }
+});
+
+test('editing date/window/student/requested time immediately removes stale recommendation DOM and retains focused input',async()=>{
+  for(const [key,value] of [['date','2099-10-07'],['startTime','13:00'],['endTime','19:00'],['studentId',''],['time','16:15']]) {
+    const f=fixture();await f.open();f.fill('date','2099-10-06');f.fill('time','15:15');f.fill('startTime','12:00');f.fill('endTime','20:00');await f.click('options');
+    const old=f.action('choose-option'),edited=f.field(key),date=f.field('date'),time=f.field('time');edited.focus();edited.selectionStart=1;edited.selectionEnd=3;
+    f.calls.length=0;f.fill(key,value);assert.equal(f.action('choose-option'),null);assert.equal(old.disabled,true);assert.equal(f.query('[data-schedule-options]'),null);
+    assert.equal(f.field(key),edited);assert.equal(f.document.activeElement,edited);assert.equal(edited.selectionStart,1);assert.equal(edited.selectionEnd,3);
+    assert.equal(f.field('date'),date);assert.equal(f.field('time'),time);assert.equal(edited.value,value);
+    old.emit('click');await settle();assert.equal(edited.value,value);assert.equal(f.calls.filter(c=>c.kind==='api'||c.kind==='render'||c.kind==='retry').length,0);
+    assert.match(f.text(),/시간 후보를 다시 확인/);assert.ok(!f.text().includes('시간 후보를 입력했습니다'));
+  }
 });

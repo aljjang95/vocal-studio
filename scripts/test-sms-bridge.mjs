@@ -63,6 +63,17 @@ try {
   check('public relay has no owner routes', (await mf.dispatchFetch('https://relay.invalid/api/sms/overview')).status === 404);
   const paired = await ok(await owner('/api/sms/pair', { relayOrigin: initial.device.relayOrigin })); token = paired.token;
   check('real named service RPC pull', (await ok(await device('pull'))).allowedPhoneHashes.length === 3);
+  await ok(await owner('/api/sms/call-settings', { enabled: true, includeUnknown: false }));
+  const callPayload = { id: 'synthetic-call-rpc', phone: '01000002222', receivedAt: clock, direction: 'incoming' };
+  const receivedCall = await ok(await device('call', callPayload)), callOverview = await ok(await owner('/api/sms/overview'));
+  const callCard = callOverview.calls.find(c => c.id === receivedCall.callId);
+  check('real named RPC call roundtrip stores current canonical identity', callCard?.name === '합성 학생2' && callCard.matchStatus === 'matched' && callCard.studentId === 's2' && callCard.status === 'pending');
+  check('call receipt leaves SMS reply and reminder queue unchanged', callOverview.messages.length === 0 && callOverview.outbox.length === 0 && callOverview.revision === 0 && callOverview.unassigned.every(s => !s.replied));
+  const callPull = await ok(await device('pull'));
+  check('public call intake metadata has strict consent and no names or calendar', JSON.stringify(callPull.callIntake) === JSON.stringify({ enabled: true, includeUnknown: false }) &&
+    Object.keys(callPull).sort().join(',') === 'allowedPhoneHashes,callIntake,deviceId,messages,ok,serverTime' && !JSON.stringify(callPull).includes('합성 학생'));
+  check('new call route denies query and missing token harmlessly', (await device('call?x=1', callPayload)).status === 404 && (await device('call', callPayload, '')).status === 401 &&
+    (await ok(await owner('/api/sms/overview'))).calls.length === 1);
   await ok(await owner('/api/sms/settings', { ...initial.settings, enabled: true }));
   await clockTo(monday);
   const pulls = await Promise.all(Array.from({ length: 5 }, () => device('pull').then(ok)));
@@ -103,9 +114,11 @@ try {
   check('corrupt preferences fail closed through real RPC', (await device('pull')).status === 409);
   const oldToken = token, rotated = await ok(await owner('/api/sms/pair', { relayOrigin: afterRestart.device.relayOrigin })); token = rotated.token;
   check('rotation with corrupt preferences revokes old bearer', token !== oldToken && (await device('pull', undefined, oldToken)).status === 401);
+  check('rotation rejects old call token through named RPC', (await device('call', { ...callPayload, id: 'old-rotation-call', receivedAt: clock }, oldToken)).status === 401);
   check('rotated pairing stays disabled with valid defaults', !(await ok(await owner('/api/sms/overview'))).settings.enabled && (await ok(await device('pull'))).messages.length === 0);
   await corruptPreferences({ ...afterRestart.settings, mondayTime: ['10:00'] });
   await ok(await owner('/api/sms/revoke', {})); check('revoke succeeds despite corrupt preferences', !(await ok(await owner('/api/sms/overview'))).device.paired);
   check('revoked bearer blocked through real RPC', (await device('pull')).status === 401 && (await event('after-revocation', first.phone, 'synthetic refused event')).status === 401);
+  check('revoke rejects call token through named RPC', (await device('call', { ...callPayload, id: 'after-revocation-call', receivedAt: clock })).status === 401);
   console.log(JSON.stringify({ ok: true, runtime: 'isolated Workerd + SQLite + named service RPC', checks, persistence: persist, externalNetwork: false, physicalPhone: false }, null, 2));
 } finally { await mf.dispose(); }
