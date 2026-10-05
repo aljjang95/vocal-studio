@@ -63,6 +63,12 @@ function fixture(extra={}) {
       if(route==='call-dismiss'){data.calls.find(c=>c.id===options.body.callId).status='acknowledged';return ok({ok:true});}
       if(route==='options'){return ok({ok:true,revision:data.revision,messageId:options.body.messageId,options:[{date:options.body.date,time:'15:15',reason:'요청한 시간이 가능해요.'}],warnings:[]});}
       if(route==='prepare'){return ok({ok:true,count:1});}
+      if(route==='test-message'){
+        const prior=data.outbox.find(row=>row.stage==='connection-test');
+        const row=prior || {id:'synthetic-test-outbox',stage:'connection-test',name:'연결 시험',status:'pending',createdAt:Date.now()};
+        if(!prior)data.outbox.push(row);
+        return ok({ok:true,id:row.id,status:row.status,expiresAt:Date.now()+3600000,duplicate:!!prior});
+      }
       if(route==='dismiss'){data.messages.find(m=>m.id===options.body.messageId).status='dismissed';return ok({ok:true});}
       if(route==='revoke'){data.device.paired=false;data.settings.enabled=false;data.callSettings={enabled:false,includeUnknown:false};return ok({ok:true});}
       if(route==='pair'){data.device.paired=true;data.callSettings={enabled:false,includeUnknown:false};return ok({ok:true,token:'synthetic-one-time-token',deviceId:'device-test',relayOrigin:data.device.relayOrigin});}
@@ -73,7 +79,13 @@ function fixture(extra={}) {
   const action=key=>query(`[data-action="${key}"]`);
   const card=()=>query('[data-message-id]') || query('.vs-sms-card');
   const field=(key,parent=document.body)=>parent.querySelector(`[data-field="${key}"]`);
-  async function click(key) { const el=action(key);assert.ok(el,`button ${key} exists`);assert.equal(el.disabled,false,`button ${key} enabled`);el.emit('click');await settle(); }
+  async function click(key) {
+    const el=action(key);assert.ok(el,`button ${key} exists`);assert.equal(el.disabled,false,`button ${key} enabled`);el.emit('click');await settle();
+    // SQLite-backed handlers also await WebCrypto; four event-loop turns do not prove completion.
+    const deadline=Date.now()+2000;
+    while(query('.vs-sms-modal')?.getAttribute('aria-busy')==='true' && Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,5));
+    assert.notEqual(query('.vs-sms-modal')?.getAttribute('aria-busy'),'true',`action ${key} completed`);
+  }
   function fill(key,value,parent=document.body) { const el=field(key,parent);assert.ok(el,`field ${key} exists`); if(el.type==='checkbox')el.checked=value;else el.value=value;el.emit(el.tagName==='select'?'change':'input'); }
   return {ctx,document,calls,clipboard,data,control,sync,query,action,card,field,click,fill,text:()=>document.body.textContent,open:()=>ctx.VSSms.open()};
 }
@@ -110,6 +122,65 @@ function promisedClipboard(f,{requireGesture=false,denied=false,completion=null,
   };
   return {click(key){gesture=true;try{f.action(key).emit('click');}finally{gesture=false;}}};
 }
+
+const pairedTest=()=>fixture({device:{paired:true,relayOrigin:'https://synthetic-relay.example'},messages:[],unassigned:[]});
+test('connection test confirms exact normalized target and fixed text, preserves other drafts, reports queue and duplicate truthfully',async()=>{
+  const f=pairedTest();await f.open();f.fill('testPhone','+82 10-0000-1234');f.fill('mondayText','{name} retained');
+  await f.click('refresh');assert.equal(f.field('testPhone').value,'+82 10-0000-1234');
+  await f.click('test-message');const post=f.calls.find(c=>c.route==='test-message');assert.deepEqual(post.body,{phone:'01000001234'});
+  const prompt=f.calls.find(c=>c.kind==='prompt');assert.match(prompt.text,/01000001234/);assert.match(prompt.text,/SMS 1건/);assert.match(prompt.text,/HLB 연결 시험입니다/);
+  assert.ok(prompt.text.split('\n\n')[1].length<=70,'confirmed fixed body stays within 70 UTF16 code units');
+  assert.equal(f.field('testPhone').value,'');assert.equal(f.field('mondayText').value,'{name} retained');assert.equal(f.data.settings.enabled,false);
+  assert.match(f.text(),/연결 시험 · 전송 대기/);assert.ok(!f.text().includes('명단 확인 필요'));assert.ok(!f.text().includes('전달 완료'));
+  f.fill('testPhone','01000001234');await f.click('test-message');assert.match(f.text(),/기존 요청 확인 · 전송 대기/);assert.equal(f.data.outbox.length,1);
+  for(const [status,expected] of [['claimed','전송 시도 중'],['sent','수신 여부 미확인'],['failed','전송 실패'],['unknown','전송 결과 불확실'],['expired','발송 기한 만료']]) {
+    f.data.outbox[0].status=status;f.fill('testPhone','01000001234');await f.click('test-message');assert.match(f.text(),new RegExp(expected));assert.equal(f.data.outbox.length,1);
+  }
+});
+
+test('test phone invalid/unknown/stale contacts, unpaired and refusal never queue; own draft survives failures and clears on close',async()=>{
+  const f=pairedTest();await f.open();
+  for(const number of ['not a phone','01000009999']) {f.fill('testPhone',number);await f.click('test-message');assert.equal(f.calls.filter(c=>c.route==='test-message').length,0);assert.equal(f.field('testPhone').value,number);}
+  f.fill('testPhone','01000001234');f.control.confirm=false;await f.click('test-message');assert.equal(f.calls.filter(c=>c.route==='test-message').length,0);
+  assert.match(f.text(),/연결 시험을 취소했습니다/);
+  f.control.confirm=true;f.control.handler=route=>{if(route==='overview')f.sync.state.base.students=[];};await f.click('test-message');assert.equal(f.calls.filter(c=>c.route==='test-message').length,0);
+  f.sync.state.base.students=[student()];f.control.handler=route=>route==='test-message'?failure(503):undefined;
+  await f.click('test-message');assert.equal(f.field('testPhone').value,'01000001234');assert.match(f.text(),/처리 여부가 불확실/);
+  const old=f.field('testPhone');f.ctx.VSSms.close();assert.equal(old.value,'');await f.open();assert.equal(f.field('testPhone').value,'');
+  const g=fixture();await g.open();assert.equal(g.action('test-message').disabled,true);
+  const h=pairedTest();await h.open();h.fill('testPhone','01000001234');h.control.handler=route=>{if(route==='overview')h.data.device.paired=false;};
+  await h.click('test-message');assert.equal(h.calls.filter(c=>c.route==='test-message').length,0);assert.match(h.text(),/연결된 휴대폰이 필요/);
+});
+
+test('connection-test pending request prevents duplicate click and isolates late refresh/POST across owner epoch sync and modal changes',async()=>{
+  for(const phase of ['overview','test-message'])for(const transition of ['owner','epoch','sync','close']) {
+    const f=pairedTest(),gate=deferred();f.sync.epoch=1;await f.open();f.fill('testPhone','01000001234');const oldInput=f.field('testPhone'),oldButton=f.action('test-message');
+    f.control.handler=route=>route===phase?gate.promise:undefined;
+    oldButton.emit('click');await settle();assert.equal(f.action('test-message').disabled,true);oldButton.emit('click');await settle();
+    assert.equal(f.calls.filter(c=>c.route==='test-message').length,phase==='overview'?0:1);
+    if(transition==='owner')f.sync.owner='new-owner';
+    if(transition==='epoch')f.sync.epoch++;
+    if(transition==='sync'){f.sync={...f.sync};f.ctx._vsSync=f.sync;}
+    if(transition==='close'){assert.equal(f.action('close').disabled,false);f.ctx.VSSms.close();}
+    else oldInput.emit('input');
+    assert.equal(oldInput.value,'');
+    f.control.handler=null;
+    gate.resolve(phase==='overview'?ok(clone(f.data)):ok({ok:true,id:'late-test',status:'pending',duplicate:false}));await settle();
+    if(transition==='close')await f.open();else await f.click('refresh');
+    assert.equal(f.field('testPhone').value,'');assert.ok(!f.text().includes('연결 시험 · 전송 대기'));
+    oldInput.value='01000001234';oldInput.emit('input');oldButton.emit('click');await settle();
+    assert.equal(f.calls.filter(c=>c.route==='test-message').length,phase==='overview'?0:1);
+  }
+});
+
+test('accepted test queue with failed overview retains draft and does not falsely report pending success',async()=>{
+  const f=pairedTest();await f.open();f.fill('testPhone','01000001234');let queued=false;
+  f.control.handler=route=>{if(route==='test-message')queued=true;if(route==='overview'&&queued)return failure(503);};
+  await f.click('test-message');assert.equal(f.data.outbox.length,1);assert.equal(f.field('testPhone').value,'01000001234');
+  assert.match(f.text(),/처리 여부가 불확실/);assert.ok(!f.text().includes('연결 시험 · 전송 대기'));
+  f.control.handler=null;await f.click('refresh');assert.match(f.text(),/연결 시험 · 전송 대기/);
+  await f.click('test-message');assert.equal(f.data.outbox.length,1);assert.match(f.text(),/기존 요청 확인/);
+});
 
 test('disconnected empty overview is usable, default disabled, setup origin + protected APK and no native phone requirement',async()=>{
   const f=fixture({messages:[],unassigned:[]});await f.open();
@@ -673,6 +744,21 @@ async function studioOwnerFixture(t,{lateEdit=false,held=false}={}) {
   const actual=actualDisplayFixture({providedFixture:f,canonicalRead:()=>state.record(),lateEdit,held});
   return {...actual,state,send,owner,db};
 }
+
+test('real SQLite StudioState + actual VSSync connection-test UI preserves disabled automation through native claim ACK and duplicate readback',async t=>{
+  const {f,state,send,owner,db}=await studioOwnerFixture(t);await f.open();const before=clone(state.record());
+  f.fill('testPhone','+82 10-0000-1234');await f.click('test-message');assert.equal(f.field('testPhone').value,'');
+  const row=db.prepare('SELECT * FROM sms_outbox').get();assert.equal(row.stage,'connection-test');assert.match(f.text(),/연결 시험 · 전송 대기/);
+  f.fill('mondayText','{name} changed reminder draft');await f.click('settings');assert.equal(state.getKV('sms.settings').enabled,false);
+  assert.equal(db.prepare('SELECT status FROM sms_outbox').get().status,'pending');
+  const claim=await send('claim',{id:row.id});assert.equal(claim.status,200);const message=(await claim.json()).message;
+  assert.deepEqual(Object.keys(message).sort(),['id','phone','text']);assert.equal(message.phone,'01000001234');
+  assert.equal((await send('ack',{id:row.id,status:'unknown'})).status,200);
+  await f.click('refresh');assert.match(f.text(),/연결 시험 · 전송 결과 불확실 · 자동 재시도 없음/);
+  f.fill('testPhone','01000001234');await f.click('test-message');assert.match(f.text(),/기존 요청 확인 · 전송 결과 불확실/);
+  assert.equal(db.prepare('SELECT count(*) AS n FROM sms_outbox').get().n,1);assert.deepEqual(state.record(),before);
+  assert.equal((await owner('sms/overview')).status,200);assert.equal(state.getKV('sms.settings').enabled,false);
+});
 
 test('real SQLite StudioState + actual VSSync owner call-to-inquiry CAS and durable display readback',async t=>{
   const {f,state,controller,ui}=await studioOwnerFixture(t);await f.open();await f.click('call-inquiry');assert.match(f.text(),/문의자 이름을 직접/);assert.equal(state.record().revision,0);

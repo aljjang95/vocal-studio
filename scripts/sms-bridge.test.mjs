@@ -54,6 +54,141 @@ const responseOK = async response => { assert.equal(response.status, 200, JSON.s
 const pendingCard = async f => (await f.overview()).messages.find(m => m.status === 'pending');
 const entry = (messageId, extra = {}) => ({ messageId, studentId: 's1', date: '2026-10-07', time: '15:00', ...extra });
 
+test('fixed connection test uses existing native pull/claim/ack with reminders off and atomic daily identity', async t => {
+  const f = fixture(t, {students:[],inquiries:[{id:'synthetic-test-contact',phone:'01000001111',name:'합성 시험'}]});
+  await f.activate(); await f.pair(false); const before=structuredClone(f.read());
+  const attempts=await Promise.all(Array.from({length:8},(_,i)=>f.api('/sms/test-message',{phone:i%2?'+82 10-0000-1111':'01000001111'})));
+  const receipts=await Promise.all(attempts.map(responseOK));
+  assert.equal(new Set(receipts.map(r=>r.id)).size,1);assert.equal(receipts.filter(r=>!r.duplicate).length,1);
+  const id=receipts[0].id,row=f.db.prepare('SELECT * FROM sms_outbox').get();
+  assert.equal(row.stage,'connection-test');assert.equal(row.week_start,'2026-10-05');assert.match(row.student_id,/^connection-test:[a-f0-9]{64}$/);
+  assert.equal(row.expires_at-f.control.now,3600000);
+  await responseOK(await f.api('/sms/settings',{...(await f.overview()).settings,enabled:false}));
+  const pull=await responseOK(await f.device('pull'));assert.equal(pull.messages.length,1);
+  assert.deepEqual(Object.keys(pull.messages[0]).sort(),['id','phone','text']);assert.equal(pull.messages[0].id,id);
+  assert.equal(pull.messages[0].text,"HLB 연결 시험입니다. '연동 확인'으로 답장 후 이 번호로 전화 1회 부탁드립니다.");
+  assert.ok(pull.messages[0].text.length<=70,'fixed UCS2 payload stays within 70 UTF16 code units');
+  assert.equal((await f.overview()).outbox[0].name,'연결 시험');
+  const claims=await Promise.all(Array.from({length:6},()=>f.device('claim',{id})));
+  assert.equal(claims.filter(r=>r.status===200).length,1);
+  assert.equal((await responseOK(await f.api('/sms/test-message',{phone:row.phone}))).status,'claimed');
+  assert.deepEqual((await responseOK(await f.device('pull'))).messages,[]);
+  await responseOK(await f.device('ack',{id,status:'sent'}));await responseOK(await f.device('ack',{id,status:'sent'}));
+  const retry=await responseOK(await f.api('/sms/test-message',{phone:row.phone}));assert.equal(retry.id,id);assert.equal(retry.status,'sent');assert.equal(retry.duplicate,true);
+  assert.deepEqual(f.read(),before);assert.equal((await f.overview()).settings.enabled,false);assert.equal(f.control.broadcasts.length,0);
+});
+
+test('connection test validates strict phone-only owner body, active state, pairing and fresh contact membership',async t=>{
+  const f=fixture(t);assert.equal((await f.api('/sms/test-message',{phone:'01000001111'})).status,409);
+  await f.activate();assert.equal((await f.api('/sms/test-message',{phone:'01000001111'})).status,409);await f.pair(false);
+  for(const body of [{},[],{phone:['01000001111']},{phone:1000001111},{phone:'010bad1111'},{phone:'01000001111',text:'free text'},{phone:'01000001111',stage:'monday'},{phone:'01000001111',enabled:true}])
+    assert.equal((await f.api('/sms/test-message',body)).status,400);
+  assert.equal((await f.api('/sms/test-message',{phone:'01000001111'},'')).status,401);
+  assert.equal((await f.api('/sms/test-message',{phone:'01000009999'})).status,409);
+  assert.equal(f.db.prepare('SELECT count(*) AS n FROM sms_outbox').get().n,0);
+  const saved=structuredClone(f.read());f.state.setKV('record',{...saved,state:{...saved.state,inquiries:'invalid'}});
+  assert.equal((await f.api('/sms/test-message',{phone:'01000001111'})).status,409);f.state.setKV('record',saved);
+  const queued=await responseOK(await f.api('/sms/test-message',{phone:'01000001111'}));
+  await responseOK(await f.commit({students:[student('s1',{ph:'01000002222'})]}));
+  assert.equal((await f.api('/sms/test-message',{phone:'01000001111'})).status,409);
+  assert.equal((await f.device('claim',{id:queued.id})).status,409);
+  assert.equal((await f.overview()).outbox[0].status,'suppressed');
+});
+
+test('test TTL spans Korea midnight and week boundary, daily cap never resends any terminal outcome',async t=>{
+  const f=fixture(t);await f.activate();await f.pair(false);
+  f.control.now=at('2026-10-04T23:55:00');const sunday=await responseOK(await f.api('/sms/test-message',{phone:'01000001111'}));
+  f.control.now=at('2026-10-05T00:05:00');assert.equal((await responseOK(await f.device('pull'))).messages[0].id,sunday.id);
+  const mondayTest=await responseOK(await f.api('/sms/test-message',{phone:'01000001111'}));assert.notEqual(mondayTest.id,sunday.id);
+  f.control.now=at('2026-10-05T00:55:00');assert.equal((await f.device('claim',{id:sunday.id})).status,409);
+  assert.equal((await f.overview()).outbox.find(r=>r.id===sunday.id).status,'expired');
+  f.control.now=at('2026-10-05T01:05:00');const retry=await responseOK(await f.api('/sms/test-message',{phone:'01000001111'}));
+  assert.equal(retry.id,mondayTest.id);assert.equal(retry.status,'expired');
+  for(const status of ['failed','unknown','sent']) {
+    f.control.now+=86400000;const queued=await responseOK(await f.api('/sms/test-message',{phone:'01000001111'}));
+    await responseOK(await f.device('claim',{id:queued.id}));await responseOK(await f.device('ack',{id:queued.id,status}));
+    const prior=await responseOK(await f.api('/sms/test-message',{phone:'01000001111'}));assert.equal(prior.id,queued.id);assert.equal(prior.status,status);
+    assert.deepEqual((await responseOK(await f.device('pull'))).messages,[]);assert.equal((await f.device('claim',{id:queued.id})).status,409);
+  }
+});
+
+test('test settings corruption fails closed; rotation/revoke cancel tests; unknown stages never reach native claim',async t=>{
+  const f=fixture(t);await f.activate();await f.pair(false);const cfg=(await f.overview()).settings;
+  const queued=await responseOK(await f.api('/sms/test-message',{phone:'01000001111'}));
+  for(const malformed of [[],{...cfg,enabled:'false'},{...cfg,mondayTime:['10:00']},{...cfg,extra:true}]) {
+    f.state.setKV('sms.settings',malformed);
+    for(const r of [await f.api('/sms/test-message',{phone:'01000001111'}),await f.device('pull'),await f.device('claim',{id:queued.id}),await f.api('/sms/overview')])assert.equal(r.status,409);
+  }
+  f.state.setKV('sms.settings',cfg);const token=f.token;await f.pair(false);
+  assert.equal((await f.device('claim',{id:queued.id},token)).status,401);assert.equal((await f.overview()).outbox[0].status,'cancelled');
+  const rotated=await responseOK(await f.api('/sms/test-message',{phone:'01000001111'}));assert.notEqual(rotated.id,queued.id);
+  await responseOK(await f.api('/sms/revoke',{}));assert.equal((await f.overview()).outbox.find(r=>r.id===rotated.id).status,'cancelled');
+  await f.pair(false);const unknown=await responseOK(await f.api('/sms/test-message',{phone:'01000001111'}));
+  await responseOK(await f.api('/sms/settings',{...cfg,enabled:true}));
+  // This would pass the old generic candidate path if stage were not explicitly bounded.
+  f.db.prepare("UPDATE sms_outbox SET stage='unrecognized',student_id='s1',week_start='2026-10-05' WHERE id=?").run(unknown.id);
+  assert.equal((await f.device('claim',{id:unknown.id})).status,409);assert.deepEqual((await responseOK(await f.device('pull'))).messages,[]);
+});
+
+test('test enqueue rechecks token generation, settings and canonical membership after async hash, SQL failure is atomic',async t=>{
+  const f=fixture(t);await f.activate();await f.pair(false);const device=structuredClone(f.state.getKV('sms.device')),cfg=(await f.overview()).settings,record=structuredClone(f.read());
+  const digest=crypto.subtle.digest.bind(crypto.subtle);let mutation;
+  t.mock.method(crypto.subtle,'digest',async(...args)=>{const bytes=await digest(...args);if(mutation){const change=mutation;mutation=null;change();}return bytes;});
+  for(const change of [()=>f.state.setKV('sms.device',{...device,id:'different-generation'}),()=>f.state.setKV('sms.settings',{...cfg,enabled:'false'}),()=>f.state.setKV('record',{...record,state:{...record.state,students:[]}})]) {
+    mutation=change;assert.notEqual((await f.api('/sms/test-message',{phone:'01000001111'})).status,200);
+    assert.equal(f.db.prepare('SELECT count(*) AS n FROM sms_outbox').get().n,0);
+    f.state.setKV('sms.device',device);f.state.setKV('sms.settings',cfg);f.state.setKV('record',record);
+  }
+  f.control.fail='INSERT INTO sms_outbox';assert.equal((await f.api('/sms/test-message',{phone:'01000001111'})).status,503);
+  assert.equal(f.db.prepare('SELECT count(*) AS n FROM sms_outbox').get().n,0);assert.deepEqual(f.read(),record);
+  const queued=await responseOK(await f.api('/sms/test-message',{phone:'01000001111'}));
+  f.state.setKV('record',{...record,mode:'pending'});assert.equal((await f.device('claim',{id:queued.id})).status,409);
+  f.state.setKV('record',record);f.control.now+=3600000;
+  assert.deepEqual((await responseOK(await f.device('pull'))).messages,[]);
+});
+
+test('explicit stored null settings deny test creation and pending test pull/claim without any outbox write',async t=>{
+  const f=fixture(t);await f.activate();await f.pair(false);const record=structuredClone(f.read()),cfg=(await f.overview()).settings;
+  f.state.setKV('sms.settings',null);
+  const denied=await f.api('/sms/test-message',{phone:'01000001111'});
+  assert.equal(denied.status,409);assert.equal((await denied.json()).error,'sms-stored-settings-invalid');
+  assert.equal(f.db.prepare('SELECT count(*) AS n FROM sms_outbox').get().n,0);assert.equal(f.state.getKV('sms.settings'),null);
+  f.state.setKV('sms.settings',cfg);const queued=await responseOK(await f.api('/sms/test-message',{phone:'01000001111'}));
+  const before=f.db.prepare('SELECT * FROM sms_outbox').all();f.state.setKV('sms.settings',null);
+  for(const response of [await f.api('/sms/test-message',{phone:'01000001111'}),await f.device('pull'),await f.device('claim',{id:queued.id}),await f.api('/sms/overview')]) {
+    assert.equal(response.status,409);const body=await response.json();assert.equal(body.error,'sms-stored-settings-invalid');
+    assert.equal(body.messages,undefined);assert.equal(body.message,undefined);
+  }
+  assert.deepEqual(f.db.prepare('SELECT * FROM sms_outbox').all(),before);assert.deepEqual(f.read(),record);
+});
+
+test('truly missing settings retain disabled defaults and allow only the fixed connection test',async t=>{
+  const f=fixture(t);await f.activate();await f.pair(false);
+  f.db.prepare('DELETE FROM kv WHERE key=?').run('sms.settings');
+  const initial=await f.overview();assert.equal(initial.settings.enabled,false);
+  assert.equal((await f.api('/sms/prepare',{stage:'monday'})).status,409);
+  const queued=await responseOK(await f.api('/sms/test-message',{phone:'01000001111'}));
+  const pull=await responseOK(await f.device('pull'));assert.equal(pull.messages.length,1);assert.equal(pull.messages[0].id,queued.id);
+  await responseOK(await f.device('claim',{id:queued.id}));await responseOK(await f.device('ack',{id:queued.id,status:'sent'}));
+  assert.equal((await f.overview()).settings.enabled,false);assert.equal(f.db.prepare('SELECT count(*) AS n FROM kv WHERE key=?').get('sms.settings').n,0);
+  assert.equal(f.db.prepare('SELECT count(*) AS n FROM sms_outbox').get().n,1);
+});
+
+test('null and invalid JSON SMS settings cannot block revoke or pairing rotation; recovery cancels tests and stays disabled',async t=>{
+  for(const corruption of ['null','invalid-json'])for(const action of ['revoke','pair']) {
+    const f=fixture(t);await f.activate();await f.pair(false);
+    const queued=await responseOK(await f.api('/sms/test-message',{phone:'01000001111'})),oldToken=f.token;
+    if(corruption==='null')f.state.setKV('sms.settings',null);
+    else f.db.prepare('UPDATE kv SET value=? WHERE key=?').run('{','sms.settings');
+    if(action==='revoke')await responseOK(await f.api('/sms/revoke',{}));else await f.pair(false);
+    const repaired=await f.overview();assert.equal(repaired.settings.enabled,false);assert.equal(repaired.device.paired,action==='pair');
+    assert.equal(repaired.outbox.find(row=>row.id===queued.id).status,'cancelled');
+    assert.equal((await f.device('pull',undefined,oldToken)).status,401);assert.equal((await f.device('claim',{id:queued.id},oldToken)).status,401);
+    assert.equal(f.state.getKV('sms.settings').enabled,false);
+    if(action==='pair')assert.deepEqual((await responseOK(await f.device('pull'))).messages,[]);
+  }
+});
+
 test('owner schedule window ranks adjacency and exact minute request, remains a read with guarded manual confirmation', async t => {
   const peer = student('peer', { ph:'01000002222', schedType:'fixed', days:['수'], times:{수:'16:00'} });
   const f = fixture(t,{students:[student(),peer]});await f.activate();await f.pair(false);await responseOK(await f.event());

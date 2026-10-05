@@ -1,0 +1,39 @@
+{
+  "feature": "owner-requested fixed SMS connection test",
+  "codeCandidate": "89b635bb978fe5391e786b759b527f9f374f07c9",
+  "validation": {
+    "focusedTests": 105,
+    "passed": 105,
+    "independentReview": "P2 explicit stored null fixed and narrowly accepted",
+    "localBrowserGroups": 6,
+    "realLocalWorkerdSQLite": true,
+    "nativeProtocolSimulation": true,
+    "physicalHandsetSendVerified": false,
+    "physicalReplyAndCallVerified": false,
+    "screenshotPixelsVerified": false
+  },
+  "limits": {
+    "registeredPhonesOnly": true,
+    "currentDeviceNumberKoreaDayMaximum": 1,
+    "ttlMinutes": 60,
+    "fixedBodyUtf16Units": 48,
+    "arbitraryTextAllowed": false,
+    "unchangedNativeApkVersionCode": 4,
+    "automationCanRemainDisabled": true,
+    "noAutomaticRetryAfterUnknownOrFailed": true
+  },
+  "sourceSha256": {
+    "smsWorker": "b793e20015f670a8b485795424e6ad5916224fdf149538444bee866bf3960f98",
+    "smsManager": "c114a3bf33a7beaeb8c478a418dbb77d61ea287b248522e03e61d551ec7b65fd",
+    "bridgeTests": "abafa246e342139bb91febd25865975d766ec539e410b1072a09c9c6fda764b6",
+    "managerTests": "ee08a1d139a413fcb071dd4d16c554ee6f4aa44028bec4de843e4211903160c7",
+    "unchangedNativeApk": "86469accbce9117d10e97308b8ab34c17cc5b9b5e132b6a76baf104682999b9f"
+  },
+  "preserved": [
+    "canonical schedules and customer records",
+    "call consent and identities",
+    "Cloudflare backend and media bindings",
+    "native app data and pairing",
+    "original reminder eligibility"
+  ]
+}
