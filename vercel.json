@@ -1,4 +1,6 @@
 {
+  "buildCommand": "echo static-deploy-no-build",
+  "outputDirectory": ".",
   "rewrites": [
     { "source": "/vocal-studio.html", "destination": "/index.html" },
     { "source": "/vocal-studi.html", "destination": "/index.html" },
