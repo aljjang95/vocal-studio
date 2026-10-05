@@ -147,6 +147,48 @@ test('test enqueue rechecks token generation, settings and canonical membership 
   assert.deepEqual((await responseOK(await f.device('pull'))).messages,[]);
 });
 
+test('explicit stored null settings deny test creation and pending test pull/claim without any outbox write',async t=>{
+  const f=fixture(t);await f.activate();await f.pair(false);const record=structuredClone(f.read()),cfg=(await f.overview()).settings;
+  f.state.setKV('sms.settings',null);
+  const denied=await f.api('/sms/test-message',{phone:'01000001111'});
+  assert.equal(denied.status,409);assert.equal((await denied.json()).error,'sms-stored-settings-invalid');
+  assert.equal(f.db.prepare('SELECT count(*) AS n FROM sms_outbox').get().n,0);assert.equal(f.state.getKV('sms.settings'),null);
+  f.state.setKV('sms.settings',cfg);const queued=await responseOK(await f.api('/sms/test-message',{phone:'01000001111'}));
+  const before=f.db.prepare('SELECT * FROM sms_outbox').all();f.state.setKV('sms.settings',null);
+  for(const response of [await f.api('/sms/test-message',{phone:'01000001111'}),await f.device('pull'),await f.device('claim',{id:queued.id}),await f.api('/sms/overview')]) {
+    assert.equal(response.status,409);const body=await response.json();assert.equal(body.error,'sms-stored-settings-invalid');
+    assert.equal(body.messages,undefined);assert.equal(body.message,undefined);
+  }
+  assert.deepEqual(f.db.prepare('SELECT * FROM sms_outbox').all(),before);assert.deepEqual(f.read(),record);
+});
+
+test('truly missing settings retain disabled defaults and allow only the fixed connection test',async t=>{
+  const f=fixture(t);await f.activate();await f.pair(false);
+  f.db.prepare('DELETE FROM kv WHERE key=?').run('sms.settings');
+  const initial=await f.overview();assert.equal(initial.settings.enabled,false);
+  assert.equal((await f.api('/sms/prepare',{stage:'monday'})).status,409);
+  const queued=await responseOK(await f.api('/sms/test-message',{phone:'01000001111'}));
+  const pull=await responseOK(await f.device('pull'));assert.equal(pull.messages.length,1);assert.equal(pull.messages[0].id,queued.id);
+  await responseOK(await f.device('claim',{id:queued.id}));await responseOK(await f.device('ack',{id:queued.id,status:'sent'}));
+  assert.equal((await f.overview()).settings.enabled,false);assert.equal(f.db.prepare('SELECT count(*) AS n FROM kv WHERE key=?').get('sms.settings').n,0);
+  assert.equal(f.db.prepare('SELECT count(*) AS n FROM sms_outbox').get().n,1);
+});
+
+test('null and invalid JSON SMS settings cannot block revoke or pairing rotation; recovery cancels tests and stays disabled',async t=>{
+  for(const corruption of ['null','invalid-json'])for(const action of ['revoke','pair']) {
+    const f=fixture(t);await f.activate();await f.pair(false);
+    const queued=await responseOK(await f.api('/sms/test-message',{phone:'01000001111'})),oldToken=f.token;
+    if(corruption==='null')f.state.setKV('sms.settings',null);
+    else f.db.prepare('UPDATE kv SET value=? WHERE key=?').run('{','sms.settings');
+    if(action==='revoke')await responseOK(await f.api('/sms/revoke',{}));else await f.pair(false);
+    const repaired=await f.overview();assert.equal(repaired.settings.enabled,false);assert.equal(repaired.device.paired,action==='pair');
+    assert.equal(repaired.outbox.find(row=>row.id===queued.id).status,'cancelled');
+    assert.equal((await f.device('pull',undefined,oldToken)).status,401);assert.equal((await f.device('claim',{id:queued.id},oldToken)).status,401);
+    assert.equal(f.state.getKV('sms.settings').enabled,false);
+    if(action==='pair')assert.deepEqual((await responseOK(await f.device('pull'))).messages,[]);
+  }
+});
+
 test('owner schedule window ranks adjacency and exact minute request, remains a read with guarded manual confirmation', async t => {
   const peer = student('peer', { ph:'01000002222', schedType:'fixed', days:['수'], times:{수:'16:00'} });
   const f = fixture(t,{students:[student(),peer]});await f.activate();await f.pair(false);await responseOK(await f.event());

@@ -128,7 +128,8 @@ function validateSettings(value) {
 }
 function settings(owner) {
   const saved = owner.getKV('sms.settings');
-  if (saved === null) return { ...DEFAULTS };
+  // getKV returns null for both absent keys and stored JSON null. Only absence has defaults.
+  if (saved === null && !owner.sql.exec('SELECT key FROM kv WHERE key=?', 'sms.settings').toArray().length) return { ...DEFAULTS };
   try { return validateSettings(saved); }
   catch { fail('sms-stored-settings-invalid', 409); }
 }
