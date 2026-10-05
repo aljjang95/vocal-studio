@@ -92,6 +92,16 @@ function fixture(extra={}) {
 function ok(data) { return {response:{ok:true,status:200},data}; }
 function failure(status) { return {response:{ok:false,status},data:{ok:false,error:'synthetic-secret-error-never-display'}}; }
 async function settle() { for(let i=0;i<4;i++) await new Promise(resolve=>setImmediate(resolve)); }
+async function actionSettled(f,key) {
+  // Observe action()'s explicit aria-busy signal cleared by finally.
+  // Mutation eligibility can remain disabled after success; it is not completion.
+  // Keep every result assertion unchanged.
+  const deadline=performance.now()+2000;
+  while(f.query('.vs-sms-modal')?.getAttribute('aria-busy')!=='false') {
+    assert.ok(performance.now()<deadline,`action ${key} must finish within the bounded observation`);
+    await new Promise(resolve=>setImmediate(resolve));
+  }
+}
 function deferred() {
   let resolve, reject;
   const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});
@@ -803,9 +813,9 @@ test('pending suggestion response and retained choice invalidate on each edited 
 test('real StudioState concurrent call-inquiry CAS409 keeps explicit owner fields and never guesses identity',async t=>{
   const {f,state,owner}=await studioOwnerFixture(t);await f.open();f.fill('callName','Owner exact');f.fill('callMemo','retained memo');
   f.control.handler=async route=>{if(route==='call-inquiry'){const r=state.record();assert.equal((await owner('commit',{requestId:'synthetic-host-edit',baseRevision:r.revision,state:{...r.state,hostFlag:'retain'}})).status,200);}};
-  await f.click('call-inquiry');assert.equal(state.record().revision,1);assert.equal(state.record().state.inquiries.length,0);assert.match(f.text(),/자료가 변경/);
+  await f.click('call-inquiry');await actionSettled(f,'call-inquiry');assert.equal(state.record().revision,1);assert.equal(state.record().state.inquiries.length,0);assert.match(f.text(),/자료가 변경/);
   assert.equal(f.field('callName').value,'Owner exact');assert.equal(f.field('callMemo').value,'retained memo');
-  f.control.handler=null;await f.click('refresh');assert.equal(f.field('callName').value,'Owner exact');await f.click('call-inquiry');assert.equal(state.record().revision,2);assert.equal(state.record().state.inquiries[0].name,'Owner exact');
+  f.control.handler=null;await f.click('refresh');assert.equal(f.field('callName').value,'Owner exact');await f.click('call-inquiry');await actionSettled(f,'call-inquiry');assert.equal(state.record().revision,2);assert.equal(state.record().state.inquiries[0].name,'Owner exact');
 });
 
 test('real accepted call inquiry response discarded after owner changes, without leaking drafts or readback',async t=>{
