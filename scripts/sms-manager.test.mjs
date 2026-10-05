@@ -81,11 +81,11 @@ function ok(data) { return {response:{ok:true,status:200},data}; }
 function failure(status) { return {response:{ok:false,status},data:{ok:false,error:'synthetic-secret-error-never-display'}}; }
 async function settle() { for(let i=0;i<4;i++) await new Promise(resolve=>setImmediate(resolve)); }
 async function actionSettled(f,key) {
-  // The refresh button is enabled only after action()'s finally clears busy.
-  // A successful mutation may legitimately keep its own button disabled; do not
-  // confuse that state with an unfinished request. Keep all assertions unchanged.
+  // Observe action()'s explicit aria-busy signal cleared by finally.
+  // Mutation eligibility can remain disabled after success; it is not completion.
+  // Keep every result assertion unchanged.
   const deadline=performance.now()+2000;
-  while(f.action('refresh')?.disabled!==false) {
+  while(f.query('.vs-sms-modal')?.getAttribute('aria-busy')!=='false') {
     assert.ok(performance.now()<deadline,`action ${key} must finish within the bounded observation`);
     await new Promise(resolve=>setImmediate(resolve));
   }
