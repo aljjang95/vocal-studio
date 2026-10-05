@@ -81,10 +81,11 @@ function ok(data) { return {response:{ok:true,status:200},data}; }
 function failure(status) { return {response:{ok:false,status},data:{ok:false,error:'synthetic-secret-error-never-display'}}; }
 async function settle() { for(let i=0;i<4;i++) await new Promise(resolve=>setImmediate(resolve)); }
 async function actionSettled(f,key) {
-  // Real SQLite/crypto request completion is observable through action()'s finally,
-  // not a fixed number of event-loop turns. Keep every result assertion unchanged.
+  // The refresh button is enabled only after action()'s finally clears busy.
+  // A successful mutation may legitimately keep its own button disabled; do not
+  // confuse that state with an unfinished request. Keep all assertions unchanged.
   const deadline=performance.now()+2000;
-  while(f.action(key)?.disabled!==false) {
+  while(f.action('refresh')?.disabled!==false) {
     assert.ok(performance.now()<deadline,`action ${key} must finish within the bounded observation`);
     await new Promise(resolve=>setImmediate(resolve));
   }
