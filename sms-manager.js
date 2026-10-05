@@ -8,6 +8,9 @@
   var busy = false, generation = 0, feedback = '', feedbackKind = 'status';
   var readbackRevision = null;
   var boundSync, boundEpoch;
+  var testPhoneDraft = '';
+  var testText = "HLB 연결 시험입니다. '연동 확인'으로 답장 후 이 번호로 전화 1회 부탁드립니다.";
+  var outboxStates = {pending:'전송 대기', queued:'전송 대기', claimed:'전송 시도 중 · 재전송하지 않음', sent:'휴대폰 발신 처리 · 수신 여부 미확인', failed:'전송 실패 · 자동 재시도 없음', unknown:'전송 결과 불확실 · 자동 재시도 없음', cancelled:'취소', suppressed:'현재 조건에서 제외', expired:'발송 기한 만료'};
   var defaults = {enabled:false, mondayTime:'10:00', tuesdayTime:'14:00',
     mondayText:'{name}님, 이번 주 가능한 레슨 날짜와 시간을 알려 주세요.',
     tuesdayText:'{name}님, 이번 주 레슨 일정 확인 부탁드립니다. 편하실 때 답장 주세요.'};
@@ -19,6 +22,7 @@
     owner = currentOwner; boundSync = s; boundEpoch = epoch; generation++;
     overview = null; drafts.clear(); settingsDraft = null; relayDraft = null; readbackRevision = null;
     callSettingsDraft = null; callDrafts.clear(); callReadback = null;
+    testPhoneDraft = '';
     feedback = ''; feedbackKind = 'status';
     if (modal) {
       // Wipe the actual input before detaching it: retained copy handlers must not retain the key.
@@ -47,6 +51,16 @@
   function matches(number) {
     var n = phone(number);
     return n ? records().filter(function (s) { return phone(s.ph || s.phone) === n; }) : [];
+  }
+  function registeredTestPhone(number) {
+    var s = sync(), state = s && s.state && s.state.base;
+    return !!(state && ['students','consults','inquiries'].every(function (key) {
+      return key === 'students' ? Array.isArray(state[key]) : state[key] === undefined || Array.isArray(state[key]);
+    }) && ['students','consults','inquiries'].some(function (key) {
+      return (state[key] || []).some(function (row) {
+        return row && !Array.isArray(row) && typeof row === 'object' && phone(row.ph || row.phone || '') === number;
+      });
+    }));
   }
   function contactMatch(number) {
       const controller = sync(), state = controller && controller.state && controller.state.base, phoneNumber = phone(number);
@@ -149,7 +163,9 @@
       'options':'날짜와 가능한 시작·종료 시간을 확인해 주세요.',
       'readback':'등록 결과를 아직 확인하지 못했습니다. 새로고침 후 결과를 확인해 주세요. 입력과 선택은 유지됩니다.',
       'stale':'현재 자료에서 해당 항목을 확인할 수 없습니다. 입력과 선택은 유지됩니다.',
-      'transport':'문자 연결 모듈을 사용할 수 없습니다. 페이지 연결 상태를 확인해 주세요.'
+      'transport':'문자 연결 모듈을 사용할 수 없습니다. 페이지 연결 상태를 확인해 주세요.',
+      'test-phone':'연결 시험 번호를 확인해 주세요. 현재 학생·상담·문의에 등록된 번호만 사용할 수 있습니다.',
+      'test-paired':'연결된 휴대폰이 필요합니다. 연결 상태를 확인해 주세요.'
     };
     return codes[error && error.code] || '서버 결과를 확인하지 못했습니다. 처리 여부가 불확실하므로 새로고침으로 확인해 주세요. 입력과 선택은 유지됩니다.';
   }
@@ -366,6 +382,26 @@
       await fresh(); say('일정 ' + entries.length + '건이 등록되었습니다.');
     });
   }
+  function sendTestMessage() {
+    return action(async function () {
+      var wave = generation, target = phone(testPhoneDraft);
+      if (!target) throw fault('test-phone');
+      var data = await authoritative(); requireOwner(wave);
+      if (data.device.paired !== true) throw fault('test-paired');
+      if (!registeredTestPhone(target)) throw fault('test-phone');
+      if (!root.confirm(target + ' 번호로 아래 고정 연결 시험 SMS 1건을 준비할까요? 한국 날짜 기준 같은 휴대폰·번호에는 하루 1건만 준비하며 재전송하지 않습니다.\n\n' + testText)) {
+        say('연결 시험을 취소했습니다. 입력은 유지됩니다.'); return;
+      }
+      requireOwner(wave);
+      if (!ready(data.revision) || hostEditing() || !registeredTestPhone(target)) throw fault('test-phone');
+      var result = await api('test-message', {phone:target});
+      if (typeof result.id !== 'string' || typeof outboxStates[result.status] !== 'string' || typeof result.duplicate !== 'boolean') throw fault('readback');
+      var latest = await fresh(), row = latest.outbox.find(function (item) { return item.id === result.id && item.stage === 'connection-test'; });
+      if (!row || typeof outboxStates[row.status] !== 'string') throw fault('readback');
+      if (phone(testPhoneDraft) === target) testPhoneDraft = '';
+      say('연결 시험 · ' + (result.duplicate ? '기존 요청 확인 · ' : '') + outboxStates[row.status] + '. 답장·수신 통화는 실제 기록에서 확인해 주세요.');
+    }, undefined, false, true);
+  }
   function approveAlias(aliasId) {
     return action(async function () {
       if (readbackRevision !== null) throw fault('readback');
@@ -563,6 +599,11 @@
         say('연결 해제와 대기 전송 중지를 확인했습니다.');
       });
     }, !data.device.paired, 'revoke'));
+    device.appendChild(node('p', 'vs-sms-help', '등록된 시험 번호에 고정 SMS 1건을 준비합니다. 자동 안내가 꺼져 있어도 사용할 수 있으며 대기 기한은 60분입니다. 휴대폰의 주기적 연결로 전송이 늦어질 수 있습니다.'));
+    var testPhone = input('tel', testPhoneDraft, function (value) { testPhoneDraft = value; }, 'testPhone');
+    testPhone.maxLength = 40; testPhone.autocomplete = 'off'; device.appendChild(field('연결 시험 번호', testPhone));
+    device.appendChild(node('pre', 'vs-sms-help', testText));
+    device.appendChild(button('고정 문자 1건 연결 시험', sendTestMessage, data.device.paired !== true || !ready(data.revision), 'test-message'));
 
     var settings = section('월요일 요청 · 화요일 미응답 안내');
     settings.appendChild(node('p', 'vs-sms-help', '시간과 문구를 확인한 뒤 활성화하세요. 답장하거나 예약한 학생은 화요일 안내에서 제외됩니다. 한국 시간 기준입니다.'));
@@ -624,10 +665,11 @@
     });
     queue.appendChild(node('p', '', '미배정 변동 레슨 학생: ' + (names.join(', ') || '없음')));
     var outbox = node('ul', 'vs-sms-outbox');
-    var states = {pending:'전송 대기', queued:'전송 대기', claimed:'전송 시도 중 · 재전송하지 않음', sent:'휴대폰 발신 처리 · 수신 여부 미확인', failed:'전송 실패 · 자동 재시도 없음', unknown:'전송 결과 불확실 · 자동 재시도 없음', cancelled:'취소', suppressed:'답장·예약 등으로 제외', expired:'발송일 만료'};
     data.outbox.forEach(function (row) {
       var student = records().find(function (s) { return id(s.id) === id(row.studentId); });
-      outbox.appendChild(node('li', '', (student ? student.name : '명단 확인 필요') + ' · ' + (row.stage === 'monday' ? '월요일' : row.stage === 'tuesday' ? '화요일' : '안내') + ' · ' + (states[row.status] || '상태 확인 필요')));
+      var label = row.stage === 'connection-test' ? '연결 시험' : (student ? student.name : '명단 확인 필요') + ' · ' + (row.stage === 'monday' ? '월요일' : row.stage === 'tuesday' ? '화요일' : '안내');
+      var status = row.status === 'suppressed' && row.stage !== 'connection-test' ? '답장·예약 등으로 제외' : row.status === 'expired' && row.stage !== 'connection-test' ? '발송일 만료' : outboxStates[row.status];
+      outbox.appendChild(node('li', '', label + ' · ' + (status || '상태 확인 필요')));
     });
     if (!data.outbox.length) outbox.appendChild(node('li', '', '전송 대기·처리 기록 없음')); queue.appendChild(outbox);
 
@@ -700,8 +742,9 @@
     if (busy && modal && modal.querySelector('[data-action="close"]').disabled) return;
     setBusy(false);
     generation++;
+    testPhoneDraft = '';
     if (modal) {
-      modal.querySelectorAll('[data-field="token"]').forEach(function (el) { el.value = ''; });
+      modal.querySelectorAll('[data-field="token"],[data-field="testPhone"]').forEach(function (el) { el.value = ''; });
       modal.remove(); modal = content = notice = null; document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', onKey);
       if (previousFocus && previousFocus.focus) previousFocus.focus();

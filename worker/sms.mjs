@@ -116,6 +116,8 @@ function parseTime(period, h, m) {
 const DEFAULTS = Object.freeze({ enabled: false, mondayTime: '10:00', tuesdayTime: '14:00',
   mondayText: '{name}님, 안녕하세요. 이번 주 수업 가능한 날짜와 시간을 알려주시면 확인 후 안내드리겠습니다.',
   tuesdayText: '{name}님, 이번 주 수업 일정 확인차 연락드립니다. 편하실 때 가능한 날짜와 시간을 알려주세요.' });
+const TEST_STAGE = 'connection-test', TEST_TTL = 60 * 60000;
+const TEST_TEXT = "HLB 연결 시험입니다. '연동 확인'으로 답장 후 이 번호로 전화 1회 부탁드립니다.";
 function validateSettings(value) {
   fields(value, ['enabled', 'mondayTime', 'tuesdayTime', 'mondayText', 'tuesdayText']);
   if (typeof value.enabled !== 'boolean' || !validTime(value.mondayTime) || !validTime(value.tuesdayTime)) fail('sms-invalid-settings');
@@ -251,6 +253,33 @@ export function initSmsTables(sql) {
   sql.exec('CREATE TABLE IF NOT EXISTS sms_outbox (id TEXT PRIMARY KEY,device_id TEXT NOT NULL,student_id TEXT NOT NULL,phone TEXT NOT NULL,text TEXT NOT NULL,week_start TEXT NOT NULL,stage TEXT NOT NULL,status TEXT NOT NULL,created_at INTEGER NOT NULL,expires_at INTEGER NOT NULL,claimed_at INTEGER,acked_at INTEGER,UNIQUE(week_start,stage,student_id))');
 }
 function cancelPending(owner, status = 'cancelled') { owner.sql.exec("UPDATE sms_outbox SET status=? WHERE status='pending'", status); }
+function cancelReminders(owner) { owner.sql.exec("UPDATE sms_outbox SET status='cancelled' WHERE status='pending' AND stage<>?", TEST_STAGE); }
+async function testMessage(owner, body, now) {
+  fields(body, ['phone']);
+  const phone = normalizePhone(body.phone);
+  if (!phone) fail('sms-invalid-phone');
+  const device = owner.getKV('sms.device');
+  if (!device?.tokenHash || typeof device.id !== 'string' || !device.id) fail('sms-unpaired', 409);
+  settings(owner); recordOf(owner);
+  // Separate domain and fixed-size key cannot collide with a real student's reminder.
+  const key = 'connection-test:' + await smsHash(JSON.stringify(['sms-connection-test-v1', device.id, phone]));
+  let row, duplicate = false;
+  owner.ctx.storage.transactionSync(() => {
+    currentDevice(owner, device); settings(owner);
+    if (!registeredPhones(recordOf(owner).state).includes(phone)) fail('sms-test-phone-unregistered', 409);
+    const date = dayInfo(now).date;
+    row = owner.sql.exec('SELECT * FROM sms_outbox WHERE week_start=? AND stage=? AND student_id=?', date, TEST_STAGE, key).toArray()[0];
+    if (row) {
+      duplicate = true;
+      if (row.status === 'pending' && !recheckOutbox(owner, row, now)) row.status = owner.sql.exec('SELECT status FROM sms_outbox WHERE id=?', row.id).toArray()[0].status;
+    } else {
+      row = { id: crypto.randomUUID(), status: 'pending', expires_at: now + TEST_TTL };
+      owner.sql.exec('INSERT INTO sms_outbox(id,device_id,student_id,phone,text,week_start,stage,status,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?)',
+        row.id, device.id, key, phone, TEST_TEXT, date, TEST_STAGE, row.status, now, row.expires_at);
+    }
+  });
+  return smsJSON({ ok: true, id: row.id, status: row.status, expiresAt: row.expires_at, duplicate });
+}
 function prepare(owner, stage, now, manual = false) {
   if (!['monday', 'tuesday'].includes(stage)) fail('sms-invalid-stage');
   const device = enabledDevice(owner), r = recordOf(owner), info = dayInfo(now), cfg = settings(owner);
@@ -274,7 +303,15 @@ function prepare(owner, stage, now, manual = false) {
 }
 function recheckOutbox(owner, row, now) {
   const info = dayInfo(now), device = owner.getKV('sms.device'); let reason = '';
-  if (!device?.tokenHash || !settings(owner).enabled || row.device_id !== device.id) reason = 'cancelled';
+  const cfg = settings(owner);
+  if (![TEST_STAGE, 'monday', 'tuesday'].includes(row.stage)) reason = 'suppressed';
+  else if (!device?.tokenHash || row.device_id !== device.id) reason = 'cancelled';
+  else if (row.stage === TEST_STAGE) {
+    const r = recordOf(owner);
+    if (now >= row.expires_at) reason = 'expired';
+    else if (row.text !== TEST_TEXT || !registeredPhones(r.state).includes(row.phone)) reason = 'suppressed';
+  }
+  else if (!cfg.enabled) reason = 'cancelled';
   else if (now >= row.expires_at || row.week_start !== info.weekStart) reason = 'expired';
   else {
     const r = recordOf(owner), s = r.state.students.find(s => s.id === row.student_id);
@@ -316,7 +353,7 @@ async function overview(owner, now) {
       .map(row => ({ id: row.id, phone: row.phone, receivedAt: row.received_at, ...callMatch(r.state, row.phone), status: row.status })),
     revision: r.revision, weekStart: info.weekStart,
     unassigned: r.state.students.filter(activeFlex).filter(s => !scheduled(snapshot, s.id)).map(s => ({ id: s.id, name: s.name, phone: phoneOf(s), replied: replied(owner, phoneOf(s), info, now, s.id), scheduled: false })),
-    messages, outbox: outbox.map(row => ({ id: row.id, studentId: row.student_id, name: r.state.students.find(s => s.id === row.student_id)?.name || '',
+    messages, outbox: outbox.map(row => ({ id: row.id, studentId: row.student_id, name: row.stage === TEST_STAGE ? '연결 시험' : r.state.students.find(s => s.id === row.student_id)?.name || '',
       stage: row.stage, status: row.status, createdAt: row.created_at })), aliasChanges: (await aliases(r.state)).map(({ recordId, ...rest }) => rest) });
 }
 function nextRecord(r, state) {
@@ -446,6 +483,7 @@ export async function handleSmsOwner(owner, request) {
     if (request.method !== 'POST') fail('sms-method-not-allowed', 405);
     const body = await readSmsBody(request);
     if (path === '/sms/pair') return await pair(owner, body, now);
+    if (path === '/sms/test-message') return await testMessage(owner, body, now);
     if (path === '/sms/revoke') {
       fields(body, []); const disabled = disabledSettings(owner);
       owner.ctx.storage.transactionSync(() => { cancelPending(owner); owner.setKV('sms.device', null); owner.setKV('sms.settings', disabled); owner.setKV('sms.callSettings', { ...CALL_DEFAULTS }); });
@@ -454,7 +492,7 @@ export async function handleSmsOwner(owner, request) {
     if (path === '/sms/settings') {
       validateSettings(body);
       if (body.enabled) { recordOf(owner); if (!owner.getKV('sms.device')?.tokenHash) fail('sms-unpaired', 409); }
-      owner.ctx.storage.transactionSync(() => { owner.setKV('sms.settings', body); if (!body.enabled) cancelPending(owner); });
+      owner.ctx.storage.transactionSync(() => { owner.setKV('sms.settings', body); if (!body.enabled) cancelReminders(owner); });
       return smsJSON({ ok: true });
     }
     if (path === '/sms/call-settings') {
@@ -621,7 +659,7 @@ export async function handleSmsDevice(owner, request) {
       owner.sql.exec("UPDATE sms_outbox SET status='expired' WHERE status='pending' AND expires_at<=?", now);
       if (settings(owner).enabled) {
         const info = dayInfo(now); if (info.dow === 1 || info.dow === 2) prepare(owner, info.dow === 1 ? 'monday' : 'tuesday', now);
-      } else cancelPending(owner);
+      } else cancelReminders(owner);
       const rows = owner.sql.exec("SELECT * FROM sms_outbox WHERE status='pending' AND device_id=? ORDER BY created_at,id LIMIT 100", device.id).toArray();
       const messages = rows.filter(row => recheckOutbox(owner, row, now)).map(row => ({ id: row.id, phone: row.phone, text: row.text }));
       const allowedPhoneHashes = await Promise.all(registeredPhones(recordOf(owner).state).map(smsHash));
