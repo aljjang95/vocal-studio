@@ -79,7 +79,7 @@ function occupiedSlots(state, date, guardMidnight = false, canonicalLegacy = fal
       if (!object(source)) unknown();
       if (source.confirmedDates !== undefined && !Array.isArray(source.confirmedDates)) unknown();
       let rows = source.confirmedDates || [];
-      if (!rows.length && source.firstDate) rows = [{ date: source.firstDate, time: source.firstTime || source.time }];
+      if (source.confirmedDates === undefined && source.firstDate) rows = [{ date: source.firstDate, time: source.firstTime || source.time }];
       const seen = new Set();
       return rows.filter(row => {
         if (!object(row)) unknown();

@@ -6564,7 +6564,8 @@ function buildDashboard(){
 function getViewMon(){var m=getMon(new Date());m.setDate(m.getDate()+wkOfs*7);return m;}
 function consultDateEntries(c){
   var list=(c&&Array.isArray(c.confirmedDates))?c.confirmedDates.slice():[];
-  if(c&&(!list.length)&&c.firstDate){
+  /* An explicit empty list means cleared; only legacy records omit the list. */
+  if(c&&!Array.isArray(c.confirmedDates)&&c.firstDate){
     list.push({date:c.firstDate,time:c.firstTime||c.time||'10:00'});
   }
   var seen={};
@@ -10199,6 +10200,17 @@ function assessmentPrintCSS(){
     'td span[style*="inline-flex"]{flex-wrap:wrap;max-width:100%;} .info-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}'+
     '@media print{body{padding:0;max-width:none;}button,.no-print{display:none!important;}}';
 }
+function assessmentPrintControls(){
+  return '<div class="no-print" style="text-align:center;margin-top:18px">'
+    +'<p style="font-size:13px;color:#555;margin-bottom:10px">종이로 출력하려면 인쇄창의 대상에서 실제 프린터를 선택하세요.<br>PDF 저장이 선택되어 있으면 파일로 저장됩니다.</p>'
+    +'<button onclick="window.print()" style="padding:10px 24px;background:#1a1a1a;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ 인쇄</button></div>';
+}
+function finishAssessmentPrint(w){
+  w.document.close();
+  if(w.closed)return;
+  try{w.focus();}catch(e){}
+  try{w.print();}catch(e){toast('인쇄창을 열지 못했습니다. 출력 화면의 인쇄 버튼으로 다시 시도해주세요','⚠️');}
+}
 function printBeforeSheet(did,mode){
   /* 출력 전 화면 값 자동 저장 */
   var data=mode==='consult'?consults.find(function(x){return x.id===did;}):students.find(function(x){return x.id===did;});
@@ -10299,9 +10311,9 @@ function printBeforeSheet(did,mode){
   w.document.write('</div>');
 
   if(consentDate)w.document.write('<div style="margin:6px 12px 0;padding:6px 10px;border:1px solid #ddd;border-radius:4px;font-size:10.5px;color:#555;background:#f8f8f8">동의 녹음 완료일: <strong>'+consentDate+'</strong></div>');
-  w.document.write('<div style="text-align:center;margin-top:12px"><button onclick="window.print()" style="padding:7px 20px;background:#1a1a1a;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer">🖨️ 인쇄</button></div>');
+  w.document.write(assessmentPrintControls());
   w.document.write('</body></html>');
-  w.document.close();
+  finishAssessmentPrint(w);
 }
 
 /* PROFILE */
@@ -10383,6 +10395,7 @@ function buildStudentLifeTimeline(data){
 function openProfile(data,mode){
   if(!data)return;
   var isC=mode==='consult';
+  var confirmedSchedule=(isC?consultDateEntries(data):_scheduleStudentConfirmedDates(data)).slice().sort(function(a,b){return a.date.localeCompare(b.date)||(a.time||'').localeCompare(b.time||'');}).map(function(cd){return cd.date+' '+(cd.time||'10:00');}).join(' · ');
   var s=isC?null:data;
   var color=s?gc(s):'#c8a96e';
   var color2=s?studentPaletteColor(s,2):'#6ea3c8';
@@ -10409,6 +10422,7 @@ function openProfile(data,mode){
   left+=pRow('성별',data.gd||data.gender||'');
   left+=pRow('나이',data.age?(function(a){var raw=String(a||'').trim();if(!raw)return '';var n=parseInt(raw)||0;var yr=raw.length<=2&&n>=0?(n>=30?1900+n:2000+n):n;var ty=new Date().getFullYear();return (yr>=1920&&yr<=ty)?'만 '+(ty-yr)+'세':'';})(data.age):'');
   left+=pRow('연락처',data.phone||data.ph||'');
+  left+=pRow('확정 일정',confirmedSchedule);
   if(isC){
     left+=pRow('상담 유형',isGroupConsult?'그룹 (2인 1수업 · 50분)':'개인');
     if(groupMemberStr)left+=pRow('그룹 멤버',groupMemberStr);
@@ -10465,7 +10479,7 @@ function openProfile(data,mode){
   var tabs='',panes='';
   if(isC){
     tabs='<div class="tab on" onclick="switchTab(this,0)">신청 정보</div><div class="tab" onclick="switchTab(this,1)">유입 &amp; 목표</div><div class="tab" onclick="switchTab(this,2)">음성 &amp; 건강</div><div class="tab" onclick="switchTab(this,3)">미디어</div>';
-    panes+='<div class="tab-pane on"><div class="fs"><div class="fs-title">기본 정보</div><div class="fs-grid">'+fv('성함',name)+fv('나이',data.age?(function(a){var raw=String(a||'').trim();if(!raw)return '';var n=parseInt(raw)||0;var yr=raw.length<=2&&n>=0?(n>=30?1900+n:2000+n):n;var ty=new Date().getFullYear();return (yr>=1920&&yr<=ty)?'만 '+(ty-yr)+'세':'';})(data.age):'')+fv('성별',data.gd||'')+fv('직업',data.job||'')+fv('연락처',data.phone||'')+fv('희망 반',data.cls?clsL(data.cls):'')+fv('스케줄 희망',(data.schedPref==='flex'?'🔄 변동 희망':'📌 고정 희망')+(data.time?' — '+data.time:''))+'</div></div><div class="fs"><div class="fs-title">레슨 일정</div><div class="fs-grid">'+fv('희망 요일',(data.days||[]).join(', '))+fv('레슨 횟수',data.freq2?'주 2회':'주 1회')+fv('시작 시기',data.when||'')+'</div></div></div>';
+    panes+='<div class="tab-pane on"><div class="fs"><div class="fs-title">기본 정보</div><div class="fs-grid">'+fv('성함',name)+fv('나이',data.age?(function(a){var raw=String(a||'').trim();if(!raw)return '';var n=parseInt(raw)||0;var yr=raw.length<=2&&n>=0?(n>=30?1900+n:2000+n):n;var ty=new Date().getFullYear();return (yr>=1920&&yr<=ty)?'만 '+(ty-yr)+'세':'';})(data.age):'')+fv('성별',data.gd||'')+fv('직업',data.job||'')+fv('연락처',data.phone||'')+fv('희망 반',data.cls?clsL(data.cls):'')+fv('스케줄 희망',(data.schedPref==='flex'?'🔄 변동 희망':'📌 고정 희망')+(data.time?' — '+data.time:''))+'</div></div><div class="fs"><div class="fs-title">레슨 일정</div><div class="fs-grid">'+fv('희망 요일',(data.days||[]).join(', '))+fv('레슨 횟수',data.freq2?'주 2회':'주 1회')+fv('시작 시기',data.when||'')+fv('확정 일정',confirmedSchedule,'full')+'</div></div></div>';
     var refStr=esc(data.ref||'')+(data.refDetail?' — '+esc(data.refDetail):'');
     var genreStr=Array.isArray(data.genres)?data.genres.join(', '):(data.genre||'');
     panes+='<div class="tab-pane"><div class="fs"><div class="fs-title">유입 경로</div><div class="fs-grid">'+fv('경로',refStr)+'</div></div><div class="fs"><div class="fs-title">목표 &amp; 동기</div><div class="fs-grid">'+fv('배우러 오게 된 계기',data.why||'','full long')+fv('목표 장르',genreStr)+fv('단기 목표',data.goalS||'')+fv('장기 목표',data.goalL||'')+'</div></div>'+(data.memo?'<div class="fs"><div class="fs-title">추가 메모</div><div class="fs-grid">'+fv('메모',data.memo,'full long')+'</div></div>':'')+(data.prob||data.impr?'<div class="fs" style="border-color:rgba(200,169,110,.2)"><div class="fs-title" style="color:var(--a)">🔒 트레이너 평가 메모</div><div class="fs-grid">'+fv('문제점',data.prob||'')+fv('개선 방향',data.impr||'')+'</div></div>':'')+'</div>';
@@ -10480,7 +10494,7 @@ function openProfile(data,mode){
     [{l:'총 레슨',v:sLogs.length+'회',col:'var(--a)'},{l:'출석',v:attCnt+'회',col:'var(--g)'},{l:'출석률',v:sLogs.length?Math.round(attCnt/sLogs.length*100)+'%':'—',col:'var(--t)'}].forEach(function(x){
       panes+='<div class="fi"><div class="fi-label">'+esc(x.l)+'</div><div class="fi-value" style="font-family:\'Cormorant Garamond\',serif;font-size:24px;font-weight:700;padding:11px 12px;color:'+x.col+'">'+esc(x.v)+'</div></div>';
     });
-    panes+='</div></div><div class="fs"><div class="fs-title">레슨 정보</div><div class="fs-grid">'+fv('반',clsL(data.cls)+' · '+clsD(data.cls))+fv('스케줄',sc)+fv('레슨 횟수',data.freq===2?'주 2회':'주 1회')+fv('레슨 시작일',data.st||'')+fv('연락처',data.ph||'')+(data.fee?fv('월 레슨비',won(data.fee)):'')+fv('상태',data.status||'')+(data.memo?fv('메모',data.memo,'full'):'')+'</div></div></div>';
+    panes+='</div></div><div class="fs"><div class="fs-title">레슨 정보</div><div class="fs-grid">'+fv('반',clsL(data.cls)+' · '+clsD(data.cls))+fv('스케줄',sc)+fv('확정 일정',confirmedSchedule,'full')+fv('레슨 횟수',data.freq===2?'주 2회':'주 1회')+fv('레슨 시작일',data.st||'')+fv('연락처',data.ph||'')+(data.fee?fv('월 레슨비',won(data.fee)):'')+fv('상태',data.status||'')+(data.memo?fv('메모',data.memo,'full'):'')+'</div></div></div>';
     var wkCards=buildStudentLifeTimeline(data);
     panes+='<div class="tab-pane">'+wkCards+'</div>';
     panes+='<div class="tab-pane">'+buildMediaPanel(data,'student')+'</div>';
@@ -11423,8 +11437,7 @@ function showEvalSheet(){
   var now=new Date();
   var ds=now.getFullYear()+'년 '+(now.getMonth()+1)+'월 '+now.getDate()+'일';
   w.document.write(evalHTML(ds));
-  w.document.close();
-  setTimeout(function(){w.print();},500);
+  finishAssessmentPrint(w);
 }
 function evalHTML(ds){
   var items=['음정 정확도','리듬·박자감','발성 (호흡·지지)','음색·톤','고음역 안정성','발음·딕션','음량 조절','감정 표현','음악성·곡 해석'];
@@ -11486,9 +11499,7 @@ function evalHTML(ds){
     +'<div class="sign-box"><div class="sign-line"></div><div class="sign-lbl">수강생 서명 (위 유의사항에 동의합니다)</div></div>'
     +'<div style="text-align:right;font-size:11px;color:#777;flex:0.7">년&nbsp;&nbsp; 월&nbsp;&nbsp; 일</div>'
     +'</div></div>'
-    +'<div class="no-print" style="text-align:center;margin-top:20px">'
-    +'<button onclick="window.print()" style="padding:10px 28px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit">🖨️ 인쇄 / PDF 저장</button>'
-    +'</div>'
+    +assessmentPrintControls()
     +'</body></html>';
 }
 
@@ -11866,9 +11877,9 @@ function printEvalSheet(cid){
   w.document.write('</div>');
 
   if(consentDate)w.document.write('<div style="margin-top:10px;font-size:11px;color:#888;text-align:right">동의 녹음일: '+consentDate+'</div>');
-  w.document.write('<div style="text-align:center;margin-top:18px"><button onclick="window.print()" style="padding:8px 24px;background:#1a1a1a;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer">🖨️ 인쇄</button></div>');
+  w.document.write(assessmentPrintControls());
   w.document.write('</body></html>');
-  w.document.close();
+  finishAssessmentPrint(w);
 }
 
 function go_page_today(){go('today');}
