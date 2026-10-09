@@ -50,6 +50,53 @@ function setup(){
   return {ctx,nodes,calls,week,bulk,form,slots:(m=mon)=>copy(ctx.getWeekSched(m))};
 }
 
+function profile(data,mode='student',consults=[]){
+  const {ctx,nodes}=setup();
+  ctx.consults=copy(consults);
+  Object.assign(ctx,{studentPaletteColor:()=> '#789',getConsultPhoto:()=>'',getStudentPhoto:()=>'',
+    clsL:v=>v||'',clsD:()=>'',won:String,freqLabel:()=> '주 1회',getStudentLogs:()=>[],
+    getCycleInfo:()=>({remainInCycle:4,totalLessons:0,cycleStart:1,cycleEnd:4,lessonsInCycle:0,cycleSize:4}),
+    buildStudentLifeTimeline:()=>'',buildMediaPanel:()=>''});
+  for(const id of ['profileTitle','profileSubtitle','profileBody','profileFooter'])nodes[id]={};
+  vm.runInContext(html.match(/^function esc\([^\n]+/m)[0]+source('function pRow(label,val){','function switchTab(')+source('function openProfile(data,mode){','/* CONSULT LIST */'),ctx);
+  const before=copy({data,consults:ctx.consults});
+  ctx.openProfile(data,mode);
+  assert.deepEqual(copy({data,consults:ctx.consults}),before,'opening the profile must not change appointment data');
+  return nodes.profileBody.innerHTML;
+}
+
+test('converted student profile shows the current linked consultation dates in order on its overview',()=>{
+  const linked={id:'consult-a',converted:true,confirmedDates:[{date:'2026-10-16',time:'16:30'},{date:'2026-10-09',time:'11:30'}]};
+  const s=student('a',{confirmedDates:[{date:'2026-10-01',time:'10:00'}],consultData:{id:'consult-a',confirmedDates:[{date:'2026-10-02',time:'10:00'}]}});
+  const markup=profile(s,'student',[linked]);
+  assert.match(markup,/확정 일정/);
+  assert.match(markup,/2026-10-09 11:30 · 2026-10-16 16:30/);
+  const overview=markup.slice(markup.indexOf('<div class="tab-pane on">'),markup.indexOf('<div class="tab-pane">'));
+  assert.match(overview,/2026-10-09 11:30/);
+  assert.doesNotMatch(markup,/2026-10-01|2026-10-02/);
+});
+
+test('consultation profiles and legacy converted profiles display all confirmed dates including legacy firstDate',()=>{
+  const consult={id:'c',name:'합성 상담',firstDate:'2026-10-12',firstTime:'14:30'};
+  assert.match(profile(consult,'consult'),/2026-10-12 14:30/);
+  assert.match(profile(student('a',{consultData:consult})),/2026-10-12 14:30/);
+});
+
+test('cleared confirmations stay empty in the profile instead of resurrecting a historical consultation snapshot',()=>{
+  const historic={id:'c',firstDate:'2026-10-12',firstTime:'14:30',confirmedDates:[{date:'2026-10-12',time:'14:30'}]};
+  const s=student('a',{confirmedDates:[],consultData:historic});
+  assert.doesNotMatch(profile(s),/2026-10-12/);
+  const cleared={...historic,converted:true,confirmedDates:[]};
+  assert.doesNotMatch(profile(cleared,'consult'),/2026-10-12/);
+  assert.doesNotMatch(profile(student('b',{confirmedDates:historic.confirmedDates,consultData:historic}),'student',[cleared]),/2026-10-12/);
+});
+
+test('confirmed dates and times in profiles are escaped as text',()=>{
+  const markup=profile(student('a',{confirmedDates:[{date:'<img src=x>',time:'<svg onload=x>'}]}));
+  assert.ok(markup.includes('&lt;img src=x&gt; &lt;svg onload=x&gt;'));
+  assert.doesNotMatch(markup,/<img src=x>|<svg onload=x>/);
+});
+
 test('assigning one student leaves unrelated weeks derived so recurrence edits take effect',async()=>{
   const {ctx,week,form,slots}=setup();
   ctx.students=[student('a'),student('b',{days:['화'],times:{화:'11:00'}})];

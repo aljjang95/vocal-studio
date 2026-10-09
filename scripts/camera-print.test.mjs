@@ -98,16 +98,35 @@ export function printFixture(text,kind='completed',long=false,group=false,screen
   const record={id:'synthetic',name:'합성 평가 수강생 < & >',song:'합성 연습곡 < & >',prob:'음정 <낮음> & 호흡\n두 번째 피드백 줄',impr:'1단계 <호흡> & 리듬\n2단계 공명 훈련',consentRec:{date:'2026-09-30'},lessonType:group?'group':'solo'};
   if(long){record.prob=Array.from({length:80},(_,i)=>`문제점 ${i+1}: 음정 <낮음> & 호흡. ${'긴 피드백을 충분히 보존합니다. '.repeat(4)}`).join('\n');record.impr=Array.from({length:60},(_,i)=>`계획 ${i+1}: ${'호흡과 공명 훈련을 반복합니다. '.repeat(4)}`).join('\n')+'\n'+ 'W'.repeat(500)+'\n끝 피드백 <완료> & 보존';}
   let html='',saves=0;
+  const output={closed:false,events:[],document:{write:v=>html+=v,close(){output.events.push('close');}},focus(){output.events.push('focus');},print(){output.events.push('print');}};
   const context={Date:class extends Date{constructor(...args){super(...(args.length?args:['2026-09-30T00:00:00Z']));}},consults:[record],students:[record],ge:id=>screen&&screen[id]!==undefined?{value:screen[id]}:null,saveAll:()=>saves++,toast(){},
-    window:{open:()=>({document:{write:v=>html+=v,close(){}}})}};
+    window:{open:()=>output}};
   vm.createContext(context);
-  const helper=text.includes('\nfunction assessmentPrintCSS(')?fn(text,'assessmentPrintCSS'):'';
-  vm.runInContext(fn(text,'esc')+helper+fn(text,'printBeforeSheet')+fn(text,'evalHTML')+fn(text,'printEvalSheet'),context);
+  const helper=['assessmentPrintCSS','assessmentPrintControls','finishAssessmentPrint'].filter(name=>text.includes('\nfunction '+name+'(')).map(name=>fn(text,name)).join('');
+  vm.runInContext(fn(text,'esc')+helper+fn(text,'printBeforeSheet')+fn(text,'evalHTML')+fn(text,'printEvalSheet')+fn(text,'showEvalSheet'),context);
   if(kind==='blank')html=context.evalHTML('2026년 9월 30일');
+  else if(kind==='blank-print')context.showEvalSheet();
   else if(kind==='lesson')context.printBeforeSheet('synthetic','student');
   else context.printEvalSheet('synthetic');
-  return {html,record,saves};
+  return {html,record,saves,output};
 }
+test('each print action closes the complete document then opens native printing once, with printer selection and retry visible',()=>{
+  for(const kind of ['completed','lesson','blank-print']){
+    const {html,output}=printFixture(source,kind);
+    assert.deepEqual(output.events,['close','focus','print'],kind);
+    assert.match(html,/실제 프린터를 선택하세요/);
+    assert.match(html,/class="no-print"/);
+    assert.ok(html.includes('onclick="window.print()"'));
+    assert.doesNotMatch(html,/download=|createObjectURL|application\/pdf/);
+  }
+});
+test('closed output windows are ignored and print failures preserve the output for manual retry',()=>{
+  const messages=[],ctx={toast:msg=>messages.push(msg)};vm.createContext(ctx);vm.runInContext(fn(source,'finishAssessmentPrint'),ctx);
+  const events=[],w={closed:true,document:{close:()=>events.push('close')},focus:()=>events.push('focus'),print:()=>events.push('print')};
+  ctx.finishAssessmentPrint(w);assert.deepEqual(events,['close']);
+  w.closed=false;w.print=()=>{throw Error('printing unavailable');};ctx.finishAssessmentPrint(w);
+  assert.equal(messages.length,1);assert.match(messages[0],/출력 화면의 인쇄 버튼/);assert.equal(w.closed,false);
+});
 test('completed and lesson printable output retain full escaped multiline feedback, song and notices',()=>{
   for(const kind of ['completed','lesson'])for(const long of [false,true]){
     const {html,record}=printFixture(source,kind,long);

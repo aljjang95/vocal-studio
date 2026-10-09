@@ -10,7 +10,8 @@ function getWK(m){var y=m.getFullYear();var s=new Date(y,0,1);var w=Math.ceil(((
 function getViewMon(){return getMon(parseDateLocal(date));}
 function consultDateEntries(c){
   var list=(c&&Array.isArray(c.confirmedDates))?c.confirmedDates.slice():[];
-  if(c&&(!list.length)&&c.firstDate){
+  /* An explicit empty list means cleared; only legacy records omit the list. */
+  if(c&&!Array.isArray(c.confirmedDates)&&c.firstDate){
     list.push({date:c.firstDate,time:c.firstTime||c.time||'10:00'});
   }
   var seen={};

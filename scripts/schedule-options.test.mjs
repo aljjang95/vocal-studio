@@ -89,6 +89,20 @@ test('confirmed flex and converted linked consultation dates override recurring 
   for (const time of ['16:00', '16:30', '17:00', '17:30', '18:00', '18:30']) assert.throws(() => confirm(state, time), code('schedule-interval-conflict', 409));
 });
 
+test('an explicitly cleared confirmation list never resurrects firstDate in the engine or availability validator', () => {
+  for (const linked of [false, true]) {
+    const consultation = { id: 'cleared', firstDate: DATE, firstTime: '16:30', confirmedDates: [], converted: linked };
+    const students = [flex('new')];
+    if (linked) students.push(flex('linked', { consultData: { id: 'cleared' }, confirmedDates: [{ date: DATE, time: '16:30' }] }));
+    const state = stateOf(students, { consults: [consultation] });
+    assert.deepEqual(Object.keys(scheduleSnapshot(state, DATE).slotsByKey), []);
+    assert.deepEqual(confirm(state, '16:30'), { date: DATE, time: '16:30' });
+    assert.ok(times(rank(state)).includes('16:30'));
+  }
+  const legacy = stateOf([flex('new')], { consults: [{ id: 'legacy', firstDate: DATE, firstTime: '16:30' }] });
+  assert.throws(() => confirm(legacy, '16:30'), code('schedule-interval-conflict', 409));
+});
+
 test('week overrides win, cancellation/absence/tentative entries never block, including malformed inactive times', () => {
   const state = override(stateOf([fixed('cancel', '13:00'), fixed('absent', '14:00'), fixed('tentative', '15:00'), flex('new')]), {
     cancel: [{ day: '수', time: ['13:00'], overrideType: 'cancel' }],
