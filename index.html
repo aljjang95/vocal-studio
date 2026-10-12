@@ -3435,11 +3435,19 @@ function loadPendingConsult(){
 /* ── 공개 기본 레슨생 데이터 (PII 제거) ── */
 var _DEFAULT_STUDENTS = [];
 
+function _decodeAppCache(key,raw){
+  if(['vsC_s','vsC_l','vsC_wo','vsC_c','vsC_p','vsC_iq'].indexOf(key)<0)return raw;
+  if(typeof VSSync!=='undefined'&&typeof VSSync.decodeStorage==='function')return VSSync.decodeStorage(raw);
+  /* An unavailable decoder must not expose an envelope as application data. */
+  var packed=raw&&JSON.parse(raw);
+  if(packed&&packed.encoding==='vs-lz-utf16-1')throw Error('cache-codec-unavailable');
+  return raw;
+}
 function _safeParseLS(key,fallback){
   try{
     var raw=localStorage.getItem(key);
     if(!raw)return fallback;
-    return JSON.parse(raw);
+    return JSON.parse(_decodeAppCache(key,raw));
   }catch(e){
     try{
       var snap=JSON.parse(localStorage.getItem('vsC_recovery_latest')||'null');
@@ -3451,11 +3459,28 @@ function _safeParseLS(key,fallback){
 function _safeSetLS(key,val){
   /* setItem replaces one value atomically. A second full-size __tmp copy can hit quota
      before the replacement is attempted, even when the replacement itself would fit. */
-  try{localStorage.setItem(key,val);}
+  var stored=val;
+  if(['vsC_s','vsC_l','vsC_wo','vsC_c','vsC_p','vsC_iq'].indexOf(key)>=0&&val.length>=65536&&
+     typeof VSSync!=='undefined'&&typeof VSSync.encodeStorage==='function'&&typeof VSSync.decodeStorage==='function'){
+    try{
+      var packed=VSSync.encodeStorage(val);
+      if(packed.length<val.length&&VSSync.decodeStorage(packed)===val)stored=packed;
+    }catch(error){/* Plain legacy storage remains available when compression cannot help. */}
+  }
+  function write(){
+    try{localStorage.setItem(key,stored);}
+    catch(error){
+      if(stored===val)throw error;
+      localStorage.setItem(key,val);stored=val;
+    }
+  }
+  try{write();}
   catch(error){
-    if(typeof _reclaimDuplicateRecoverySnapshot==='function'&&_reclaimDuplicateRecoverySnapshot()>0)localStorage.setItem(key,val);
+    if(typeof _reclaimDuplicateRecoverySnapshot==='function'&&_reclaimDuplicateRecoverySnapshot()>0)write();
     else throw error;
   }
+  /* Real Web Storage always provides getItem; isolated legacy writer fixtures may not. */
+  if(typeof localStorage.getItem==='function'&&localStorage.getItem(key)!==stored)throw Error('cache-readback');
 }
 function _persistableListForBackup(list){
   var stripA=function(arr){return (arr||[]).map(function(a){return (a&&a.data&&a.data.length>50000)?Object.assign({},a,{data:'[saved]'}):a;});};
@@ -4285,18 +4310,9 @@ function saveAll(){
     _safeSetLS('vsC_iq',JSON.stringify(inquiries));
     _writeRecoverySnapshot('save');
   }catch(e){
-    try{
-      var _cs2=consults.map(function(x){return Object.assign({},x,{photo:'',audios:[],videos:[],consentRec:null});});
-      var _ss2=students.map(function(x){return Object.assign({},x,{photo:'',audios:[],videos:[],consentRec:null});});
-      _safeSetLS('vsC_s',JSON.stringify(_ss2));
-      _safeSetLS('vsC_l',JSON.stringify(logs));
-      _safeSetLS('vsC_wo',JSON.stringify(weekOvr));
-      _safeSetLS('vsC_c',JSON.stringify(_cs2));
-      _safeSetLS('vsC_p',JSON.stringify(payments));
-      _safeSetLS('vsC_iq',JSON.stringify(inquiries));
-      _writeRecoverySnapshot('save-media-stripped');
-      toast('⚠️ 저장 공간 부족으로 미디어가 제외되었습니다','⚠️');
-    }catch(e2){toast('저장 실패: 저장 공간이 부족합니다','❌');}
+    /* Cache failure is separate from the controller's durable journal/server result.
+       Retrying with empty media lists would lose pointers and metadata on reload. */
+    toast('기기 캐시 저장을 확인하지 못했습니다 · 동기화 상태를 확인해 주세요','⚠️');
   }
 }
 
@@ -4420,8 +4436,17 @@ function _cfBindLocalOwner(){
 }
 function _cfLoadLocalResume(owner){
   try{
+    if(typeof owner!=='string'||!owner)return null;
     if(localStorage.getItem(_cfLocalOwnerKey())!==owner)return null;
-    return{students:JSON.parse(localStorage.getItem('vsC_s')||'[]'),logs:JSON.parse(localStorage.getItem('vsC_l')||'[]'),weekOvr:JSON.parse(localStorage.getItem('vsC_wo')||'{}'),consults:JSON.parse(localStorage.getItem('vsC_c')||'[]'),payments:JSON.parse(localStorage.getItem('vsC_p')||'[]'),inquiries:JSON.parse(localStorage.getItem('vsC_iq')||'[]')};
+    var fields={vsC_s:'students',vsC_l:'logs',vsC_wo:'weekOvr',vsC_c:'consults',vsC_p:'payments',vsC_iq:'inquiries'},data={};
+    for(var key in fields){
+      var raw=localStorage.getItem(key);
+      if(raw===null)return null;
+      var value=JSON.parse(_decodeAppCache(key,raw));
+      if(key==='vsC_wo'?(!value||typeof value!=='object'||Array.isArray(value)):!Array.isArray(value))return null;
+      data[fields[key]]=value;
+    }
+    return data;
   }catch(e){return null;}
 }
 function _disableCloudflareSync(msg){
