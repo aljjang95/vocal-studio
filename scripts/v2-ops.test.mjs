@@ -180,11 +180,14 @@ test('sync backup adapter uses dedicated overflow without pruning local recovery
   const adapter=html.slice(html.indexOf('var _vsSync=null;'),html.indexOf('saveAll=function(){',html.indexOf('var _vsSync=null;')));
   const calls=[],indexedDB={synthetic:true},overflowStore={synthetic:true};
   const context=vm.createContext({window:{indexedDB},sessionStorage:{},localStorage:{},performance:{},crypto:{},
-    VSBackup:{create:options=>{calls.push(options.indexedDB);return overflowStore;}},VSSync:{create:options=>options},
-    _cfDatabase(){},_vsEditing(){},_showSyncStatus(){}});
+    VSBackup:{create:options=>{calls.push(options.indexedDB);return overflowStore;}},
+    VSCloudBackup:{journalStore:store=>store,create:options=>options.localStore},VSSync:{create:options=>options},
+    _cfDatabase(){},_vsEditing(){},_cfCaptureDeviceMedia(){return [];},_showSyncStatus(){}});
   vm.runInContext(adapter,context);
   assert.deepEqual(calls,[indexedDB]);assert.equal(context._vsSync.overflowStore,overflowStore);
   assert.equal(context._vsSync.reclaim,undefined,'backup overflow cannot delete app recovery to obtain capacity');
+  assert.equal(context._vsSync.preferOverflow,true,'new journals skip quota-bound localStorage writes');
+  assert.equal(context._vsSync.cloudFirst,true);
   assert.match(html,/<script src="\.\/vs-backup\.js\?v=/);
   assert.match(html,/<script src="\.\/vs-sync\.js\?v=/);
   assert.match(build,/'vs-backup.js'/);assert.match(read('worker/index.mjs'),/'\/vs-backup.js'/);

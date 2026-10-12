@@ -1,10 +1,11 @@
 import { authenticate, principalId } from './auth.mjs';
+import { handleBackups } from './backups.mjs';
 import { StudioState } from './state.mjs';
 export { StudioState };
 const PROTOCOL = 'vs-cf-1';
 const MAX_MEDIA_BYTES = 20 * 1024 * 1024;
 const ASSETS = new Set([
-  '/index.html', '/vs-sync.js', '/vs-backup.js', '/cf-transport.js', '/cf-migration.js',
+  '/index.html', '/vs-sync.js', '/vs-backup.js', '/vs-cloud-backup.js', '/cf-transport.js', '/cf-migration.js',
   '/v2-ui.js', '/v2.css',
   '/v3-daylight.css', '/studio-daylight.png',
   '/sw.js', '/manifest.json', '/icon-192.png', '/icon-512.png',
@@ -48,6 +49,8 @@ function mediaKey(pathname) {
   const encoded = pathname.slice('/api/media/'.length);
   if (!encoded) throw new Error('media-pointer-required');
   let value; try { value = decodeURIComponent(encoded); } catch { throw new Error('invalid-media-pointer'); }
+  // Backup objects have a separate principal boundary and are never media pointers.
+  if (value === '_vs_backups' || value.startsWith('_vs_backups/')) throw new Error('invalid-media-pointer');
   if (value.length > 512 || value.startsWith('/') || value.includes('..') || value.includes('\\') || value.includes('//') ||
       !/^[A-Za-z0-9._/-]+$/.test(value)) throw new Error('invalid-media-pointer');
   return value;
@@ -147,6 +150,7 @@ export default {
       if (!sameOrigin(request, url)) return json({ error: 'origin-required' }, 403);
       return callEvents(request, env, principal);
     }
+    if (url.pathname === '/api/backups') return handleBackups(request, env, principal);
     if (url.pathname.startsWith('/api/media/')) {
       if (request.method === 'PUT' && !requireProtocol(request)) return json({ error: 'protocol-required' }, 400);
       try { return await mediaResponse(request, env, url); }

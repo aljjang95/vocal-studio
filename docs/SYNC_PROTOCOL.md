@@ -32,6 +32,16 @@ If that durable copy differs from a pending or acknowledgement journal, the prev
 
 Recovery controls remain explicit: retry re-reads the canonical server; device backup exports local recovery evidence; server-choice archives the disputed local state and adopts the latest confirmed server view. No automatic union of old recovery snapshots is performed.
 
+## Cloud-first journals — 2026-10-12
+
+The active browser adapter keeps full synchronization journals in memory instead of session/local Web Storage. New journals are written to the Access-protected same-origin `POST /api/backups` before the controller reports durability. The existing private R2 binding stores immutable SHA-256 content and one conditional latest pointer per principal and tab instance. The response requires exact content and pointer readback; `GET /api/backups?prefix=...` retrieves only the authenticated principal's latest journals, including every pagination page. These backups never update canonical schedule data, and their internal prefix cannot be reached through the media API.
+
+When cloud storage is unreachable, strict IndexedDB write completion and exact readback preserve the offline journal. A later cloud-confirmed replacement removes only matching device bytes in an atomic compare-and-delete transaction; divergent or unknown recovery metadata stays preserved. Cloud/device variants for one key are both retained. A cloud-list failure without a device journal is an error, never evidence of an empty journal set.
+
+Session Storage holds only the tab instance and a small pointer after durability succeeds. The controller uses cloud/device journals to restore pending intent on reload. Authenticated, hydrated saves no longer write six full application caches or timestamp recovery snapshots alongside those journals. Existing local cache, recovery, photo, draft and other-tab backup keys stay intact; startup pruning is disabled. Those historical cache values are not used to override the active journal or infer new writes. Existing media durability queues remain unchanged.
+
+Rollback must retain this cloud journal adapter, backup API, principal isolation, offline fallback, cache decoder and strict resume policy. A plaintext-only or session-journal-only release cannot safely consume the small pointers or resume cloud-only intent. Preserve immutable R2 history and all local recovery evidence; do not directly deploy an older incompatible Worker version.
+
 ## Media protocol
 
 Media uploads use same-origin `PUT /api/media/<pointer>`. Pointers are validated and immutable: an existing object returns conflict. The maximum body is 20 MiB. The Worker exposes authenticated GET/HEAD with byte ranges and 416 handling; this candidate has no media delete endpoint and no arbitrary URL proxy.

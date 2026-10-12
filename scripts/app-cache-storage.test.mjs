@@ -127,7 +127,7 @@ test('codec round-trip mismatch falls back to plain and write readback mismatch 
 
 test('app cache failure preserves media metadata and does not assert a failed durable server save',()=>{
   const data=fixture(),toasts=[],h=vm.createContext({...data,_backupOrphanPhotos(){},_safeSetLS(){throw Error('quota');},_writeRecoverySnapshot(){},toast:text=>toasts.push(text)});
-  vm.runInContext(source('saveAll'),h);h.saveAll();
+  vm.runInContext(source('_cfCloudSaveActive')+'\n'+source('saveAll'),h);h.saveAll();
   assert.equal(toasts.length,1);assert.doesNotMatch(toasts[0],/저장 실패:|미디어가 제외/);
   assert.deepEqual(copy(h.students),data.students);assert.deepEqual(copy(h.consults),data.consults);
 });
@@ -136,6 +136,17 @@ test('actual saveAll wrapper still submits durable sync after a cache failure',a
   let synced=0;const toasts=[],h=vm.createContext({students:[],consults:[],logs:[],weekOvr:{},payments:[],inquiries:[],
     _backupOrphanPhotos(){},_safeSetLS(){throw Error('quota');},_writeRecoverySnapshot(){},toast:text=>toasts.push(text),
     hasAdminSession:()=>true,_cfBindLocalOwner(){},_fbApplyingRemote:false,_vsSync:{save(){synced++;return Promise.resolve(true);}}});
-  vm.runInContext(source('saveAll')+'\nvar _saveAllOrig=saveAll;\n'+index.match(/saveAll=function\(\)\{[\s\S]*?\n\};/)[0],h);
+  vm.runInContext(source('_cfCloudSaveActive')+'\n'+source('saveAll')+'\nvar _saveAllOrig=saveAll;\n'+index.match(/saveAll=function\(\)\{[\s\S]*?\n\};/)[0],h);
   h.saveAll();await Promise.resolve();assert.equal(synced,1);assert.equal(toasts.length,1);assert.doesNotMatch(toasts[0],/저장 실패:|미디어가 제외/);
+});
+
+test('hydrated cloud save avoids quota-bound app cache and snapshot writes while submitting new intent',async()=>{
+  const data=fixture();let synced=0,writes=0;const toasts=[];
+  const h=vm.createContext({...data,weekOvr:data.weekOvr,_cfAppHydrated:true,hasAdminSession:()=>true,
+    _cfBindLocalOwner(){},_fbApplyingRemote:false,_vsSync:{a:{cloudFirst:true},save(){synced++;return Promise.resolve(true);}},
+    _backupOrphanPhotos(){},_safeSetLS(){writes++;throw Error('quota');},
+    _writeRecoverySnapshot(){writes++;throw Error('quota');},toast:text=>toasts.push(text)});
+  vm.runInContext(source('_cfCloudSaveActive')+'\n'+source('saveAll')+'\nvar _saveAllOrig=saveAll;\n'+index.match(/saveAll=function\(\)\{[\s\S]*?\n\};/)[0],h);
+  h.saveAll();await Promise.resolve();assert.equal(synced,1);assert.equal(writes,0);assert.deepEqual(toasts,[]);
+  assert.deepEqual(copy(h.students),data.students);
 });
