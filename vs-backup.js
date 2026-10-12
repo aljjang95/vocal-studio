@@ -62,6 +62,17 @@
             if(cursor){rows.push({key:cursor.key,text:cursor.value});cursor.continue();}
           });return rows;
         }finally{db.close();}
+      },
+      async remove(key,expectedText){
+        if(typeof key!=='string'||typeof expectedText!=='string')throw Error('invalid-backup');
+        var db=await open(),removed=false,objectStore;
+        try{
+          // Compare and delete in one strict transaction; a newer offline save must survive.
+          await transaction(db,'readwrite',function(store){objectStore=store;return store.get(key);},function(saved){
+            if(saved===expectedText){objectStore.delete(key);removed=true;}
+          });
+          return removed;
+        }finally{db.close();}
       }
     };
   }

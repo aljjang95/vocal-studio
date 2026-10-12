@@ -271,6 +271,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     }
   }
   Controller.prototype.status=function(mode,detail){
+    if(this.a.cloudFirst&&this.a.storageLocation&&this.a.storageLocation()==='device'&&['synced','recovery'].indexOf(mode)>=0)mode='device-only';
     if(['offline','invalid-remote','missing-remote'].indexOf(mode)>=0)this.connectionError=mode;
     this.mode=mode;this.a.status(mode,detail);
   };
@@ -283,6 +284,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
      Keep the exact removed bytes in this tab's journal storage before relying on that anchor.
      These copies survive reloads and are included in the device export; never overwrite one. */
   Controller.prototype.preserveReclaimedBackup=function(raw){
+    if(this.a.cloudFirst)return false; // Memory staging is not a durable archive of legacy bytes.
     var store=this.a.store,prefix=this.key+':reclaimed:',limit=store?store.length+1:0;
     if(!store||store===this.a.backupStore)return false;
     try{
@@ -311,6 +313,10 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     throw Error('backup-quota');
   };
   Controller.prototype.persist=function(next){
+    if(this.a.captureDeviceMedia){
+      var deviceMedia=this.a.captureDeviceMedia();
+      if(deviceMedia&&deviceMedia.length)next.deviceMedia=clone(deviceMedia);
+    }
     var text=JSON.stringify(next),sequence=++this.archiveSequence;
     try{
       this.a.store.setItem(this.key,text);
@@ -327,7 +333,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
            Array.isArray(next.recovery)&&next.recovery.length===0&&equal(next.base,next.local)&&
            this.latest&&revision(this.latest)===next.revision&&equal(normalize(this.latest),next.base);
         if(!confirmedOnly||this.a.overflowStore||store.getItem(backupKey)!==null||this.overflowActive){
-          var overflow=this.overflowActive;
+          var overflow=this.overflowActive||!!this.a.preferOverflow;
           if(!overflow){
             try{this.writeBackup(next,text,backupKey);}catch(error){
               if(!this.a.overflowStore||error.message!=='backup-quota')throw error;overflow=true;
@@ -381,9 +387,19 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     this.archiveSequence++;this.overflowActive=false;this.overflowBackups=new Map();this.connecting=null;
     this.connectionError=null;
     this.viewBase=null;
+    this.otherRecovery=[];
     if(this.a.ready)this.a.ready(false);
   };
   Controller.prototype.pending=function(){return this.state?diff(this.state.base,this.state.local).length:0;};
+  Controller.prototype.hasRecovery=function(){return !!((this.state&&this.state.recovery.length)||(this.otherRecovery&&this.otherRecovery.length));};
+  Controller.prototype.knownStartup=function(previous){
+    if(!this.a.cloudFirst)return false;
+    var known=false;
+    this.overflowBackups.forEach(function(text){
+      var saved=JSON.parse(text),values=[saved.base,saved.local].concat(saved.recovery||[]);
+      if(values.some(function(value){return equal(normalize(value),previous);}))known=true;
+    });return known;
+  };
   Controller.prototype.connect=function(){
     var owner=this.a.owner();if(owner===this.owner&&this.connecting)return this.connecting;
     if(owner===this.owner&&this.unsubscribe&&!this.unbound)return;
@@ -399,6 +415,11 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
           var journal=JSON.parse(row.text);
           if(journal.version!==1||journal.owner!==self.owner||journal.namespace!==self.a.namespace)throw Error('invalid-overflow-owner');
           self.overflowBackups.set(row.key,row.text);
+          if(self.a.cloudFirst&&row.key!==self.key+':backup:'+self.instance&&
+            (journal.ack||journal.resumeConflict||diff(journal.base,journal.local).length||journal.recovery.length)){
+            // Preserve closed-tab intent as visible recovery evidence; never infer it as a new write.
+            self.otherRecovery.push(row.key);
+          }
         });
         var own=self.overflowBackups.get(self.key+':backup:'+self.instance),session=self.a.store.getItem(self.key);
         self.overflowActive=!!own;
@@ -500,7 +521,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     var next;
     if(!this.state){
       var previous=normalize(this.a.getData());
-      next={version:1,namespace:this.a.namespace,owner:this.owner,revision:rev,base:remote,local:remote,recovery:equal(previous,remote)?[]:[previous]};
+      next={version:1,namespace:this.a.namespace,owner:this.owner,revision:rev,base:remote,local:remote,recovery:equal(previous,remote)||this.knownStartup(previous)?[]:[previous]};
     }else{
       if(rev===this.state.revision&&!equal(remote,this.state.base)){this.blocked=true;this.status('legacy-conflict');return;}
       var merged=apply(remote,diff(this.state.base,this.state.local));
@@ -512,7 +533,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
       if(!self.confirmed||self.connectionError||confirmationSequence!==self.confirmationSequence)return false;
       self.ready=true;self.unbound=false;if(self.a.ready)self.a.ready(true);
       if(changed||self.displayRequired)self.display();if(self.blocked)return false;
-      self.status(self.pending()?'pending':(self.state.recovery.length?'recovery':'synced'));
+      self.status(self.pending()?'pending':(self.hasRecovery()?'recovery':'synced'));
       // The subscription can advance while IndexedDB commits. Replay the latest queued
       // snapshot now, rather than waiting for another notification or the audit timer.
       if(self.deferred){self.drain();return true;}
@@ -552,7 +573,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
       if(self.connectionError)return false;
       if(self.state.resumeConflict){self.blocked=true;self.status('conflict');return false;}
       if(self.state.ack){return afterPersist(self.finishAck(),function(){self.drain();return true;});}
-      self.status(self.pending()?'pending':(self.ready?'synced':'unconfirmed'));
+      self.status(self.pending()?'pending':(self.ready?(self.hasRecovery()?'recovery':'synced'):'unconfirmed'));
       // A save can supersede the initial archive while connect is waiting for durability.
       // Connection may start only after this newest journal is committed as well.
       if(!self.doc&&self.a.overflowStore)self.subscribe(self.epoch);
@@ -604,7 +625,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     return afterPersist(result,function(){
       if(self.connectionError)return false;
       self.display();
-      if(!self.blocked)self.status(self.pending()?'pending':(self.state.recovery.length?'recovery':'synced'));
+      if(!self.blocked)self.status(self.pending()?'pending':(self.hasRecovery()?'recovery':'synced'));
       return !self.blocked;
     });
   };

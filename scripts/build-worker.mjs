@@ -4,7 +4,7 @@ import './build-schedule-core.mjs';
 
 const root=path.resolve(import.meta.dirname,'..');
 const out=path.join(root,'dist','cloudflare-assets');
-const assets=['index.html','vs-sync.js','vs-backup.js','cf-transport.js','cf-migration.js','v2-ui.js','v2.css','v3-daylight.css','studio-daylight.png','sw.js','manifest.json','icon-192.png','icon-512.png','sms-manager.js','sms-manager.css','hlb-sms-relay.apk'];
+const assets=['index.html','vs-sync.js','vs-backup.js','vs-cloud-backup.js','cf-transport.js','cf-migration.js','v2-ui.js','v2.css','v3-daylight.css','studio-daylight.png','sw.js','manifest.json','icon-192.png','icon-512.png','sms-manager.js','sms-manager.css','hlb-sms-relay.apk'];
 await rm(out,{recursive:true,force:true});
 await mkdir(out,{recursive:true});
 for(const name of assets)await cp(path.join(root,name),path.join(out,name));

@@ -11,6 +11,7 @@
   <link rel="apple-touch-icon" href="/icon-192.png">
   <meta name="mobile-web-app-capable" content="yes">
   <script src="./vs-backup.js?v=20260930-overflow1"></script>
+  <script src="./vs-cloud-backup.js?v=20261012-cloud1"></script>
   <script src="./vs-sync.js?v=20260930-overflow1"></script>
   <script src="./cf-transport.js?v=20260917-shared1"></script>
   <script src="./cf-migration.js?v=20260915-cf1"></script>
@@ -3529,6 +3530,7 @@ function _reclaimDuplicateRecoverySnapshot(){
   return removed;
 }
 function _writeRecoverySnapshot(reason){
+  if(typeof VSCloudBackup!=='undefined')return; // Keep historical snapshots; do not create/prune duplicates.
   /* 실제 사고: 스냅샷 12개가 7.7MB를 점유해 localStorage가 9.97MB로 포화 →
      레슨생 저장이 '용량부족'으로 실패하고 스케줄에 안 뜨는 문제가 발생했다.
      원인은 (1) 새 스냅샷을 먼저 쓰고 나중에 정리해 포화 상태에서 쓰기가 터지고
@@ -3553,8 +3555,7 @@ function _writeRecoverySnapshot(reason){
     try{_pruneRecoverySnapshots(1);}catch(e2){}
   }
 }
-/* 앱 로드 시 1회 — 과거 버전이 남긴 고아 스냅샷을 자동 회수한다(기기별 자가치유). */
-try{_pruneRecoverySnapshots(RECOVERY_KEEP);}catch(e){}
+/* Historical snapshots stay intact. Cloud journaling does not create or prune these copies. */
 function _rowIdentityKeys(x,prefix,idx){
   if(!x)return [prefix+':empty:'+idx];
   var keys=[];
@@ -3913,7 +3914,7 @@ IQ=_safeParseLS('vsC_iq',[]);
 /* ST가 null(localStorage 없거나 비어있음) → 기본 39명 데이터로 초기화 */
 if(!ST||!Array.isArray(ST)||ST.length===0){
   ST=_DEFAULT_STUDENTS.slice(); /* 복사본 사용 */
-  try{localStorage.setItem('vsC_s',JSON.stringify(ST));}catch(e){} /* 저장 시도 (실패해도 무관) */
+  try{if(localStorage.getItem('vsC_s')===null)localStorage.setItem('vsC_s',JSON.stringify(ST));}catch(e){}
 }else{
   /* localStorage에 데이터가 있으면: 기본 데이터 중 없는 사람만 추가 */
   var _existNames=ST.map(function(s){return s.name;});
@@ -4274,8 +4275,11 @@ function copyAdminVerificationReceipt(){
 }
 
 function saveAll(){
+  // The controller durably stores new intent in the cloud, with IndexedDB for offline edits.
+  // Do not add full app caches and timestamp snapshots on top of that journal.
   _backupOrphanPhotos(students);
   _backupOrphanPhotos(consults);
+  if(_cfCloudSaveActive())return;
   try{
     /* 오디오/비디오 base64 데이터는 localStorage에서 제외 (용량 초과 방지) */
     var stripMedia=function(arr){
@@ -4430,12 +4434,18 @@ function _updateAdminAuthControls(){
   var verifyBtn=ge('topAdminVerifyBtn');if(verifyBtn)verifyBtn.style.display='none';
 }
 function _cfLocalOwnerKey(){return 'vsC_cf_owner_v1';}
+function _cfCloudSaveActive(){
+  return typeof _vsSync!=='undefined'&&!!_vsSync&&!!_vsSync.a&&!!_vsSync.a.cloudFirst&&hasAdminSession()&&_cfAppHydrated;
+}
 function _cfBindLocalOwner(){
   if(!hasAdminSession())return false;
   try{localStorage.setItem(_cfLocalOwnerKey(),_cfSession.principal);return true;}catch(e){return false;}
 }
 function _cfLoadLocalResume(owner){
   try{
+    // Once cloud journals are enabled, these preserved legacy caches are historical evidence.
+    // They must not override a newer cloud/offline journal after reload.
+    if(typeof _vsSync!=='undefined'&&_vsSync&&_vsSync.a&&_vsSync.a.cloudFirst)return null;
     if(typeof owner!=='string'||!owner)return null;
     if(localStorage.getItem(_cfLocalOwnerKey())!==owner)return null;
     var fields={vsC_s:'students',vsC_l:'logs',vsC_wo:'weekOvr',vsC_c:'consults',vsC_p:'payments',vsC_iq:'inquiries'},data={};
@@ -4706,6 +4716,7 @@ function _warnLocalOnlySync(msg){
 }
 /* Active runtime adapter: all writes pass through the versioned transaction controller. */
 var _vsSyncLabels={
+  'device-only':'서버 동기화됨 · 보관본은 이 기기에만 저장됨 · 다시 확인해 주세요',
   'auth-required':'로그인이 만료되었거나 확인이 필요합니다 · 다시 로그인해 주세요 · 변경 보관',
   'connection-delayed':'연결 확인이 지연되고 있습니다 · 다시 확인하거나 로그인해 주세요 · 변경 보관',
   'storage-delayed':'기기 보관본 저장 확인이 지연되고 있습니다 · 저장소 확인 후 다시 시도해 주세요 · 서버 전송 중지',
@@ -4718,7 +4729,7 @@ var _vsSyncLabels={
   'legacy-conflict':'이전 버전 변경 감지 · 자동 저장 중지',
   conflict:'동시 수정 충돌 · 변경 보관 · 확인 필요',
   'storage-error':'기기 저장 공간 확인 필요 · 서버 전송 중지',
-  'storage-pending':'기기 보관본 저장 확인 중 · 확인 후 서버에 전송합니다',
+  'storage-pending':'자료 보관본 저장 확인 중 · 확인 후 서버에 반영합니다',
   'apply-error':'화면 반영 확인 필요 · 보관본 유지',
   'write-error':'서버 저장 실패 · 변경 보관 · 다시 확인해 주세요',
   frozen:'마이그레이션 동결 · 서버 저장 보류'
@@ -4736,7 +4747,7 @@ function _cfSyncMode(mode){
     if(error&&error.kind==='invalid-response')return 'invalid-remote';
     if(error&&error.kind==='timeout')return 'connection-delayed';
   }
-  if(_cfAuthIssue&&['synced','recovery','pending','unconfirmed','saving','deferred','offline','write-error','invalid-remote','connection-delayed'].indexOf(mode)>=0)return 'auth-required';
+  if(_cfAuthIssue&&['synced','recovery','device-only','pending','unconfirmed','saving','deferred','offline','write-error','invalid-remote','connection-delayed'].indexOf(mode)>=0)return 'auth-required';
   return mode;
 }
 function _updateV2InitialSyncState(mode){
@@ -4755,14 +4766,14 @@ function _updateV2InitialSyncState(mode){
     pane.setAttribute('role','status');pane.setAttribute('aria-live','polite');pane.setAttribute('aria-busy','true');
     while(pane.firstChild)pane.removeChild(pane.firstChild);
     var spinner=document.createElement('span');spinner.className='v2-initial-sync-spinner';spinner.setAttribute('aria-hidden','true');
-    var title=document.createElement('strong');title.textContent=mode==='storage-pending'?'기기 보관본 저장을 확인하는 중':'공용 자료를 불러오는 중';
+    var title=document.createElement('strong');title.textContent=mode==='storage-pending'?'자료를 안전하게 보관하는 중':'공용 자료를 불러오는 중';
     var detail=document.createElement('p');detail.textContent=mode==='storage-pending'?'이전 보관본을 유지하며 새 보관본을 안전하게 저장하고 있습니다. 확인 후 연결을 계속합니다.':'서버 응답을 확인하고 있습니다. 확인이 끝나면 스케줄과 명단을 표시합니다.';
     pane.appendChild(spinner);pane.appendChild(title);pane.appendChild(detail);
     content.setAttribute('aria-busy','true');return;
   }
   if(!pane){content.removeAttribute('aria-busy');return;}
   content.removeAttribute('aria-busy');
-  if(['synced','recovery','pending','saving','deferred'].indexOf(mode)>=0){
+  if(['synced','recovery','device-only','pending','saving','deferred'].indexOf(mode)>=0){
     pane.remove();
     if(!content.children.length&&typeof render==='function')render();
     return;
@@ -4787,17 +4798,65 @@ function _vsCarryRows(rows,previous){
     return VSSync.retainLocal(Object.assign({},row),found.get(typeof row.id+':'+row.id));
   });
 }
-var _vsSync=null;
-try{if(typeof VSBackup==='undefined')throw Error('backup-module-unavailable');if(typeof VSSync!=='undefined')_vsSync=VSSync.create({
-  namespace:'vocal-studio',store:sessionStorage,backupStore:localStorage,
-  overflowStore:VSBackup.create({indexedDB:window.indexedDB}),
+function _cfDeviceMediaIdentity(entry){
+  return JSON.stringify([entry.id==null?null:entry.id,entry.name||null,entry.url||null,entry.date||null]);
+}
+function _cfCaptureDeviceMedia(){
+  var refs=[];
+  [{type:'student',rows:students},{type:'consult',rows:consults}].forEach(function(group){
+    group.rows.forEach(function(row){
+      if(!row||row.id==null)return;
+      if(row._photoKey||typeof row.photo==='string'&&row.photo.length>5000){refs.push({type:group.type,ownerId:row.id,field:'photo',key:row._photoKey||'',data:row._photoKey?'':row.photo});}
+      ['audios','videos','consentRec'].forEach(function(field){
+        var entries=field==='consentRec'?(row[field]?[row[field]]:[]):row[field]||[];
+        entries.forEach(function(entry){
+          if(!entry)return;
+          var key=entry._mediaKey||entry.mediaKey||'',data=!key&&typeof entry.data==='string'&&entry.data.length>50000?entry.data:'';
+          if(key||data)refs.push({type:group.type,ownerId:row.id,field:field,identity:_cfDeviceMediaIdentity(entry),key:key,data:data});
+        });
+      });
+    });
+  });return refs;
+}
+function _cfRestoreDeviceMedia(refs){
+  if(!Array.isArray(refs))return;
+  refs.forEach(function(ref){
+    if(!ref||['student','consult'].indexOf(ref.type)<0)return;
+    var rows=(ref.type==='student'?students:consults).filter(function(row){return row&&row.id===ref.ownerId;});
+    if(rows.length!==1)return;var row=rows[0];
+    if(ref.field==='photo'){
+      if(!row.photo&&typeof ref.key==='string'&&ref.key.indexOf('vsC_ph_')===0)row._photoKey=ref.key;
+      if(!row.photo&&!row._photoKey&&typeof ref.data==='string'&&ref.data.indexOf('data:image/')===0)row.photo=ref.data;
+      return;
+    }
+    if(['audios','videos','consentRec'].indexOf(ref.field)<0)return;
+    var entries=ref.field==='consentRec'?(row[ref.field]?[row[ref.field]]:[]):row[ref.field]||[];
+    var matches=entries.filter(function(entry){return entry&&_cfDeviceMediaIdentity(entry)===ref.identity;});
+    if(matches.length!==1)return;var entry=matches[0];
+    if(!entry._mediaKey&&typeof ref.key==='string'&&/^vsM_[A-Za-z0-9_-]+$/.test(ref.key))entry._mediaKey=ref.key;
+    if(entry.data==='[saved]'&&typeof ref.data==='string'&&/^data:(audio|video)\//.test(ref.data))entry.data=ref.data;
+  });
+}
+var _vsSync=null;var _vsCloudJournal=null,_vsCloudLocation=null;
+try{
+if(typeof VSBackup==='undefined'||typeof VSCloudBackup==='undefined')throw Error('backup-module-unavailable');
+_vsCloudJournal=VSCloudBackup.journalStore(sessionStorage,{encode:VSSync.encodeStorage,decode:VSSync.decodeStorage});
+if(typeof VSSync!=='undefined')_vsSync=VSSync.create({
+  namespace:'vocal-studio',store:_vsCloudJournal,backupStore:localStorage,cloudFirst:true,preferOverflow:true,
+  overflowStore:VSCloudBackup.create({namespace:'vocal-studio',localStore:VSBackup.create({indexedDB:window.indexedDB}),
+    owner:function(){return hasAdminSession()?_cfSession.principal:null;},
+    currentKey:function(){return _vsSync&&_vsSync.key?_vsSync.key+':backup:'+_vsSync.instance:null;},
+    resumeHint:function(){return _vsSync&&_vsSync.key?{key:_vsSync.key+':backup:'+_vsSync.instance,hint:_vsCloudJournal.readDurableHint(_vsSync.key)}:null;},
+    onDurable:function(key,text,location){_vsCloudLocation=location;_vsCloudJournal.markDurable(key.replace(/:backup:[^:]+$/,''),text);}}),
   instanceId:typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():undefined,
-  forkInstance:!!(performance.getEntriesByType&&performance.getEntriesByType('navigation')[0]&&performance.getEntriesByType('navigation')[0].type==='navigate'),
+  forkInstance:!!(performance.getEntriesByType&&performance.getEntriesByType('navigation')[0]&&performance.getEntriesByType('navigation')[0].type!=='reload'),
   owner:function(){return hasAdminSession()?_cfSession.principal:null;},
   database:_cfDatabase,timestamp:function(){return new Date().toISOString();},
   frozen:function(){return false;},editing:_vsEditing,later:function(fn){setTimeout(fn,0);},
   ready:function(value){_fbReady=value;},doc:function(ref){window._fbDocRef=ref;},
   hydrated:function(){return _cfAppHydrated;},resumeData:function(owner){return _cfLoadLocalResume(owner);},
+  captureDeviceMedia:_cfCaptureDeviceMedia,
+  storageLocation:function(){return _vsCloudLocation;},
   getData:function(){return {students:students,logs:logs,weekOvr:weekOvr,consults:consults,payments:payments,inquiries:inquiries};},
   setData:function(data){
     _fbApplyingRemote=true;
@@ -4805,6 +4864,7 @@ try{if(typeof VSBackup==='undefined')throw Error('backup-module-unavailable');if
       students=_vsCarryRows(data.students,students);logs=_vsCarryRows(data.logs,logs);
       consults=_vsCarryRows(data.consults,consults);payments=_vsCarryRows(data.payments,payments);
       inquiries=_vsCarryRows(data.inquiries,inquiries);weekOvr=data.weekOvr;
+      if(_vsSync&&_vsSync.state)_cfRestoreDeviceMedia(_vsSync.state.deviceMedia);
       _cfAppHydrated=true;_cfBindLocalOwner();_saveAllOrig();
       setTimeout(_cfDrainMedia,0);
     }finally{_fbApplyingRemote=false;}
@@ -4813,7 +4873,7 @@ try{if(typeof VSBackup==='undefined')throw Error('backup-module-unavailable');if
     _fbApplyingRemote=true;
     try{renderSidebarToday();if(typeof render==='function')render();}finally{_fbApplyingRemote=false;}
   },
-  status:function(mode,count){mode=_cfSyncMode(mode);_showSyncStatus((_vsSyncLabels[mode]||mode)+(count?' ('+count+'건)':''));_vsSyncActions(mode);}
+  status:function(mode,count){if(_vsCloudLocation==='device'&&['synced','recovery'].indexOf(mode)>=0)mode='device-only';mode=_cfSyncMode(mode);_showSyncStatus((_vsSyncLabels[mode]||mode)+(count?' ('+count+'건)':''));_vsSyncActions(mode);}
 });}catch(error){_showSyncStatus('동기화 저장소 확인 필요 · 서버 전송 중지');}
 saveAll=function(){
   if(hasAdminSession())_cfBindLocalOwner();
@@ -4821,6 +4881,11 @@ saveAll=function(){
   if(_fbApplyingRemote)return;
   if(_vsSync)_vsSync.save();else _showSyncStatus('동기화 모듈 확인 필요 · 로컬 저장만 됨');
 };
+function _cfProtectPendingUnload(event){
+  if(!_vsSync)return;
+  if(_vsSync.hold==='durability'||_vsSync.hold==='storage'||_vsSync.pending()>0){event.preventDefault();event.returnValue='';}
+}
+window.addEventListener('beforeunload',_cfProtectPendingUnload);
 function _cfMediaPendingCount(){
   return _mediaQueueRead().filter(function(x){return x.status==='queued'||x.status==='retry';}).length;
 }
@@ -4838,6 +4903,8 @@ function _retryCloudflareSync(){
 }
 function _vsSyncActions(mode){
   mode=_cfSyncMode(mode);
+  var protectedContent=ge('content');if(protectedContent)protectedContent.inert=!!_cfAuthIssue||mode==='auth-required';
+  document.querySelectorAll('.ov.open').forEach(function(form){form.inert=!!_cfAuthIssue||mode==='auth-required';});
   var phase=mode==='storage-pending'?'storage':(['checking-session','checking-server','unconfirmed'].indexOf(mode)>=0?'connection':null);
   if(phase){
     if(_cfWaitingPhase!==phase){

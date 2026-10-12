@@ -18,14 +18,14 @@ function element(tag='div'){
 }
 function harness(fetch=async()=>Response.json(record())){
   const timers=new Map(),nodes=new Map(),sockets=[],events=new Map();let id=0;
-  const document={visibilityState:'visible',activeElement:null,createElement:tag=>element(tag),querySelector:()=>null,
+  const document={visibilityState:'visible',activeElement:null,createElement:tag=>element(tag),querySelector:()=>null,querySelectorAll:()=>[],
     addEventListener:(key,fn)=>events.set(key,fn),removeEventListener:(key,fn)=>{if(events.get(key)===fn)events.delete(key);}};
   for(const name of ['content','topSyncStatus','vsSyncPanel','adminLoginBtn','adminLogoutBtn','topAdminLoginBtn','topAdminLogoutBtn']){
     const el=element();el.id=name;nodes.set(name,el);
   }
   nodes.get('vsSyncPanel').appendChild(nodes.get('topSyncStatus'));
   class WebSocket{constructor(){sockets.push(this);}close(){}}
-  const context=vm.createContext({fetch,AbortController,Response,Blob,TextEncoder,Uint8Array,atob,WebSocket,document,
+  const context=vm.createContext({fetch,AbortController,Response,Blob,TextEncoder,Uint8Array,atob,WebSocket,document,_vsCloudLocation:null,
     console:{error(){}},location:{host:'studio.example',protocol:'https:',reload(){context.navigations++;},assign(){context.navigations++;}},navigations:0,
     setTimeout:(fn,ms)=>{const key=++id;timers.set(key,{fn,ms});return key;},clearTimeout:key=>timers.delete(key),
     ge:name=>nodes.get(name)||[...nodes.values()].flatMap(x=>[...x.children,...x.children.flatMap(y=>y.children)]).find(x=>x.id===name),

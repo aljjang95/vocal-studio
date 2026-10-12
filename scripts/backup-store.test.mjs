@@ -23,12 +23,13 @@ function database(){
     if(w.openFailure){req.error=Error('open-error');req.onerror?.();return;}
     if(w.blocked){req.onblocked?.();return;}
     const db={objectStoreNames:{contains:()=>w.created.length>0},createObjectStore:n=>w.created.push(n),close(){w.closes++;},transaction(name,mode,options){
-      const tx={name,mode,options,aborted:false,abort(){this.aborted=true;this.error=Error('abort');this.onabort?.();},complete(){if(this.aborted)return;if(this.write&&!w.abortWrite)w.rows.set(...this.write);this.oncomplete?.();},objectStore(){return {
+      const tx={name,mode,options,aborted:false,abort(){this.aborted=true;this.error=Error('abort');this.onabort?.();},complete(){if(this.aborted)return;if(this.write&&!w.abortWrite)w.rows.set(...this.write);if(this.deletion&&!w.abortWrite)w.rows.delete(this.deletion);this.oncomplete?.();},objectStore(){return {
         put(value,key){const r=request();tx.write=[key,value];queueMicrotask(()=>{
           if(w.putFailure){r.error=Error('quota');r.onerror?.();tx.abort();return;}
           r.success(key);if(w.abortWrite)tx.abort();else if(!w.holdWrite)tx.complete();
         });return r;},
         get(key){const r=request();queueMicrotask(()=>{r.success(w.mismatch?'corrupt':w.rows.get(key));if(w.abortRead)tx.abort();else if(!w.holdRead)tx.complete();});return r;},
+        delete(key){const r=request();tx.deletion=key;queueMicrotask(()=>r.success(undefined));return r;},
         openCursor(range){const r=request(),rows=[...w.rows].filter(([key])=>key>=range.lower&&key<=range.upper);let index=0;
           r.onUnhandled=()=>tx.abort();
           function next(){if(tx.aborted)return;const row=rows[index++];r.success(row?{key:row[0],value:row[1],continue(){r.readyState='pending';queueMicrotask(next);}}:null);if(!row&&!w.holdRead)tx.complete();}
@@ -52,6 +53,17 @@ for(const failure of ['putFailure','abortWrite','abortRead','mismatch','openFail
 test('unavailable and hung IDB fail closed',async()=>{
   await assert.rejects(backup.create({}).put('key','exact'),/unavailable/);
   const w=database();w.holdWrite=true;await assert.rejects(w.store().put('key','exact'),/timeout|abort/);assert.equal(w.closes,1);
+});
+
+test('offline copy cleanup atomically compares bytes and waits for strict transaction completion',async()=>{
+  const w=database();w.rows.set('owner-A:tab','new offline edit');
+  assert.equal(await w.store().remove('owner-A:tab','old confirmed edit'),false);
+  assert.equal(w.rows.get('owner-A:tab'),'new offline edit');
+  w.holdRead=true;let done=false;
+  const removed=w.store().remove('owner-A:tab','new offline edit').then(value=>{done=true;return value;});await settle();
+  assert.equal(done,false);assert.equal(w.rows.get('owner-A:tab'),'new offline edit');
+  const tx=w.transactions.at(-1);assert.deepEqual(tx.options,{durability:'strict'});tx.complete();
+  assert.equal(await removed,true);assert.equal(w.rows.has('owner-A:tab'),false);
 });
 test('list reads only the selected principal prefix and waits for cursor transaction completion',async()=>{
   const w=database();w.rows.set('owner-A:tab1','one');w.rows.set('owner-A:tab2','two');w.rows.set('owner-B:tab','secret synthetic');
