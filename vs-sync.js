@@ -675,5 +675,5 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     }
     return clone(result);
   };
-  return {normalize:normalize,retainLocal:retainLocal,equal:equal,diff:diff,apply:apply,Controller:Controller,create:function(adapter){return new Controller(adapter);}};
+  return {normalize:normalize,retainLocal:retainLocal,equal:equal,diff:diff,apply:apply,encodeStorage:encodeBackup,decodeStorage:decodeBackup,Controller:Controller,create:function(adapter){return new Controller(adapter);}};
 });
