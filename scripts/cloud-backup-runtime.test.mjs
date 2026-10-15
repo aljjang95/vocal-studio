@@ -292,6 +292,31 @@ test('a hint requires its own key when cloud is unavailable and ignores another 
   await assert.rejects(h.api.list(prefix('admin-A')),/backup-hint-missing/);
 });
 
+test('a pointer written by an earlier page instance in this tab is not required under the new instance key',async()=>{
+  const s=session(),store=cloud.journalStore(s),earlier=prefix('admin-A')+'tab-1',current=prefix('admin-A')+'tab-2',text=journal('admin-A',1,'saved',{ack:{id:'x'}});
+  store.setItem(jkey,text);assert.equal(store.markDurable(jkey,text,'tab-1'),true);assert.equal(JSON.parse(s.getItem(jkey)).instance,'tab-1');
+  const h=setup({resumeHint:()=>({key:current,hint:store.readDurableHint(jkey)}),currentKey:()=>current});h.srv.rows.set(earlier,text);
+  assert.deepEqual(await h.api.list(prefix('admin-A')),[{key:earlier,text}]);
+  const down=setup({resumeHint:()=>({key:current,hint:store.readDurableHint(jkey)}),currentKey:()=>current});down.srv.mode='down';down.disk.rows.set(earlier,text);
+  await assert.rejects(down.api.list(prefix('admin-A')),/backup-hint-missing/);
+  const own=setup({resumeHint:()=>({key:earlier,hint:store.readDurableHint(jkey)}),currentKey:()=>earlier});own.srv.mode='down';own.disk.rows.set(current,text);
+  await assert.rejects(own.api.list(prefix('admin-A')),/backup-hint-missing/);
+});
+
+test('an older instance-less pointer is attributed to another key only by an exact row in a verified cloud list',async()=>{
+  const clean=memo=>journal('admin-A',104,memo,{base:{students:[{id:'s1',memo}]}});
+  const s=session(),store=cloud.journalStore(s),earlier=prefix('admin-A')+'tab-1',current=prefix('admin-A')+'tab-2',
+    text=clean('saved'),same=clean('SAVED');
+  store.setItem(jkey,text);assert.equal(store.markDurable(jkey,text),true);assert.equal(JSON.parse(s.getItem(jkey)).instance,undefined);
+  const hint=()=>({key:current,hint:store.readDurableHint(jkey)});
+  const h=setup({resumeHint:hint,currentKey:()=>current});h.srv.rows.set(earlier,text);h.srv.rows.set(prefix('admin-A')+'tab-3',same);
+  h.srv.rows.set(prefix('admin-A')+'tab-4',clean('shorter'));
+  assert.deepEqual((await h.api.list(prefix('admin-A'))).map(row=>row.key).sort(),[earlier,prefix('admin-A')+'tab-3']);
+  assert.ok(h.srv.calls.some(call=>call.url.includes('&key='+encodeURIComponent(earlier))));
+  const unknown=setup({resumeHint:hint,currentKey:()=>current});unknown.srv.rows.set(earlier,same);
+  await assert.rejects(unknown.api.list(prefix('admin-A')),/backup-hint-missing/);
+});
+
 test('session journal codec stores a checked compressed full value before a durable pointer',()=>{
   const s=session(),codec={encode:sync.encodeStorage,decode:sync.decodeStorage},store=cloud.journalStore(s,codec),text=journal('admin-A',1,'x'.repeat(200000));
   assert.equal(store.setItem(jkey,text),true);assert.notEqual(s.getItem(jkey),text);assert.equal(store.getItem(jkey),text);

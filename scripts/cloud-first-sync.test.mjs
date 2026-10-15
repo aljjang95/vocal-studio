@@ -29,13 +29,13 @@ function world(){
     return Response.json({rows:rows.map(([key,text])=>({key,text}))});
   };
   w.local={async put(key,text){w.localWrites++;w.offline.set(key,text);return text;},async list(prefix){return [...w.offline].filter(([key])=>key.startsWith(prefix)).map(([key,text])=>({key,text}));},async remove(key,text){if(w.offline.get(key)!==text)return false;w.offline.delete(key);return true;}};
-  w.client=async(session=storage(256),instance='synthetic-tab')=>{
+  w.client=async(session=storage(256),instance='synthetic-tab',fork=false)=>{
     const c={ui:sync.normalize({}),owner:'owner-A',session,store:cloud.journalStore(session,{encode:sync.encodeStorage,decode:sync.decodeStorage}),editing:false};
-    c.controller=sync.create({namespace:'vocal-studio',instanceId:instance,store:c.store,backupStore:w.backup,preferOverflow:true,cloudFirst:true,
+    c.controller=sync.create({namespace:'vocal-studio',instanceId:instance,forkInstance:fork,store:c.store,backupStore:w.backup,preferOverflow:true,cloudFirst:true,
       overflowStore:cloud.create({namespace:'vocal-studio',owner:()=>c.owner,localStore:w.local,fetch:w.fetch,
         currentKey:()=>c.controller?.key?c.controller.key+':backup:'+c.controller.instance:null,
         resumeHint:()=>c.controller?.key&&c.store.readDurableHint?{key:c.controller.key+':backup:'+c.controller.instance,hint:c.store.readDurableHint(c.controller.key)}:null,
-        onDurable:(key,text)=>c.store.markDurable(key.replace(/:backup:[^:]+$/,''),text)}),
+        onDurable:(key,text)=>c.store.markDurable(key.replace(/:backup:[^:]+$/,''),text,key.replace(/^.*:backup:/,''))}),
       owner:()=>c.owner,database:()=>w.db,hydrated:()=>false,resumeData:()=>null,timestamp:()=> 'synthetic-time',frozen:()=>false,editing:()=>c.editing,
       getData:()=>c.ui,setData:data=>{c.ui=data;},render(){},status:mode=>{c.mode=mode;},later:fn=>queueMicrotask(fn)});
     await c.controller.connect();w.emit();await settle();return c;
@@ -95,4 +95,17 @@ test('a cloud-only journal cannot be silently forgotten when backup listing is u
   const reloaded=await w.client(c.session);assert.equal(reloaded.controller.ready,false);
   assert.equal(reloaded.mode,'storage-error');assert.equal(w.canonicalWrites,0);
   assert.ok(w.cloud.size>0);assert.equal(w.backup.writes.length,0);
+});
+
+test('a new page instance in the same tab starts after an earlier durable save instead of blocking storage',async()=>{
+  const w=world(),c=await w.client();c.ui.students[0].memo='saved before navigation';await c.controller.save();await settle();
+  assert.equal(w.data.students[0].memo,'saved before navigation');assert.equal(JSON.parse(c.session.getItem(c.controller.key)).instance,'synthetic-tab');
+  c.controller.disconnect();
+  const next=await w.client(c.session,'next-page',true);
+  assert.equal(next.controller.instance,'next-page');assert.notEqual(next.mode,'storage-error');assert.equal(next.controller.ready,true);
+  assert.equal(next.ui.students[0].memo,'saved before navigation');
+  next.ui.students[0].memo='edited after navigation';await next.controller.save();await settle();
+  assert.equal(w.data.students[0].memo,'edited after navigation');assert.equal(JSON.parse(next.session.getItem(next.controller.key)).instance,'next-page');
+  next.controller.disconnect();const reloaded=await w.client(next.session,'unused-id');
+  assert.equal(reloaded.controller.instance,'next-page');assert.equal(reloaded.controller.ready,true);
 });
