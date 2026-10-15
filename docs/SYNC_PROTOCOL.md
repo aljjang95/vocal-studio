@@ -58,7 +58,7 @@ The release closure uses three different evidence layers and does not conflate t
 
 - Node protocol/regression tests exercise merge, deletion, concurrency, journal, owner-switch, and exact High/Medium review regressions.
 - `scripts/test-cloudflare.mjs` starts real local Wrangler and validates Static Assets, SQLite Durable Object transitions/CAS/idempotency, and local R2 PUT/range/HEAD/error behavior.
-- `scripts/verify-sync-browser.py` opens the actual `index.html` in installed Chrome against that Worker, reproduces the unhydrated-reload conflict and media PUT failure/retry/recovery, then checks desktop plus 390/360 emulated mobile viewports with page-error capture.
+- `scripts/verify-sync-browser.py` opens the actual `index.html` in installed Chrome against that Worker, checks that a stale legacy app cache cannot override the cloud journal after an unhydrated reload, that a full localStorage does not stop sync or prune preserved evidence, media PUT failure/retry/recovery, and Access 401 loading/retry states, then checks desktop plus 390/360 emulated mobile viewports with page-error capture.
 
 These tests are local evidence. They do not prove production customer import, production Access login/logout, production deployment, or physical-phone dogfood.
 

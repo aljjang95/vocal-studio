@@ -37,7 +37,7 @@ function world(){
         resumeHint:()=>c.controller?.key&&c.store.readDurableHint?{key:c.controller.key+':backup:'+c.controller.instance,hint:c.store.readDurableHint(c.controller.key)}:null,
         onDurable:(key,text)=>c.store.markDurable(key.replace(/:backup:[^:]+$/,''),text,key.replace(/^.*:backup:/,''))}),
       owner:()=>c.owner,database:()=>w.db,hydrated:()=>false,resumeData:()=>null,timestamp:()=> 'synthetic-time',frozen:()=>false,editing:()=>c.editing,
-      getData:()=>c.ui,setData:data=>{c.ui=data;},render(){},status:mode=>{c.mode=mode;},later:fn=>queueMicrotask(fn)});
+      getData:()=>c.ui,setData:data=>{c.ui=data;},render(){},status:mode=>{c.mode=mode;(c.modes||(c.modes=[])).push(mode);},later:fn=>queueMicrotask(fn)});
     await c.controller.connect();w.emit();await settle();return c;
   };
   return w;
@@ -95,6 +95,12 @@ test('a cloud-only journal cannot be silently forgotten when backup listing is u
   const reloaded=await w.client(c.session);assert.equal(reloaded.controller.ready,false);
   assert.equal(reloaded.mode,'storage-error');assert.equal(w.canonicalWrites,0);
   assert.ok(w.cloud.size>0);assert.equal(w.backup.writes.length,0);
+});
+
+test('startup reports the server check after backup storage is verified, not a storage wait',async()=>{
+  const w=world(),c=await w.client();
+  const pending=c.modes.indexOf('storage-pending'),server=c.modes.indexOf('checking-server'),done=c.modes.findIndex(m=>m==='synced'||m==='recovery');
+  assert.ok(pending>=0&&server>pending&&done>server,JSON.stringify(c.modes));
 });
 
 test('a new page instance in the same tab starts after an earlier durable save instead of blocking storage',async()=>{

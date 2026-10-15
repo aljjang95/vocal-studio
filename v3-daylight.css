@@ -214,10 +214,12 @@ body#vocalAdmin .bulk-confirmed-row input,body#vocalAdmin .bulk-confirmed-row se
 body#vocalAdmin .schedule-card-time.is-editable{min-height:30px;border:1px solid #c9d4c6;cursor:pointer;font-family:inherit;white-space:nowrap;}
 body#vocalAdmin .schedule-card-time.is-editable:hover,body#vocalAdmin .schedule-card-time.is-editable:focus-visible{background:#d7e5da!important;border-color:#3c6554!important;outline:2px solid #3c6554;outline-offset:1px;}
 @media(max-width:768px){
-  body#vocalAdmin[data-active-page="today"] .main{display:flex!important;flex-direction:column!important;}
+  /* The workspace is the last item here, so let .main grow with its content: its own tab-bar padding then
+     follows the workspace and the quick actions are never left under the fixed mobile tab bar. */
+  body#vocalAdmin[data-active-page="today"] .main{display:flex!important;flex-direction:column!important;align-self:flex-start!important;min-height:100%!important;}
   body#vocalAdmin[data-active-page="today"] .main>.topbar{order:0;}
   body#vocalAdmin[data-active-page="today"] .main>#vsSyncPanel{order:1;}
-  body#vocalAdmin[data-active-page="today"] .main>.content{order:2;padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))!important;}
+  body#vocalAdmin[data-active-page="today"] .main>.content{order:2;padding-bottom:14px!important;}
   body#vocalAdmin[data-active-page="today"] .main>#pwaWorkspace{order:3;}
   body#vocalAdmin[data-active-page="today"] #pwaWorkspace{margin:6px 12px 0!important;padding:8px!important;}
   body#vocalAdmin[data-active-page="today"] .v2-kpis{grid-template-columns:repeat(2,minmax(0,1fr));}

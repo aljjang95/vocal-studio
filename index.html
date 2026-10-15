@@ -185,6 +185,9 @@ body.is-mobile .main{margin-left:0!important;padding-bottom:calc(62px + env(safe
   border-bottom:1px solid var(--season-border,rgba(220,185,120,.1));
   padding:0 26px;height:56px;
   display:flex;align-items:center;justify-content:space-between;
+  /* .main is a column flex container; with a min-height set, a long page would shrink the bar to that
+     minimum and wrapped toolbar buttons would spill over the sync panel. Keep its content height. */
+  flex-shrink:0;
   z-index:40;
   box-shadow:0 1px 0 var(--season-border,rgba(220,185,120,.07)),0 6px 32px rgba(0,0,0,.45);
   transition:background .8s ease;
@@ -4721,6 +4724,7 @@ var _vsSyncLabels={
   'connection-delayed':'연결 확인이 지연되고 있습니다 · 다시 확인하거나 로그인해 주세요 · 변경 보관',
   'storage-delayed':'기기 보관본 저장 확인이 지연되고 있습니다 · 저장소 확인 후 다시 시도해 주세요 · 서버 전송 중지',
   'local-only':'서버 확인 전 · 변경은 이 기기에 보관됩니다',
+  'checking-server':'🔐 Cloudflare Access 인증됨 · 서버 자료 확인 중',
   saving:'서버 저장 확인 중',pending:'미동기화 변경 보관 중',synced:'동기화됨',
   recovery:'동기화됨 · 이전 기기 보관본 있음',deferred:'입력·저장 응답 확인 후 다른 기기 변경을 반영합니다',
   unconfirmed:'연결 확인 중 · 기기 보관 상태',offline:'연결 끊김 · 변경 보관',
