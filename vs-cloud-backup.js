@@ -221,9 +221,9 @@
       // A session pointer names the tab instance that wrote it. A pointer left by an earlier page in this
       // tab (back/forward, sign-in redirect, duplicated tab) belongs to that instance's journal, which is
       // listed below as another tab's row. It is never evidence for this page's own key.
-      var hintPointer=hintInfo&&hintInfo.hint!==null&&hintInfo.hint!==undefined?pointerValue(hintInfo.hint):null;
+      var hintPointer=hintInfo&&hintInfo.hint!==null&&hintInfo.hint!==undefined?pointerValue(hintInfo.hint):null,foreignPointer=false;
       if(hintPointer&&typeof hintPointer.instance==='string'&&hintInfo.key!==expected+hintPointer.instance){
-        hintInfo={key:hintInfo.key,hint:null};hintPointer=null;
+        hintInfo={key:hintInfo.key,hint:null};hintPointer=null;foreignPointer=true;
       }
       var legacyHint=!!hintPointer&&hintPointer.instance===undefined;
       if(typeof options.currentKey==='function')current=options.currentKey();
@@ -232,6 +232,9 @@
       // Only transport trouble falls back to the device copy; rows that fail validation never do.
       try{cloudRows=await cloudList(expected,principal);}catch(error){if(!error||!error.transport)throw error;cloudRows=null;}
       if(changed(principal))throw Error('owner-changed');
+      // A stale foreign pointer means this tab's own pointer was never written. Only the cloud list can show
+      // whether this instance has a cloud-only journal, so without it startup still fails closed.
+      if(foreignPointer&&cloudRows===null)throw Error('backup-hint-missing');
       if(localStore&&typeof localStore.list==='function'){localRows=await localStore.list(expected);if(changed(principal))throw Error('owner-changed');}
       // Without the cloud list and without any device journal, an empty answer could hide a cloud-only journal.
       if(cloudRows===null&&(!localRows||!localRows.length))throw Error('cloud-backup-unavailable');

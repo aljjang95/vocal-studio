@@ -298,7 +298,7 @@ test('a pointer written by an earlier page instance in this tab is not required 
   const h=setup({resumeHint:()=>({key:current,hint:store.readDurableHint(jkey)}),currentKey:()=>current});h.srv.rows.set(earlier,text);
   assert.deepEqual(await h.api.list(prefix('admin-A')),[{key:earlier,text}]);
   const down=setup({resumeHint:()=>({key:current,hint:store.readDurableHint(jkey)}),currentKey:()=>current});down.srv.mode='down';down.disk.rows.set(earlier,text);
-  assert.deepEqual(await down.api.list(prefix('admin-A')),[{key:earlier,text}]);
+  await assert.rejects(down.api.list(prefix('admin-A')),/backup-hint-missing/);
   const own=setup({resumeHint:()=>({key:earlier,hint:store.readDurableHint(jkey)}),currentKey:()=>earlier});own.srv.mode='down';own.disk.rows.set(current,text);
   await assert.rejects(own.api.list(prefix('admin-A')),/backup-hint-missing/);
 });
