@@ -218,6 +218,14 @@
         if(!isObject(hintInfo)||typeof hintInfo.key!=='string'||hintInfo.key.indexOf(expected)!==0||hintInfo.key.length===expected.length)throw Error('invalid-backup-hint');
         if(hintInfo.hint!==null&&hintInfo.hint!==undefined&&typeof hintInfo.hint!=='string')throw Error('invalid-backup-hint');
       }
+      // A session pointer names the tab instance that wrote it. A pointer left by an earlier page in this
+      // tab (back/forward, sign-in redirect, duplicated tab) belongs to that instance's journal, which is
+      // listed below as another tab's row. It is never evidence for this page's own key.
+      var hintPointer=hintInfo&&hintInfo.hint!==null&&hintInfo.hint!==undefined?pointerValue(hintInfo.hint):null;
+      if(hintPointer&&typeof hintPointer.instance==='string'&&hintInfo.key!==expected+hintPointer.instance){
+        hintInfo={key:hintInfo.key,hint:null};hintPointer=null;
+      }
+      var legacyHint=!!hintPointer&&hintPointer.instance===undefined;
       if(typeof options.currentKey==='function')current=options.currentKey();
       if(current!==null&&current!==undefined&&
          (typeof current!=='string'||current.indexOf(expected)!==0||current.length===expected.length))throw Error('invalid-backup-key');
@@ -233,6 +241,10 @@
       if(hintInfo)required.add(hintInfo.key);
       if(cloudRows){
         cloudRows.rows.forEach(function(meta){if(meta.pending||meta.recoveryCount>0)required.add(meta.key);});
+        // An instance-less (older) pointer whose key is absent from the verified cloud list may belong to an
+        // earlier page of this tab. Load same-length rows so the exact text can be checked below.
+        if(legacyHint&&!local.has(hintInfo.key)&&!cloudRows.rows.some(function(row){return row.key===hintInfo.key;}))
+          cloudRows.rows.forEach(function(meta){if(meta.length===hintPointer.length)required.add(meta.key);});
         if(changed(principal))throw Error('owner-changed');
         var loads=[];required.forEach(function(key){
           var meta=cloudRows.rows.find(function(row){return row.key===key;});if(!meta)return;
@@ -243,8 +255,18 @@
       }
       if(hint){
         var hintKey=hintInfo.key,hasHintKey=local.has(hintKey)||cloud.has(hintKey);
-        if(!hasHintKey)throw Error('backup-hint-missing');
-        if(!((local.has(hintKey)&&matchesHint(local.get(hintKey),hint))||(cloud.has(hintKey)&&matchesHint(cloud.get(hintKey),hint))))throw Error('backup-hint-mismatch');
+        if(!hasHintKey){
+          // Only a complete cloud list can prove this key holds nothing. Then an exact match under another
+          // key identifies the pointer's real owner; without the cloud list this still fails closed.
+          var foreign=false;
+          if(legacyHint&&cloudRows){
+            cloud.forEach(function(text){if(matchesHint(text,hint))foreign=true;});
+            local.forEach(function(text){if(matchesHint(text,hint))foreign=true;});
+          }
+          if(!foreign)throw Error('backup-hint-missing');
+          hint=null;
+        }
+        else if(!((local.has(hintKey)&&matchesHint(local.get(hintKey),hint))||(cloud.has(hintKey)&&matchesHint(cloud.get(hintKey),hint))))throw Error('backup-hint-mismatch');
       }
       var merged=[];
       cloud.forEach(function(text,key){
@@ -267,7 +289,12 @@
      A session pointer is written only by markDurable() after the matching cloud/IndexedDB write, and a
      pointer reads as null so a reload loads the journal from durable storage. */
   function checksum(text){var h=2166136261;for(var i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}return (h>>>0).toString(16).padStart(8,'0');}
-  function pointerFor(text){var pointer={};pointer[POINTER]=1;pointer.length=text.length;pointer.digest=checksum(text);return JSON.stringify(pointer);}
+  function validInstance(value){return typeof value==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(value);}
+  function pointerFor(text,instance){
+    var pointer={};pointer[POINTER]=1;pointer.length=text.length;pointer.digest=checksum(text);
+    if(validInstance(instance))pointer.instance=instance;
+    return JSON.stringify(pointer);
+  }
   function pointerValue(hint){
     if(isObject(hint))return hint;
     if(typeof hint!=='string'||hint.length>256||hint.charAt(0)!=='{')return null;
@@ -283,7 +310,7 @@
   function isPointer(raw){
     if(typeof raw!=='string'||raw.length>256||raw.charAt(0)!=='{')return false;
     try{var value=JSON.parse(raw);return isObject(value)&&value[POINTER]===1&&Number.isSafeInteger(value.length)&&value.length>=0&&
-      typeof value.digest==='string'&&/^[0-9a-f]{8}$/.test(value.digest);}catch(error){return false;}
+      typeof value.digest==='string'&&/^[0-9a-f]{8}$/.test(value.digest)&&(value.instance===undefined||validInstance(value.instance));}catch(error){return false;}
   }
   function journalStore(session,codec){
     codec=codec||{};
@@ -326,10 +353,10 @@
       // Never delete a legacy full journal here; only pointers and the instance id are ours to remove.
       if(raw!==null&&(isPointer(raw)||key.indexOf(INSTANCE_PREFIX)===0)){try{session.removeItem(key);}catch(error){}}
     }
-    function markDurable(key,text){
+    function markDurable(key,text,instance){
       key=String(key);
       if(!journalKey(key)||typeof text!=='string'||!memory.has(key)||memory.get(key)!==text)return false;
-      var pointer=pointerFor(text);
+      var pointer=pointerFor(text,instance);
       try{session.setItem(key,pointer);return session.getItem(key)===pointer;}catch(error){return false;}
     }
     function readDurableHint(key){

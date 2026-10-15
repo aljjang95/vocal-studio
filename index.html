@@ -4847,7 +4847,7 @@ if(typeof VSSync!=='undefined')_vsSync=VSSync.create({
     owner:function(){return hasAdminSession()?_cfSession.principal:null;},
     currentKey:function(){return _vsSync&&_vsSync.key?_vsSync.key+':backup:'+_vsSync.instance:null;},
     resumeHint:function(){return _vsSync&&_vsSync.key?{key:_vsSync.key+':backup:'+_vsSync.instance,hint:_vsCloudJournal.readDurableHint(_vsSync.key)}:null;},
-    onDurable:function(key,text,location){_vsCloudLocation=location;_vsCloudJournal.markDurable(key.replace(/:backup:[^:]+$/,''),text);}}),
+    onDurable:function(key,text,location){_vsCloudLocation=location;_vsCloudJournal.markDurable(key.replace(/:backup:[^:]+$/,''),text,key.replace(/^.*:backup:/,''));}}),
   instanceId:typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():undefined,
   forkInstance:!!(performance.getEntriesByType&&performance.getEntriesByType('navigation')[0]&&performance.getEntriesByType('navigation')[0].type!=='reload'),
   owner:function(){return hasAdminSession()?_cfSession.principal:null;},
