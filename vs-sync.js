@@ -489,6 +489,8 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
   };
   Controller.prototype.subscribe=function(epoch){
       var self=this;if(!this.guard(epoch)||this.blocked)return false;
+      // Startup storage checks are finished here; the remaining wait is the server snapshot.
+      if(this.mode==='storage-pending')this.status('checking-server');
       this.doc=this.a.database().collection('studio').doc('data');
       if(this.a.doc)this.a.doc(this.doc);
       var unsubscribe=this.doc.onSnapshot({includeMetadataChanges:true},function(snapshot){

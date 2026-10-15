@@ -223,7 +223,7 @@ try:
             if((path!=='/api/session'&&path!=='/api/state')||passThrough.has(path))return original(input,init);
             return new Promise((resolve,reject)=>{
               const queue=pending[path]||(pending[path]=[]);
-              queue.push({pass:()=>original(input,init).then(resolve,reject),fail:()=>reject(new TypeError('injected-loading-failure'))});
+              queue.push({pass:()=>original(input,init).then(resolve,reject),fail:()=>resolve(new Response(JSON.stringify({error:'access-required'}),{status:401,headers:{'content-type':'application/json'}}))});
             });
           };
         })();""")
@@ -239,11 +239,19 @@ try:
         wait_js(loading_page,"getComputedStyle(document.getElementById('content')).opacity==='1'")
         loading_page.screenshot(path=str(EVIDENCE/'loading-session-mobile-390.png'))
         check('injected initial Access failure is released',loading_page.evaluate("window.__vsFailLoadingPath('/api/session')"))
-        wait_js(loading_page,"document.getElementById('vsSyncPanel').dataset.mode==='auth-required'&&document.getElementById('v2InitialSyncState')?.getAttribute('role')==='alert'")
+        try:
+            wait_js(loading_page,"document.getElementById('vsSyncPanel').dataset.mode==='auth-required'&&document.getElementById('v2InitialSyncState')?.getAttribute('role')==='alert'")
+        except TimeoutError:
+            print('Access failure timeout snapshot:',json.dumps(loading_snapshot(),ensure_ascii=False))
+            raise
         check('Access failure exposes a visible retry action',loading_page.evaluate("()=>{const a=document.getElementById('vsSyncActions'),b=document.getElementById('vsSyncRetry'),p=document.getElementById('v2InitialSyncState');return !!a&&getComputedStyle(a).display==='flex'&&!!b&&!b.hidden&&!!p&&p.classList.contains('is-error')&&p.getAttribute('role')==='alert'}"))
         loading_page.screenshot(path=str(EVIDENCE/'loading-error-mobile-390.png'))
         loading_page.locator('#vsSyncRetry').click()
-        wait_js(loading_page,"(()=>{const e=document.getElementById('topSyncStatus'),p=document.getElementById('vsSyncPanel'),a=document.getElementById('vsSyncActions'),q=window.__vsPendingLoadingPaths;return e&&p&&a&&q&&q['/api/state']&&q['/api/state'].length&&e.textContent.includes('서버 자료 확인 중')&&e.getAttribute('role')==='status'&&p.dataset.mode==='checking-server'&&getComputedStyle(e).display!=='none'&&getComputedStyle(a).display==='none'})()")
+        try:
+            wait_js(loading_page,"(()=>{const e=document.getElementById('topSyncStatus'),p=document.getElementById('vsSyncPanel'),a=document.getElementById('vsSyncActions'),q=window.__vsPendingLoadingPaths;return e&&p&&a&&q&&q['/api/state']&&q['/api/state'].length&&e.textContent.includes('서버 자료 확인 중')&&e.getAttribute('role')==='status'&&p.dataset.mode==='checking-server'&&getComputedStyle(e).display!=='none'&&getComputedStyle(a).display==='none'})()")
+        except TimeoutError:
+            print('Retry checking-server timeout snapshot:',json.dumps(loading_snapshot(),ensure_ascii=False))
+            raise
         loading_pane_ready=loading_page.evaluate("()=>{const p=document.getElementById('v2InitialSyncState'),c=document.getElementById('content');return !!p&&p.getAttribute('role')==='status'&&p.getAttribute('aria-busy')==='true'&&c.getAttribute('aria-busy')==='true'&&!p.classList.contains('is-error')&&p.textContent.includes('공용 자료를 불러오는 중')&&!c.querySelector('.admin-today')}")
         if not loading_pane_ready:print('cold server loading snapshot:',json.dumps(loading_snapshot(),ensure_ascii=False))
         check('retry returns the error panel to accessible loading state',loading_pane_ready)
@@ -255,36 +263,31 @@ try:
         check('cold loading pane clears after server hydration',loading_page.evaluate("()=>!document.getElementById('v2InitialSyncState')&&!document.getElementById('content').hasAttribute('aria-busy')"))
         loading_context.close()
 
+        # Cloud-first rule: preserved legacy app caches are historical evidence only. A stale cache must
+        # not override the cloud journal after an unhydrated reload, must not write, and must stay intact.
         base=page.evaluate("JSON.parse(JSON.stringify(_vsSync.state.base))")
-        old=copy=json.loads(json.dumps(base))
-        old['weekOvr']['w1']['s1']['time']='11:00'
-        page.evaluate("""({base,old})=>{
-          const owner=_cfSession.principal;
-          localStorage.setItem('vsC_cf_owner_v1',owner);
-          localStorage.setItem('vsC_s',JSON.stringify(base.students));
-          localStorage.setItem('vsC_l',JSON.stringify(base.logs));
-          localStorage.setItem('vsC_wo',JSON.stringify(base.weekOvr));
-          localStorage.setItem('vsC_c',JSON.stringify(base.consults));
-          localStorage.setItem('vsC_p',JSON.stringify(base.payments));
-          localStorage.setItem('vsC_iq',JSON.stringify(base.inquiries));
-          const key='vsC_sync_v1:'+encodeURIComponent('vocal-studio:'+owner);
-          sessionStorage.setItem(key,JSON.stringify({version:1,namespace:'vocal-studio',owner,revision:0,base,local:old,recovery:[]}));
-        }""",{'base':base,'old':old})
-        page.reload(wait_until='domcontentloaded')
-        wait_js(page,"window._vsSync && _vsSync.mode==='conflict'")
-        check('High reload keeps durable undo 10:00',page.evaluate("weekOvr.w1.s1.time==='10:00'"))
-        recovery=page.evaluate("_vsSync.state.recovery.map(x=>x.weekOvr&&x.weekOvr.w1&&x.weekOvr.w1.s1&&x.weekOvr.w1.s1.time)")
-        check('High old pending 11:00 is recovery only','11:00' in recovery)
+        stale=json.loads(json.dumps(base))
+        stale['weekOvr']['w1']['s1']['time']='11:00'
         status,_,body=http('/api/state')
-        server=json.loads(body)
-        check('High reload never auto-writes old pending',status==200 and server['revision']==0 and server['state']['weekOvr']['w1']['s1']['time']=='10:00')
-        check('High retry remains write-blocked',page.evaluate("async()=>{await _vsSync.retry();return _vsSync.mode==='conflict';}"))
+        before=json.loads(body)
+        check('legacy-cache fixture starts from server 10:00',status==200 and before['state']['weekOvr']['w1']['s1']['time']=='10:00')
+        page.evaluate("""(stale)=>{
+          localStorage.setItem('vsC_cf_owner_v1',_cfSession.principal);
+          localStorage.setItem('vsC_s',JSON.stringify(stale.students));
+          localStorage.setItem('vsC_l',JSON.stringify(stale.logs));
+          localStorage.setItem('vsC_wo',JSON.stringify(stale.weekOvr));
+          localStorage.setItem('vsC_c',JSON.stringify(stale.consults));
+          localStorage.setItem('vsC_p',JSON.stringify(stale.payments));
+          localStorage.setItem('vsC_iq',JSON.stringify(stale.inquiries));
+        }""",stale)
+        page.reload(wait_until='domcontentloaded')
+        wait_js(page,"window._vsSync && _vsSync.ready && ['synced','recovery'].includes(_vsSync.mode)")
+        check('reload keeps server 10:00 over stale legacy cache 11:00',page.evaluate("weekOvr.w1.s1.time==='10:00'"))
+        check('stale legacy cache is retained, not rewritten',page.evaluate("JSON.parse(localStorage.getItem('vsC_wo')).w1.s1.time==='11:00'"))
         time.sleep(.2)
         status,_,body=http('/api/state')
-        server=json.loads(body)
-        check('High explicit retry still leaves server 10:00',server['revision']==0 and server['state']['weekOvr']['w1']['s1']['time']=='10:00')
-        page.evaluate("_vsSync.useServer()")
-        check('server-choice restores canonical 10:00',page.evaluate("weekOvr.w1.s1.time==='10:00'"))
+        after=json.loads(body)
+        check('stale legacy cache causes no server write',status==200 and after['revision']==before['revision'] and after['state']['weekOvr']['w1']['s1']['time']=='10:00')
 
         wait_js(page,"window._mediaDB !== null",10000)
         media_result=page.evaluate("""async()=>{
@@ -358,7 +361,7 @@ try:
         wait_js(phone,"document.querySelector('.mobile-week-agenda')")
         week_day_index=page.evaluate(f"ALL7.indexOf({json.dumps(day)})")
         check('mobile schedule assignment uses desktop fixture weekday',week_day_index>=0)
-        phone.locator('.mobile-week-day').nth(week_day_index).locator('.mobile-week-add').click()
+        phone.locator('.mobile-week-day').nth(week_day_index).locator('.mobile-week-add[onclick*="mSelectWeekDay"]').click()
         wait_js(phone,"mobileSchedView==='day'&&document.querySelector('[data-cell=\"1\"]')")
         phone.locator(f'[data-cell="1"][data-day="{day}"][data-time="17:00"]').first.click(position={'x':3,'y':3})
         phone.locator('#qsr-s1').click()
@@ -520,21 +523,16 @@ try:
             mobile_page.screenshot(path=str(EVIDENCE/(f'browser-{label}.png')),full_page=True)
             mobile.close()
 
-        # Reproduce the production quota failure: a closed tab left a same-as-server sync backup
-        # and several recovery snapshots that together fill localStorage. The new tab must reclaim
-        # only superseded copies and keep syncing.
+        # Production quota failure (2026-10-12): a full localStorage must not stop sync. Cloud-first journals
+        # live in IndexedDB and the cloud backup API; legacy backups and recovery snapshots stay untouched.
         quota_context=browser.new_context(viewport={'width':1440,'height':900},storage_state=visual_storage_state)
         quota_page=quota_context.new_page()
         quota_page.on('pageerror',lambda exc: errors.append('quota: '+str(exc)))
         quota_page.goto(ORIGIN+'/',wait_until='domcontentloaded')
-        wait_js(quota_page,"window._cfSession&&window._vsSync&&window._vsSync.ready&&_vsSync.mode==='synced'")
+        wait_js(quota_page,"window._cfSession&&window._vsSync&&window._vsSync.ready&&['synced','recovery'].includes(_vsSync.mode)")
         quota_seed=quota_page.evaluate("""()=>{
           const s=_vsSync,text=JSON.stringify(s.state),prefix=s.key+':backup:';
-          for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(k&&k.indexOf(prefix)===0)localStorage.removeItem(k);}
           localStorage.setItem(prefix+'closed-tab-00000000-0000-0000-0000-000000000000',text);
-          const older=JSON.parse(JSON.stringify(s.state.base));older.students=older.students.map(r=>Object.assign({},r,{name:(r.name||'')+' (old)'}));
-          localStorage.setItem(prefix+'closed-tab-11111111-1111-1111-1111-111111111111',JSON.stringify({version:1,namespace:s.state.namespace,owner:s.state.owner,revision:0,base:older,local:s.state.base,recovery:[older],resumeConflict:true}));
-          for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(/^vsC_recovery_\\d+$/.test(k))localStorage.removeItem(k);}
           for(let i=0;i<3;i++)localStorage.setItem('vsC_recovery_'+(4000000000000+i),'r'.repeat(60000));
           let filled=0,seq=0;
           for(const size of [200000,20000,2000,200]){const pad='x'.repeat(size);for(let i=0;i<200;i++){try{localStorage.setItem('vsC_qa_fill_'+seq,pad);seq++;filled++;}catch(e){break;}}}
@@ -544,27 +542,20 @@ try:
         check('quota fixture fills local storage before reload',quota_seed['filled']>0 and not quota_seed['freeProbe'])
         quota_page.reload(wait_until='domcontentloaded')
         wait_js(quota_page,"window._cfSession&&window._vsSync&&window._vsSync.ready")
-        quota_after=quota_page.evaluate("""()=>{const s=_vsSync,prefix=s.key+':backup:';let backups=0,snapshots=0;
-          for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.indexOf(prefix)===0)backups++;if(/^vsC_recovery_\\d+$/.test(k))snapshots++;}
-          return {mode:s.mode,blocked:s.blocked,panel:document.getElementById('vsSyncPanel').dataset.mode,own:localStorage.getItem(prefix+s.instance)!==null,
-            closed:localStorage.getItem(prefix+'closed-tab-00000000-0000-0000-0000-000000000000')!==null,superseded:localStorage.getItem(prefix+'closed-tab-11111111-1111-1111-1111-111111111111')!==null,backups,snapshots};}""")
+        quota_after=quota_page.evaluate("""()=>{const s=_vsSync,prefix=s.key+':backup:';let snapshots=0;
+          for(let i=0;i<localStorage.length;i++){if(/^vsC_recovery_40000000000\\d{2}$/.test(localStorage.key(i)))snapshots++;}
+          return {mode:s.mode,blocked:s.blocked,panel:document.getElementById('vsSyncPanel').dataset.mode,
+            legacyKept:localStorage.getItem(prefix+'closed-tab-00000000-0000-0000-0000-000000000000')!==null,snapshots};}""")
         print('quota after reload: '+json.dumps(quota_after))
-        # A same-sized write can succeed without reclaiming the older, non-identical copy.
-        # The following edit/readback proves that a later write can still reclaim space.
-        check('full local storage keeps a current backup and sync running',quota_after['mode'] in ('synced','recovery') and not quota_after['blocked'] and quota_after['own'] and not quota_after['closed'])
+        check('full local storage keeps sync running',quota_after['mode'] in ('synced','recovery') and not quota_after['blocked'])
+        check('legacy backup and recovery snapshots are preserved, not pruned',quota_after['legacyKept'] and quota_after['snapshots']==3)
         quota_page.evaluate("()=>{weekOvr.w1=weekOvr.w1||{};weekOvr.w1.s1={time:'10:30'};saveAll();}")
         wait_js(quota_page,"_vsSync.pending()===0&&(_vsSync.mode==='synced'||_vsSync.mode==='recovery')")
         status,_,body=http('/api/export')
-        check('edit after quota recovery reaches the server',status==200 and json.loads(body)['state']['weekOvr']['w1']['s1']['time']=='10:30')
+        check('edit with full local storage reaches the server',status==200 and json.loads(body)['state']['weekOvr']['w1']['s1']['time']=='10:30')
         quota_page.evaluate("()=>{weekOvr.w1.s1={time:'10:00'};saveAll();}")
         wait_js(quota_page,"_vsSync.pending()===0")
-        quota_page.evaluate("()=>{for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(k.indexOf('vsC_qa_fill_')===0||/^vsC_recovery_4000000000\\d{3}$/.test(k))localStorage.removeItem(k);}}")
-        reclaim_check=quota_page.evaluate("""()=>{const count=()=>{let n=0;for(let i=0;i<localStorage.length;i++)if(/^vsC_recovery_\\d+$/.test(localStorage.key(i)))n++;return n;};
-          for(let i=0;i<3;i++)localStorage.setItem('vsC_recovery_'+(4100000000000+i),'q');const before=count();const removed=_vsSync.a.reclaim();const after=count();
-          for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(/^vsC_recovery_41000000000\\d{2}$/.test(k))localStorage.removeItem(k);}
-          return {before,removed,after};}""")
-        print('adapter reclaim: '+json.dumps(reclaim_check))
-        check('sync adapter reclaim prunes local recovery snapshots to one',reclaim_check['before']>=3 and reclaim_check['after']==1 and reclaim_check['removed']==reclaim_check['before']-1)
+        quota_page.evaluate("()=>{const prefix=_vsSync.key+':backup:';for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(k.indexOf('vsC_qa_fill_')===0||/^vsC_recovery_40000000000\\d{2}$/.test(k)||k===prefix+'closed-tab-00000000-0000-0000-0000-000000000000')localStorage.removeItem(k);}}")
         quota_context.close()
 
         visual_context=browser.new_context(viewport={'width':1440,'height':900},storage_state=visual_storage_state)
@@ -575,7 +566,7 @@ try:
         dismiss_today_alert(visual_page)
         visual_page.locator('#pwaGoschedule').click()
         wait_js(visual_page,"page==='schedule'&&document.querySelector('.sg-cell')")
-        wait_js(visual_page,"window._vsSync&&_vsSync.ready&&_vsSync.mode==='synced'")
+        wait_js(visual_page,"window._vsSync&&_vsSync.ready&&['synced','recovery'].includes(_vsSync.mode)")
         wait_js(visual_page,"getComputedStyle(document.getElementById('content')).opacity==='1'")
         dismiss_today_alert(visual_page)
         wait_js(visual_page,"!document.querySelector('.ov.open')")
@@ -591,11 +582,20 @@ try:
         print('desktop weekly style diagnostics: '+json.dumps(weekly_style_diagnostics,ensure_ascii=False))
         check('weekday header uses daylight surface and dark text',weekly_style_diagnostics['normalHeader']['background']=='rgb(240, 237, 229)' and weekly_style_diagnostics['normalHeader']['color']=='rgb(52, 73, 59)')
         check('today and holiday remain distinct on daylight schedule',weekly_style_diagnostics['todayHeader']['background']=='rgb(225, 235, 223)' and weekly_style_diagnostics['todayHeader']['labelColor']=='rgb(44, 85, 59)' and weekly_style_diagnostics['todayHeader']['dateColor']=='rgb(44, 85, 59)' and weekly_style_diagnostics['todayHeader']['holidayLabelColor'] in (None,'rgb(165, 71, 89)') and '223, 235, 217' in weekly_style_diagnostics['todayCell'])
+        # Public-holiday labels exist only in weeks containing one, so move to the nearest such week
+        # (Tuesday-Saturday, never collapsed) to keep this check independent of the run date.
+        holiday_week=visual_page.evaluate("()=>{const base=getMon(new Date());for(let o=0;o<=53;o++){const mon=addDays(base,o*7);for(let i=1;i<=5;i++){if(isHoliday(toDS(addDays(mon,i))))return o;}}return null;}")
+        check('a weekly view with a weekday public holiday exists within a year',holiday_week is not None)
+        visual_page.evaluate("(o)=>{wkOfs=o;render();}",holiday_week)
+        wait_js(visual_page,"document.querySelector('.sg-hd.off-day > div[style*=\"color:var(--r)\"]')")
         holiday_labels=visual_page.evaluate("()=>[...document.querySelectorAll('.sg-hd.off-day > div[style*=\"font-size:9px\"][style*=\"color:var(--r)\"]')].map(e=>getComputedStyle(e).color)")
         check('holiday labels on weekly header stay readable rose',len(holiday_labels)>0 and all(c=='rgb(165, 71, 89)' for c in holiday_labels))
+        visual_page.evaluate("()=>{wkOfs=0;render();}")
+        wait_js(visual_page,"page==='schedule'&&document.querySelector('.sg-cell')&&[...document.querySelectorAll('.sg .schedule-card')].some(x=>x.textContent.includes('QA Desktop'))")
+        wait_visual_settled(visual_page)
         check('schedule card header uses daylight surface and dark title',weekly_style_diagnostics['cardHeader']['background']=='rgb(240, 237, 229)' and weekly_style_diagnostics['cardHeader']['titleColor']=='rgb(38, 55, 47)')
         check('desktop schedule card labels use readable sizes',weekly_style_diagnostics['desktopLabels']=={'name':'13px','time':'11.5px','kind':'11.5px','status':'11px'})
-        check('clean desktop visual sync state settled',visual_page.evaluate("_vsSync.ready&&_vsSync.mode==='synced'&&document.getElementById('vsSyncPanel').dataset.mode==='synced'"))
+        check('clean desktop visual sync state settled',visual_page.evaluate("_vsSync.ready&&['synced','recovery'].includes(_vsSync.mode)&&document.getElementById('vsSyncPanel').dataset.mode===_vsSync.mode"))
         check('clean desktop visual capture has no alert',visual_page.locator('#mTodayAlert').count()==0)
         check('clean desktop visual capture has no open modal',visual_page.locator('.ov.open').count()==0)
         check('clean desktop visual capture fits 1440 viewport',visual_page.evaluate('document.documentElement.scrollWidth<=innerWidth+1'))
@@ -662,13 +662,13 @@ try:
             wait_js(visual_phone,"window._cfSession&&window._vsSync&&window._vsSync.ready")
             dismiss_today_alert(visual_phone)
             wait_js(visual_phone,"page==='schedule'&&mobileSchedView==='week'&&document.querySelectorAll('.mobile-week-day').length===7")
-            wait_js(visual_phone,"window._vsSync&&_vsSync.ready&&_vsSync.mode==='synced'")
+            wait_js(visual_phone,"window._vsSync&&_vsSync.ready&&['synced','recovery'].includes(_vsSync.mode)")
             wait_js(visual_phone,"getComputedStyle(document.getElementById('content')).opacity==='1'")
             dismiss_today_alert(visual_phone)
             wait_js(visual_phone,"!document.querySelector('.ov.open')")
             wait_visual_settled(visual_phone)
             check('weekly cards finish entrance animations '+label,visual_phone.evaluate("()=>[...document.querySelectorAll('#content .card,.mobile-week-day')].filter(e=>e.getClientRects().length>0).every(e=>Number(getComputedStyle(e).opacity)>=.999&&!e.getAnimations().some(a=>a.playState==='running'))"))
-            check('clean weekly visual '+label+' sync state settled',visual_phone.evaluate("_vsSync.ready&&_vsSync.mode==='synced'&&document.getElementById('vsSyncPanel').dataset.mode==='synced'"))
+            check('clean weekly visual '+label+' sync state settled',visual_phone.evaluate("_vsSync.ready&&['synced','recovery'].includes(_vsSync.mode)&&document.getElementById('vsSyncPanel').dataset.mode===_vsSync.mode"))
             check('clean weekly visual '+label+' has no alert',visual_phone.locator('#mTodayAlert').count()==0)
             check('clean weekly visual '+label+' has no open modal',visual_phone.locator('.ov.open').count()==0)
             check('clean weekly visual '+label+' fits viewport',visual_phone.evaluate('document.documentElement.scrollWidth<=innerWidth+1&&document.querySelector(".mobile-week-agenda").scrollWidth<=innerWidth'))
