@@ -579,7 +579,7 @@ function actualDisplayFixture({lateEdit=false,skipDisplay=false,held=false,local
   let enterPut,releasePut;const entered=new Promise(resolve=>{enterPut=resolve;});
   const controller=syncRuntime.create({namespace:'sms-synthetic',instanceId:'one',store,backupStore:{...store,setItem(){throw Error('synthetic quota');}},
     overflowStore:{async put(key,text){if(JSON.parse(text).revision===baseRevision+1&&allowEdit){
-      if(held){const wait=new Promise(resolve=>{releasePut=()=>resolve(text);});enterPut();return wait;}
+      if(held)return text;
       await new Promise(resolve=>setImmediate(resolve));host.focus();
     }return text;}},
     owner:()=> 'synthetic-owner',frozen:()=>false,
@@ -595,6 +595,13 @@ function actualDisplayFixture({lateEdit=false,skipDisplay=false,held=false,local
   controller.doc={async get(){if(canonicalRead){const record=canonicalRead();return {exists:true,data:()=>({...clone(record.state),_vsSyncRevision:record.revision})};}
     const data={...syncRuntime.normalize(ui),_vsSyncRevision:f.data.revision};if(f.data.revision===8){const receipt=f.data.messages[0].confirmation;
     data.weekOvr={[receipt.date]:{[receipt.studentId]:[{day:'월',time:receipt.time,source:'sms-confirmed'}]}};}return {exists:true,data:()=>data};}};
+  if(held){
+    // Server-first: the race window is the canonical readback itself. The owner starts typing in another
+    // field while the server confirmation is in flight; that open edit must not be repainted.
+    const read=controller.doc.get;
+    controller.doc.get=async function(){const snapshot=await read.apply(this,arguments);
+      if(allowEdit&&snapshot.data()._vsSyncRevision===baseRevision+1){await new Promise(resolve=>{releasePut=resolve;enterPut();});}return snapshot;};
+  }
   const display=controller.display;if(skipDisplay)controller.display=function(){this.displayRequired=false;};
   f.ctx._vsSync=controller;
   return {f,controller,host,ui:()=>ui,photo:()=>store.getItem('synthetic-photo'),audio,entered,release:()=>releasePut(),recover(){allowEdit=false;controller.display=display;f.document.body.focus();}};
@@ -631,8 +638,9 @@ test('readback accepts an applied adapter viewBase that differs from the canonic
 test('actual VSSync held overflow readback retains pending drafts until host edit ends and display recovers',{timeout:5000},async()=>{
   const {f,controller,host,ui,recover,entered,release,photo,audio}=actualDisplayFixture({lateEdit:true,held:true,localMedia:true});await f.open();
   f.fill('date','2099-10-06');f.fill('time','16:30');f.fill('checked',true);f.fill('mondayText','{name} retained SMS draft');f.calls.length=0;
-  const attempt=f.click('confirm');await entered;assert.equal(controller.hold,'durability');host.focus();release();await attempt;
-  assert.equal(controller.state.revision,8);assert.equal(controller.ready,true);assert.equal(controller.pending(),0);
+  const attempt=f.click('confirm');await entered;host.focus();release();await attempt;
+  // The confirmed revision waits in the queue while another field is open; nothing is repainted yet.
+  assert.equal(controller.deferred._vsSyncRevision,8);assert.equal(controller.state.revision,7);assert.equal(controller.ready,true);assert.equal(controller.pending(),0);
   assert.equal(ui().weekOvr['2099-10-06'],undefined);assert.equal(f.document.activeElement,host);assert.equal(host.value,'uncommitted host draft');
   assert.equal(f.calls.filter(c=>c.kind==='render'||c.kind==='adapter-render').length,0);assert.ok(!f.text().includes('일정 1건이 등록되었습니다'));
   assert.equal(f.field('checked').checked,true);assert.equal(f.field('date').value,'2099-10-06');assert.equal(f.field('time').value,'16:30');
@@ -782,8 +790,8 @@ test('real SQLite StudioState + actual VSSync owner call-to-inquiry CAS and dura
 test('real StudioState call inquiry + actual async VSSync overflow host-edit race retains drafts until authoritative display',{timeout:5000},async t=>{
   const {f,state,controller,host,ui,recover,entered,release}=await studioOwnerFixture(t,{lateEdit:true,held:true});await f.open();
   f.fill('callName','retained inquiry name');f.fill('callMemo','retained inquiry memo');f.fill('mondayText','{name} retained reminder');
-  const pending=f.click('call-inquiry');await entered;assert.equal(controller.hold,'durability');host.focus();release();await pending;
-  assert.equal(state.record().revision,1);assert.equal(controller.state.revision,1);assert.equal(ui().inquiries.length,0);assert.equal(host.value,'uncommitted host draft');assert.equal(f.document.activeElement,host);
+  const pending=f.click('call-inquiry');await entered;host.focus();release();await pending;
+  assert.equal(state.record().revision,1);assert.equal(controller.deferred._vsSyncRevision,1);assert.equal(ui().inquiries.length,0);assert.equal(host.value,'uncommitted host draft');assert.equal(f.document.activeElement,host);
   assert.match(f.text(),/등록 결과를 아직 확인하지 못/);assert.equal(f.field('callName').value,'retained inquiry name');assert.equal(f.field('callMemo').value,'retained inquiry memo');
   assert.equal(f.field('mondayText').value,'{name} retained reminder');assert.equal(f.action('call-inquiry').disabled,true);assert.equal(controller.displayRequired,true);
   assert.equal(f.calls.filter(c=>c.kind==='render'||c.kind==='adapter-render').length,0);assert.equal(f.calls.filter(c=>c.route==='call-inquiry').length,1);

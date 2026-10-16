@@ -41,24 +41,30 @@ function world(){
   return w;
 }
 
-test('full quota with a divergent recovery waits for durable commit before ready or server writes',async()=>{
-  const w=world(),g=gate();w.gates.push(g);const c=w.client();await settle();
-  assert.equal(c.mode,'storage-pending');assert.equal(c.ready,false);assert.equal(w.subscriptions,0);assert.equal(w.writes,0);
-  g.resolve();await c.connection;await settle();
-  assert.equal(c.ready,true);assert.equal(c.controller.blocked,false);assert.equal(c.controller.pending(),0);assert.equal(c.controller.state.recovery.length,1);
+test('full quota with a divergent recovery opens server data without waiting for the backup and keeps recovery',async()=>{
+  const w=world(),g=gate();w.gates.push(g);const c=w.client();await c.connection;await settle();
+  assert.equal(c.ready,true,'server-first: a pending journal backup never holds the first paint');assert.equal(w.subscriptions,1);
+  assert.equal(c.controller.backupPending,true);assert.equal(c.controller.pending(),0);assert.equal(c.controller.state.recovery.length,1);
   assert.equal(c.controller.state.recovery[0].students[0].fee,200);assert.equal(w.writes,0);
+  g.resolve();await settle();assert.equal(c.controller.backupPending,false);assert.equal(c.controller.backupFailed,false);
   const exported=await c.controller.exportData();assert.ok(exported.backups.some(b=>b.recovery?.[0]?.students[0]?.name==='Retained variant'));w.intact();
 });
-test('a save during pending archive retains newest intent and sends only after its own durability',async()=>{
+test('saves during a pending backup are sent at once and the newest intent ends up in the backup',async()=>{
   const w=world(),c=w.client();await c.connection;await settle();const a=gate(),b=gate();w.gates.push(a,b);
   c.ui.students[0].memo='first';const first=c.controller.save();await settle();
-  c.ui.students[0].memo='second';const second=c.controller.save();await settle();assert.equal(w.writes,0);
-  a.resolve();await settle();assert.equal(w.writes,0);assert.equal(c.ui.students[0].memo,'second');assert.equal(c.ready,false);
-  b.resolve();await Promise.all([first,second]);await settle();assert.equal(w.data.students[0].memo,'second');assert.equal(c.controller.pending(),0);assert.equal(c.controller.state.recovery.length,1);w.intact();
+  c.ui.students[0].memo='second';const second=c.controller.save();await Promise.all([first,second]);await settle();
+  assert.ok(w.writes>=1,'the server transaction does not wait for the journal backup');assert.equal(w.data.students[0].memo,'second');
+  assert.equal(c.ui.students[0].memo,'second');assert.equal(c.ready,true);assert.equal(c.controller.pending(),0);
+  a.resolve();b.resolve();await settle();
+  const latest=JSON.parse(w.rows.get(prefix+':backup:'+c.controller.instance));
+  assert.equal(latest.local.students[0].memo,'second');assert.deepEqual(latest.base,latest.local);assert.equal(latest.recovery.length,1);
+  assert.equal(c.controller.backupPending,false);assert.equal(c.controller.state.recovery.length,1);w.intact();
 });
-test('stale overflow completion cannot resume a disconnected account or export another owner',async()=>{
-  const w=world(),g=gate();w.gates.push(g);const c=w.client();await settle();c.owner='admin-B';c.controller.disconnect();g.resolve();await c.connection;await settle();
-  assert.equal(c.ready,false);assert.equal(c.controller.state,null);assert.equal(w.subscriptions,0);assert.equal(w.writes,0);
+test('stale backup completion cannot resume a disconnected account or export another owner',async()=>{
+  const w=world(),g=gate();w.gates.push(g);const c=w.client();await c.connection;await settle();const writes=w.writes;
+  c.owner='admin-B';c.controller.disconnect();g.resolve();await settle();
+  assert.equal(c.ready,false);assert.equal(c.controller.state,null);assert.equal(w.writes,writes);
+  assert.equal(c.controller.backupPending,false);assert.equal(c.controller.backupFailed,false);
   assert.deepEqual((await c.controller.exportData()).backups,[]);w.intact();
 });
 test('committed own overflow survives missing session journal and a fork exports all owner backups',async()=>{
@@ -68,27 +74,41 @@ test('committed own overflow survives missing session journal and a fork exports
   const fork=w.client({noJournal:true,forkInstance:true});await fork.connection;await settle();assert.notEqual(fork.controller.instance,reload.controller.instance);
   assert.ok((await fork.controller.exportData()).backups.some(b=>b.local?.students[0]?.memo==='unsent'));w.intact();
 });
-test('overflow load/write failures fail closed and retry preserves recovery',async()=>{
-  const w=world();w.listFail=true;const c=w.client();await c.connection;await settle();assert.equal(c.mode,'storage-error');assert.equal(w.subscriptions,0);
-  w.listFail=false;w.putFail=true;await c.controller.retry();await settle();assert.equal(c.ready,false);assert.equal(w.writes,0);
-  w.putFail=false;await c.controller.retry();await settle();assert.equal(c.ready,true);assert.equal(c.controller.state.recovery.length,1);w.intact();
+test('a failed backup list still opens the server copy under a fresh key; a failed backup write never blocks sending',async()=>{
+  const w=world(),stale=prefix+':backup:tab-1';w.rows.set(stale,JSON.stringify({version:1,namespace,owner,revision:39,base:seed(),local:seed(),recovery:[]}));const before=w.rows.get(stale);
+  w.listFail=true;const c=w.client();await c.connection;await settle();
+  assert.equal(c.ready,true);assert.equal(w.subscriptions,1);assert.notEqual(c.controller.mode,'storage-error');
+  assert.notEqual(c.controller.instance,'tab-1','an unread journal key is never reused');assert.equal(c.controller.backupsUnchecked,true);
+  assert.equal(c.controller.state.recovery.length,1);
+  w.putFail=true;c.ui.students[0].memo='sent without backup';await c.controller.save();await settle();
+  assert.equal(w.data.students[0].memo,'sent without backup');assert.equal(c.controller.pending(),0);assert.equal(c.controller.backupFailed,true);
+  w.putFail=false;w.listFail=false;await c.controller.retry();await settle();
+  assert.equal(c.controller.backupsUnchecked,false);assert.equal(w.rows.get(stale),before,'the unread journal stays byte for byte');
+  c.ui.students[0].fee=150;await c.controller.save();await settle();assert.equal(c.controller.backupFailed,false);assert.equal(w.data.students[0].fee,150);
+  assert.equal(c.controller.state.recovery.length,1);w.intact();
 });
-test('load completes before connecting, and owner-mismatched stored payloads fail closed',async()=>{
+test('a slow list holds only the first paint, and an owner-mismatched row is never adopted or overwritten',async()=>{
   const w=world();w.listGate=gate();const c=w.client();await settle();assert.equal(w.subscriptions,0);assert.equal(c.ready,false);
-  w.rows.set(prefix+':backup:bad',JSON.stringify({version:1,owner:'admin-B',namespace}));w.listGate.resolve();await c.connection;await settle();
-  assert.equal(c.mode,'storage-error');assert.equal(w.subscriptions,0);assert.equal(w.writes,0);w.intact();
+  const bad=JSON.stringify({version:1,owner:'admin-B',namespace});w.rows.set(prefix+':backup:bad',bad);w.listGate.resolve();await c.connection;await settle();
+  assert.equal(c.ready,true);assert.equal(w.subscriptions,1);assert.equal(c.controller.overflowBackups.has(prefix+':backup:bad'),false);
+  assert.equal(w.rows.get(prefix+':backup:bad'),bad);assert.equal(w.writes,0);w.intact();
 });
-test('readback mismatch preserves staged edits/recovery and prohibits transaction until explicit retry',async()=>{
+test('a backup list that never answers falls back to the server copy after the startup deadline',async()=>{
+  const w=world();w.listGate=gate();const c=w.client({noJournal:true});c.controller.a.backupListTimeout=5;
+  c.controller.disconnect();c.connection=c.controller.connect();await new Promise(r=>setTimeout(r,20));await settle();
+  assert.equal(c.ready,true);assert.equal(c.controller.backupsUnchecked,true);w.listGate.resolve();await settle();w.intact();
+});
+test('a backup readback mismatch never blocks the server transaction and keeps the staged journal',async()=>{
   const w=world(),c=w.client();await c.connection;await settle();w.mismatch=true;c.ui.students[0].memo='new intent';
-  assert.equal(await c.controller.save(),false);assert.equal(c.ready,false);assert.equal(c.mode,'storage-error');assert.equal(w.writes,0);
-  assert.equal(JSON.parse(c.store.getItem(prefix)).local.students[0].memo,'new intent');assert.equal(c.controller.state.recovery.length,1);
-  w.mismatch=false;await c.controller.retry();await settle();assert.equal(w.data.students[0].memo,'new intent');assert.equal(c.controller.pending(),0);w.intact();
+  await c.controller.save();await settle();assert.equal(w.data.students[0].memo,'new intent');assert.equal(c.controller.pending(),0);
+  assert.equal(c.controller.backupFailed,true);assert.equal(c.ready,true);
+  assert.equal(JSON.parse(c.store.getItem(prefix)).local.students[0].memo,'new intent');assert.equal(c.controller.state.recovery.length,1);w.intact();
 });
 test('save during deferred ACK and its archive preserves both newer intent and recovery through reload',async()=>{
   const w=world(),c=w.client();await c.connection;await settle();const ack=gate();w.ackGate=ack;
   c.ui.students[0].memo='first';const first=c.controller.save();await settle();assert.equal(w.writes,1);
   c.editing=true;c.ui.students[0].fee=333;await c.controller.save();const archive=gate();w.gates.push(archive);ack.resolve();await settle();
-  assert.ok(c.controller.state.ack);assert.equal(c.ready,false);assert.equal(w.writes,1);
+  assert.ok(c.controller.state.ack,'an ACK waits for the open form, not for the backup');assert.equal(w.writes,1);
   c.ui.students[0].memo='newest';const save=c.controller.save();archive.resolve();await Promise.all([first,save]);await settle();
   assert.ok(c.controller.state.ack);assert.equal(c.controller.state.local.students[0].memo,'newest');assert.equal(c.controller.state.recovery.length,1);
   const savedUI=copy(c.ui);c.controller.disconnect();const reload=w.client({store:c.store,noJournal:true,ui:savedUI});await reload.connection;await settle();
@@ -122,37 +142,36 @@ test('normal localStorage remains synchronous after overflow inventory loads, wi
   assert.equal(w.data.students[0].memo,'local path');assert.equal(w.puts.length,0);w.intact();
 });
 test('an offline or invalid-remote gate is not lifted merely by finishing a pending archive',async()=>{
-  const w=world(),c=w.client();await c.connection;await settle();const g=gate();w.gates.push(g);
-  c.ui.students[0].memo='wait for reconnect';const saving=c.controller.save();await settle();c.controller.unready();c.controller.status('offline');
-  g.resolve();await saving;await settle();assert.equal(c.ready,false);assert.equal(w.writes,0);
+  const w=world(),c=w.client();await c.connection;await settle();const g=gate();w.gates.push(g);c.controller.unready();c.controller.status('offline');
+  c.ui.students[0].memo='wait for reconnect';const saving=c.controller.save();await settle();
+  g.resolve();await saving;await settle();assert.equal(c.ready,false);assert.equal(c.mode,'offline');assert.equal(w.writes,0);
   await c.controller.retry();await settle();assert.equal(c.ready,true);assert.equal(w.data.students[0].memo,'wait for reconnect');w.intact();
 });
-test('an explicit save during startup archive is committed before subscription and keeps newest edits',async()=>{
-  const w=world(),a=gate(),b=gate();w.gates.push(a,b);const c=w.client();await settle();c.ui.students[0].memo='during startup';const saving=c.controller.save();
-  a.resolve();await settle();assert.equal(w.subscriptions,0);assert.equal(w.writes,0);assert.equal(c.ready,false);
-  b.resolve();await Promise.all([c.connection,saving]);await settle();assert.equal(w.subscriptions,1);assert.equal(w.data.students[0].memo,'during startup');assert.equal(c.controller.pending(),0);assert.equal(c.controller.state.recovery.length,1);w.intact();
+test('an explicit save while the startup backup is pending is sent at once and keeps newest edits',async()=>{
+  const w=world(),a=gate(),b=gate();w.gates.push(a,b);const c=w.client();await c.connection;await settle();assert.equal(w.subscriptions,1);
+  c.ui.students[0].memo='during startup';await c.controller.save();await settle();
+  assert.equal(w.data.students[0].memo,'during startup');assert.equal(c.controller.pending(),0);assert.equal(c.controller.state.recovery.length,1);
+  a.resolve();b.resolve();await settle();assert.equal(c.controller.backupPending,false);w.intact();
 });
-for(const mode of ['offline','invalid-remote'])for(const recovery of [false,true])test('remote archive completion preserves newer '+mode+' gate with recovery='+recovery,async()=>{
+for(const mode of ['offline','invalid-remote'])for(const recovery of [false,true])test('backup completion preserves a newer '+mode+' gate with recovery='+recovery,async()=>{
   const w=world(),c=w.client({noJournal:!recovery});await c.connection;await settle();const g=gate();w.gates.push(g);
-  w.remote(data=>{data.students[0].fee=410;});await settle();assert.equal(c.mode,'storage-pending');assert.equal(c.ready,false);
+  w.remote(data=>{data.students[0].fee=410;});await settle();assert.equal(c.ready,true);assert.equal(c.ui.students[0].fee,410,'remote data paints without waiting for its backup');
   w.fault(mode);const blocked=c.controller.blocked;g.resolve();await settle();
-  assert.equal(c.ready,false);assert.equal(c.controller.confirmed,false);assert.equal(c.mode,mode);assert.equal(c.controller.blocked,blocked);
-  assert.equal(c.ui.students[0].fee,100,'completion cannot paint old remote data after a newer validation/connection error');assert.equal(w.writes,0);
-  w.emit();await settle();assert.equal(c.ready,true);assert.equal(c.ui.students[0].fee,410);assert.equal(c.controller.state.recovery.length,recovery?1:0);w.intact();
+  assert.equal(c.ready,false);assert.equal(c.controller.confirmed,false);assert.equal(c.mode,mode);assert.equal(c.controller.blocked,blocked);assert.equal(w.writes,0);
+  w.data.students[0].fee=415;w.rev++;w.emit();await settle();assert.equal(c.ready,true);assert.equal(c.ui.students[0].fee,415);assert.equal(c.controller.state.recovery.length,recovery?1:0);w.intact();
 });
-for(const recovery of [false,true])test('remote archive completion automatically drains newer revision with recovery='+recovery,async()=>{
+for(const recovery of [false,true])test('consecutive remote revisions apply immediately during a pending backup with recovery='+recovery,async()=>{
   const w=world(),c=w.client({noJournal:!recovery});await c.connection;await settle();const first=gate(),latest=gate();w.gates.push(first,latest);
-  w.remote(data=>{data.students[0].fee=410;});await settle();w.remote(data=>{data.students[0].fee=420;});
-  assert.equal(c.controller.deferred._vsSyncRevision,42);first.resolve();await settle();
-  assert.equal(c.controller.state.revision,42,'latest remote revision starts durability without another notification or retry');assert.equal(c.ready,false);assert.equal(w.writes,0);
-  latest.resolve();await settle();assert.equal(c.ui.students[0].fee,420);assert.equal(c.ready,true);assert.equal(c.controller.pending(),0);
-  assert.equal(c.controller.deferred,null);assert.equal(c.controller.state.recovery.length,recovery?1:0);w.intact();
+  w.remote(data=>{data.students[0].fee=410;});await settle();w.remote(data=>{data.students[0].fee=420;});await settle();
+  assert.equal(c.controller.state.revision,42);assert.equal(c.ui.students[0].fee,420);assert.equal(c.ready,true);assert.equal(c.controller.deferred,null);assert.equal(w.writes,0);
+  first.resolve();latest.resolve();await settle();assert.equal(c.controller.pending(),0);assert.equal(c.controller.backupPending,false);
+  assert.equal(c.controller.state.recovery.length,recovery?1:0);w.intact();
 });
-for(const mode of ['offline','invalid-remote'])test('queued remote data before '+mode+' cannot restore confirmation after old archive completes',async()=>{
+for(const mode of ['offline','invalid-remote'])test('remote data before '+mode+' cannot restore confirmation when an old backup completes',async()=>{
   const w=world(),c=w.client();await c.connection;await settle();const g=gate();w.gates.push(g);
-  w.remote(data=>{data.students[0].fee=410;});await settle();w.remote(data=>{data.students[0].fee=420;});w.fault(mode);
+  w.remote(data=>{data.students[0].fee=410;});await settle();w.remote(data=>{data.students[0].fee=420;});await settle();w.fault(mode);
   g.resolve();await settle();c.controller.drain();await settle();assert.equal(c.ready,false);assert.equal(c.mode,mode);assert.equal(w.writes,0);
-  assert.equal(c.ui.students[0].fee,100);w.emit();await settle();assert.equal(c.ready,true);assert.equal(c.ui.students[0].fee,420);w.intact();
+  assert.equal(c.ui.students[0].fee,420);w.emit();await settle();assert.equal(c.ready,true);assert.equal(c.ui.students[0].fee,420);w.intact();
 });
 for(const mode of ['offline','invalid-remote'])test('only a fresh post-'+mode+' snapshot queued during archive can restore latest confirmation',async()=>{
   const w=world(),c=w.client();await c.connection;await settle();const g=gate();w.gates.push(g);
@@ -163,9 +182,9 @@ for(const mode of ['offline','invalid-remote'])test('only a fresh post-'+mode+' 
 for(const mode of ['offline','invalid-remote'])test('ACK and newer explicit edit survive '+mode+' during ACK durability, then fresh retry converges',async()=>{
   const w=world(),c=w.client();await c.connection;await settle();const ack=gate();w.ackGate=ack;
   c.ui.students[0].memo='first committed';const first=c.controller.save();await settle();assert.equal(w.writes,1);
-  const archive=gate();w.gates.push(archive);ack.resolve();await settle();assert.ok(c.controller.state.ack);
+  const archive=gate();w.gates.push(archive);ack.resolve();await settle();
   w.fault(mode);c.ui.students[0].memo='newest edit';const newest=c.controller.save();archive.resolve();await Promise.all([first,newest]);await settle();
-  assert.equal(c.ready,false);assert.equal(c.mode,mode);assert.ok(c.controller.state.ack);assert.equal(c.controller.state.local.students[0].memo,'newest edit');
+  assert.equal(c.ready,false);assert.equal(c.mode,mode);assert.equal(c.controller.state.local.students[0].memo,'newest edit');
   assert.equal(w.writes,1);w.data.students[0].fee=420;w.rev++;await c.controller.retry();await settle();
   assert.equal(c.ready,true);assert.equal(c.controller.state.ack,undefined);assert.equal(c.controller.pending(),0);assert.equal(c.ui.students[0].memo,'newest edit');
   assert.equal(c.ui.students[0].fee,420);assert.equal(c.controller.state.recovery.length,1);assert.equal(w.writes,2);w.intact();
@@ -175,31 +194,32 @@ test('localStorage persistence also preserves an existing validation gate until 
   c.ui.students[0].memo='safe local edit';await c.controller.save();assert.equal(c.ready,false);assert.equal(c.mode,'invalid-remote');assert.equal(c.controller.blocked,true);assert.equal(w.writes,0);
   await c.controller.retry();await settle();assert.equal(c.ready,true);assert.equal(w.data.students[0].memo,'safe local edit');w.intact();
 });
-test('a quota rejection after offline keeps the connection error visible and can retry both gates',async()=>{
+test('a backup rejection after offline keeps the connection error visible and does not hold storage',async()=>{
   const w=world(),c=w.client();await c.connection;await settle();const g=gate();w.gates.push(g);w.putFail=true;
   w.remote(data=>{data.students[0].fee=410;});await settle();w.fault('offline');g.resolve();await settle();
-  assert.equal(c.ready,false);assert.equal(c.mode,'offline');assert.equal(c.controller.hold,'storage');assert.equal(w.writes,0);
-  w.putFail=false;await c.controller.retry();await settle();assert.equal(c.ready,true);assert.equal(c.mode,'recovery');assert.equal(c.controller.state.recovery.length,1);w.intact();
+  assert.equal(c.ready,false);assert.equal(c.mode,'offline');assert.equal(c.controller.hold,null);assert.equal(c.controller.backupFailed,true);assert.equal(w.writes,0);
+  w.putFail=false;w.data.students[0].fee=411;w.rev++;await c.controller.retry();await settle();
+  assert.equal(c.ready,true);assert.equal(c.mode,'recovery');assert.equal(c.controller.backupFailed,false);assert.equal(c.controller.state.recovery.length,1);w.intact();
 });
-test('memo-only form save while unseen remote fee archive is pending preserves the remote fee',async()=>{
+test('memo-only form save after a remote fee change preserves the remote fee',async()=>{
   const w=world(),c=w.client();await c.connection;await settle();const archive=gate();w.gates.push(archive);
-  w.remote(data=>{data.students[0].fee=111;});await settle();assert.equal(c.controller.state.base.students[0].fee,111);assert.equal(c.ui.students[0].fee,100);
+  w.remote(data=>{data.students[0].fee=111;});await settle();assert.equal(c.controller.state.base.students[0].fee,111);assert.equal(c.ui.students[0].fee,111);
   c.editing=true;c.ui.students[0].memo='memo-only edit';const saved=c.controller.save();archive.resolve();await saved;await settle();c.editing=false;c.controller.drain();await settle();
   assert.equal(w.data.students[0].fee,111,'unseen remote fee is not inferred as an intentional local rollback');assert.equal(w.data.students[0].memo,'memo-only edit');
   assert.equal(c.ui.students[0].fee,111);assert.equal(c.controller.pending(),0);assert.equal(c.controller.state.recovery.length,1);w.intact();
 });
-test('same-field form edit during unseen remote archive fails closed with both variants durably retained',async()=>{
-  const w=world(),c=w.client();await c.connection;await settle();const archive=gate();w.gates.push(archive);
-  w.remote(data=>{data.students[0].fee=111;});await settle();c.editing=true;c.ui.students[0].fee=130;const saved=c.controller.save();
-  archive.resolve();await saved;await settle();c.editing=false;c.controller.drain();await settle();
+test('same-field form edit against an unseen remote change fails closed with both values retained',async()=>{
+  const w=world(),c=w.client();await c.connection;await settle();const archive=gate();w.gates.push(archive);c.editing=true;
+  w.remote(data=>{data.students[0].fee=111;});await settle();assert.equal(c.ui.students[0].fee,100,'an open form is not repainted');
+  c.ui.students[0].fee=130;const saved=c.controller.save();archive.resolve();await saved;await settle();c.editing=false;c.controller.drain();await settle();
   assert.equal(w.writes,0);assert.equal(w.data.students[0].fee,111);assert.equal(c.mode,'conflict');assert.equal(c.controller.blocked,true);
   const raw=JSON.parse(w.rows.get(prefix+':backup:'+c.controller.instance));assert.equal(raw.local.students[0].fee,130);
-  assert.ok(raw.recovery.some(d=>d.students[0].fee===111));assert.ok(raw.recovery.some(d=>d.students[0].fee===200));w.intact();
+  assert.ok(raw.recovery.some(d=>d.students[0].fee===200));w.intact();
 });
-test('retry after unseen remote archive quota failure uses the captured UI patch instead of stale fields',async()=>{
+test('retry after a backup failure uses the captured UI patch instead of stale fields',async()=>{
   const w=world(),c=w.client();await c.connection;await settle();const archive=gate();w.gates.push(archive);
   w.remote(data=>{data.students[0].fee=111;});await settle();c.editing=true;c.ui.students[0].memo='memo after quota';const saved=c.controller.save();
-  w.putFail=true;archive.resolve();await saved;await settle();assert.equal(c.controller.hold,'storage');assert.equal(w.writes,0);
+  w.putFail=true;archive.resolve();await saved;await settle();assert.equal(c.controller.hold,null);assert.equal(c.controller.backupFailed,true);assert.equal(w.writes,0);
   c.editing=false;w.putFail=false;await c.controller.retry();await settle();assert.equal(w.data.students[0].fee,111);assert.equal(w.data.students[0].memo,'memo after quota');
   assert.equal(c.ready,true);assert.equal(c.controller.pending(),0);w.intact();
 });

@@ -263,7 +263,8 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     this.flight=null;this.deferred=null;this.latest=null;this.ready=false;this.blocked=false;this.hold=null;
     this.archiveTail=Promise.resolve();this.archiveSequence=0;this.overflowBackups=new Map();
     this.confirmationSequence=0;this.connectionError=null;
-    var instanceKey='vsC_sync_instance_v1:'+encodeURIComponent(adapter.namespace);
+    var instanceKey=this.instanceKey='vsC_sync_instance_v1:'+encodeURIComponent(adapter.namespace);
+    this.backupPending=false;this.backupFailed=false;this.backupsUnchecked=false;
     this.instance=adapter.forkInstance?null:adapter.store.getItem(instanceKey);
     if(!this.instance){
       this.instance=adapter.instanceId||String(Date.now())+'-'+Math.random().toString(36).slice(2);
@@ -271,9 +272,55 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     }
   }
   Controller.prototype.status=function(mode,detail){
-    if(this.a.cloudFirst&&this.a.storageLocation&&this.a.storageLocation()==='device'&&['synced','recovery'].indexOf(mode)>=0)mode='device-only';
+    // A synced journal has nothing beyond the server copy, so where its backup lives does not matter.
+    // Only recovery evidence that exists solely on this device is worth flagging.
+    if(this.a.cloudFirst&&this.a.storageLocation&&this.a.storageLocation()==='device'&&mode==='recovery')mode='device-only';
     if(['offline','invalid-remote','missing-remote'].indexOf(mode)>=0)this.connectionError=mode;
     this.mode=mode;this.a.status(mode,detail);
+  };
+  /* Server-first: the canonical copy is the server. A journal backup that cannot be written only
+     matters while this tab still holds unsent intent, so it is reported then and never blocks sending. */
+  Controller.prototype.backupNotice=function(){
+    if(this.mode&&this.state&&(this.pending()>0||this.state.ack))this.status(this.mode);
+  };
+  /* Startup could not read the journal list (offline, expired login, unavailable device database or an
+     unreadable row). Continue from the server with a fresh instance key: no unread journal is ever
+     overwritten, and every one of them stays in cloud/device storage for a later recovery check. */
+  Controller.prototype.skipBackups=function(){
+    this.overflowBackups=new Map();this.otherRecovery=[];this.overflowActive=false;this.backupsUnchecked=true;
+    this.newInstance();
+  };
+  Controller.prototype.newInstance=function(){
+    this.instance=String(Date.now())+'-'+Math.random().toString(36).slice(2);
+    if(typeof crypto!=='undefined'&&crypto&&typeof crypto.randomUUID==='function')this.instance=crypto.randomUUID();
+    try{this.a.store.setItem(this.instanceKey,this.instance);}catch(error){}
+  };
+  Controller.prototype.adoptBackups=function(rows){
+    var self=this;
+    rows.forEach(function(row){
+      if(typeof row.key!=='string'||row.key.indexOf(self.key+':backup:')!==0||typeof row.text!=='string')throw Error('invalid-overflow');
+      var journal=JSON.parse(row.text);
+      if(journal.version!==1||journal.owner!==self.owner||journal.namespace!==self.a.namespace)throw Error('invalid-overflow-owner');
+    });
+    rows.forEach(function(row){
+      var journal=JSON.parse(row.text);
+      self.overflowBackups.set(row.key,row.text);
+      if(self.a.cloudFirst&&row.key!==self.key+':backup:'+self.instance&&
+        (journal.ack||journal.resumeConflict||diff(journal.base,journal.local).length||journal.recovery.length)){
+        // Preserve closed-tab intent as visible recovery evidence; never infer it as a new write.
+        if(self.otherRecovery.indexOf(row.key)<0)self.otherRecovery.push(row.key);
+      }
+    });
+  };
+  /* After a skipped startup list, look again once the server copy is shown and surface any recovery. */
+  Controller.prototype.recheckBackups=function(){
+    if(!this.backupsUnchecked||!this.a.overflowStore||this.rechecking||!this.key)return;
+    var self=this,epoch=this.epoch;this.rechecking=true;
+    Promise.resolve().then(function(){return self.a.overflowStore.list(self.key+':backup:');}).then(function(rows){
+      if(!self.guard(epoch))return;
+      self.adoptBackups(rows);self.backupsUnchecked=false;
+      if(self.ready&&!self.blocked&&['synced','device-only'].indexOf(self.mode)>=0&&self.hasRecovery())self.status('recovery');
+    }).catch(function(){}).then(function(){self.rechecking=false;});
   };
   Controller.prototype.unready=function(){
     this.confirmationSequence++;this.deferred=null;this.ready=false;this.confirmed=false;this.displayRequired=true;
@@ -332,7 +379,9 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
            Object.keys(next).length===fields.length&&Object.keys(next).every(function(k){return fields.indexOf(k)>=0;})&&
            Array.isArray(next.recovery)&&next.recovery.length===0&&equal(next.base,next.local)&&
            this.latest&&revision(this.latest)===next.revision&&equal(normalize(this.latest),next.base);
-        if(!confirmedOnly||this.a.overflowStore||store.getItem(backupKey)!==null||this.overflowActive){
+        // A clean journal (server copy only, no edits, ACK or recovery) adds nothing to the server, so it is
+        // not uploaded again on every app start unless this key already holds an older backup to replace.
+        if(!confirmedOnly||(!this.a.overflowStore&&store.getItem(backupKey)!==null)||this.overflowActive){
           var overflow=this.overflowActive||!!this.a.preferOverflow;
           if(!overflow){
             try{this.writeBackup(next,text,backupKey);}catch(error){
@@ -341,35 +390,30 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
             if(!overflow&&decodeBackup(store.getItem(backupKey))!==text)throw Error('backup-readback');
           }
           if(overflow){
-            // Stage the verified session journal immediately, so a subsequent save/ACK builds
-            // on the newest intent. All durable writes serialize; only the latest generation
-            // may release the hold. No Promise is treated as synchronous persistence success.
-            var self=this,epoch=this.epoch,confirmationSequence=this.confirmationSequence;
-            this.overflowActive=true;this.state=next;this.blocked=true;this.hold='durability';this.ready=false;
-            if(this.a.ready)this.a.ready(false);if(!this.connectionError)this.status('storage-pending');
+            // Server-first: the journal is staged in memory (and the session when it fits) and the server
+            // transaction proceeds at once. The backup is written behind it; durable writes still serialize
+            // so an older journal never replaces a newer one. A failed backup never stops server sending.
+            var self=this,epoch=this.epoch,writer=this.owner;
+            this.overflowActive=true;this.backupPending=true;
             var pending=this.archiveTail.catch(function(){}).then(function(){
-              if(!self.guard(epoch))return false;
+              // A queued backup of unsent intent still lands after a same-owner disconnect (reconnect,
+              // closing tab). Another account never receives it: the backup store rechecks the owner prefix.
+              if(!writer||self.a.owner()!==writer)return false;
               return self.a.overflowStore.put(backupKey,text).then(function(saved){
                 if(saved!==text)throw Error('backup-readback');
                 if(!self.guard(epoch))return false;
                 self.overflowBackups.set(backupKey,text);
                 if(sequence!==self.archiveSequence)return false;
-                // Durability cannot undo a newer connection/validation failure. Retire only
-                // this archive's hold; any snapshot queued before that failure was invalidated.
-                if(confirmationSequence!==self.confirmationSequence||self.connectionError){
-                  if(self.hold==='durability')self.hold=null;
-                  if(!self.connectionError&&self.deferred)self.drain();return false;
-                }
-                self.blocked=false;self.hold=null;self.ready=!!self.confirmed;
-                if(self.a.ready)self.a.ready(self.ready);return true;
+                var recovered=self.backupFailed;self.backupPending=false;self.backupFailed=false;
+                if(recovered)self.backupNotice();
+                return true;
               });
             }).catch(function(){
               if(self.guard(epoch)&&sequence===self.archiveSequence){
-                self.blocked=true;self.hold='storage';
-                if(!self.connectionError){self.unready();self.status('storage-error');}
+                self.backupPending=false;self.backupFailed=true;self.backupNotice();
               }return false;
             });
-            this.archiveTail=pending;return pending;
+            this.archiveTail=pending;
           }
         }
       }
@@ -385,6 +429,8 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     this.epoch++;if(this.unsubscribe)try{this.unsubscribe();}catch(error){}
     this.unsubscribe=null;this.ready=false;this.confirmed=false;this.blocked=false;this.hold=null;this.doc=null;this.state=null;this.flight=null;this.deferred=null;this.latest=null;this.owner=null;
     this.archiveSequence++;this.overflowActive=false;this.overflowBackups=new Map();this.connecting=null;
+    this.backupPending=false;this.backupFailed=false;this.backupsUnchecked=false;this.rechecking=false;
+    if(this.idleTimer){try{clearTimeout(this.idleTimer);}catch(error){}this.idleTimer=null;}
     this.connectionError=null;
     this.viewBase=null;
     this.otherRecovery=[];
@@ -408,20 +454,29 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     var epoch=this.epoch,self=this,connectionKey=this.key;
     if(this.a.overflowStore){
       this.unready();this.status('storage-pending');
-      this.connecting=Promise.resolve().then(function(){if(!self.guard(epoch))return [];return self.a.overflowStore.list(connectionKey+':backup:');}).then(function(rows){
+      var listTimeout=this.a.backupListTimeout||12000,listTimer=null;
+      var listed=Promise.race([
+        Promise.resolve().then(function(){if(!self.guard(epoch))return null;return self.a.overflowStore.list(connectionKey+':backup:');}),
+        new Promise(function(resolve){listTimer=setTimeout(function(){resolve(null);},listTimeout);})
+      ]).then(function(rows){
+        if(!self.guard(epoch)||!Array.isArray(rows))return false;
+        self.adoptBackups(rows);return true;
+      }).catch(function(){return false;}).then(function(ok){clearTimeout(listTimer);return ok;});
+      this.connecting=listed.then(function(ok){
         if(!self.guard(epoch))return false;
-        rows.forEach(function(row){
-          if(typeof row.key!=='string'||row.key.indexOf(self.key+':backup:')!==0||typeof row.text!=='string')throw Error('invalid-overflow');
-          var journal=JSON.parse(row.text);
-          if(journal.version!==1||journal.owner!==self.owner||journal.namespace!==self.a.namespace)throw Error('invalid-overflow-owner');
-          self.overflowBackups.set(row.key,row.text);
-          if(self.a.cloudFirst&&row.key!==self.key+':backup:'+self.instance&&
-            (journal.ack||journal.resumeConflict||diff(journal.base,journal.local).length||journal.recovery.length)){
-            // Preserve closed-tab intent as visible recovery evidence; never infer it as a new write.
-            self.otherRecovery.push(row.key);
-          }
-        });
-        var own=self.overflowBackups.get(self.key+':backup:'+self.instance),session=self.a.store.getItem(self.key);
+        // The journal list is recovery evidence, not the data source. When it cannot be read the
+        // server copy still opens; see skipBackups for why no unread journal can be overwritten.
+        if(!ok){self.skipBackups();return self.start(epoch);}
+        var ownKey=self.key+':backup:'+self.instance,own=self.overflowBackups.get(ownKey);
+        if(own&&typeof self.a.store.staleHead==='function'&&self.a.store.staleHead(self.key)){
+          // A newer journal than this durable head was never checkpointed before the page closed; whatever it
+          // sent is already on the server. Replaying the older head could undo an acknowledged change, so it
+          // stays only as recovery evidence and this page continues under a fresh key.
+          var older=JSON.parse(own);
+          if((older.ack||older.resumeConflict||diff(older.base,older.local).length||older.recovery.length)&&self.otherRecovery.indexOf(ownKey)<0)self.otherRecovery.push(ownKey);
+          self.newInstance();own=null;
+        }
+        var session=self.a.store.getItem(self.key);
         self.overflowActive=!!own;
         if(own){
           if(!session){self.a.store.setItem(self.key,own);if(self.a.store.getItem(self.key)!==own)throw Error('journal-readback');}
@@ -470,7 +525,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
           if(saved.ack||diff(saved.base,saved.local).length)saved.resumeConflict=true;
         }
         this.state=saved;
-        var needsPersist=this.a.overflowStore||JSON.stringify(saved)!==raw;
+        var needsPersist=JSON.stringify(saved)!==raw||(!!this.a.overflowStore&&this.overflowBackups.get(this.key+':backup:'+this.instance)!==raw);
         this.initialLocal=startup;
         return afterPersist(needsPersist?this.persist(saved):true,function(){
           return afterPersist(saved.ack&&!saved.resumeConflict&&!(self.a.editing&&self.a.editing())?self.finishAck():true,function(){
@@ -534,6 +589,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     return afterPersist(this.persist(next),function(){
       if(!self.confirmed||self.connectionError||confirmationSequence!==self.confirmationSequence)return false;
       self.ready=true;self.unbound=false;if(self.a.ready)self.a.ready(true);
+      if(self.backupsUnchecked)self.recheckBackups();
       if(changed||self.displayRequired)self.display();if(self.blocked)return false;
       self.status(self.pending()?'pending':(self.hasRecovery()?'recovery':'synced'));
       // The subscription can advance while IndexedDB commits. Replay the latest queued
@@ -585,7 +641,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
   Controller.prototype.flush=function(){
     var self=this,epoch=this.epoch;
     if(!this.guard(epoch)||!this.state||this.state.resumeConflict||!this.ready||this.blocked||this.flight)return Promise.resolve(false);
-    if(this.a.editing&&this.a.editing())return Promise.resolve(false);
+    if(this.a.editing&&this.a.editing()){if(this.pending())this.whenIdle();return Promise.resolve(false);}
     if(this.a.frozen()){this.status('frozen');return Promise.resolve(false);}
     var base=clone(this.state.base),sent=clone(this.state.local),operations=diff(base,sent),baseRevision=this.state.revision;
     if(!operations.length)return Promise.resolve(true);
@@ -617,6 +673,20 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
       if(self.deferred){var deferred=self.deferred;self.deferred=null;self.receive(deferred);}
       return false;
     });
+  };
+  /* A save made while a form is still open waits for that form to close. Send it as soon as editing
+     ends, without relying on a later click or focus change. The timer never keeps a process alive. */
+  Controller.prototype.whenIdle=function(){
+    if(this.idleTimer||typeof setTimeout!=='function')return;
+    var self=this,epoch=this.epoch,started=Date.now();
+    function arm(){self.idleTimer=setTimeout(tick,300);if(self.idleTimer&&typeof self.idleTimer.unref==='function')self.idleTimer.unref();}
+    function tick(){
+      self.idleTimer=null;
+      if(!self.guard(epoch)||!self.pending()||Date.now()-started>1800000)return;
+      if(self.a.editing&&self.a.editing()){arm();return;}
+      self.drain();
+    }
+    arm();
   };
   Controller.prototype.finishAck=function(){
     if(!this.state||this.state.resumeConflict||!this.state.ack||(this.a.editing&&this.a.editing()))return false;

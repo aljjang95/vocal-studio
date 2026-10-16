@@ -221,7 +221,8 @@ const ikey='vsC_sync_instance_v1:'+encodeURIComponent(ns);
 test('full journals stay in memory with exact readback when session quota fails; reclaimed keys are not durable',()=>{
   const s=session(),store=cloud.journalStore(s),big=journal('admin-A',1,'x'.repeat(2e6));
   s.failSet=(k,v)=>v.length>1000;
-  assert.equal(store.setItem(jkey,big),false);assert.equal(store.getItem(jkey),big);assert.equal(s.map.has(jkey),false);
+  assert.equal(store.setItem(jkey,big),false);assert.equal(store.getItem(jkey),big);assert.equal(s.map.get(jkey),'{"vsCloudJournalStale":1}','only a stale marker reaches the session');
+  assert.equal(cloud.journalStore(s).getItem(jkey),null);assert.equal(cloud.journalStore(s).staleHead(jkey),true);
   store.setItem(ikey,'tab-1');assert.equal(s.getItem(ikey),'tab-1');assert.equal(cloud.journalStore(s).getItem(ikey),'tab-1');
   assert.equal(store.setItem('vsC_sync_v1:other:reclaimed:0',big),false);assert.equal(s.map.has('vsC_sync_v1:other:reclaimed:0'),false);
   assert.deepEqual([store.length,store.key(0),store.key(1)].slice(0,1),[3]);assert.equal(store.key(99),null);
@@ -239,13 +240,16 @@ test('a session quota error on the pointer keeps the memory journal and reports 
   const s=session(),store=cloud.journalStore(s),text=journal('admin-A',2,'kept');s.failSet=()=>true;
   store.setItem(jkey,text);assert.equal(store.markDurable(jkey,text),false);assert.equal(store.getItem(jkey),text);
 });
-test('a legacy full session journal is readable and preserved until a matching durable mark replaces it',()=>{
+test('a legacy full session journal is readable, and a newer journal that does not fit replaces it with a stale marker',()=>{
   const s=session(),legacy=journal('admin-A',1,'legacy');s.map.set(jkey,legacy);const store=cloud.journalStore(s);
   s.failSet=(k,v)=>!cloud.isPointer(v);
-  assert.equal(store.getItem(jkey),legacy);const next=journal('admin-A',2,'next');store.setItem(jkey,next);
-  assert.equal(s.getItem(jkey),legacy);assert.equal(store.getItem(jkey),next);
-  store.removeItem(jkey);assert.equal(s.getItem(jkey),legacy);assert.equal(store.getItem(jkey),null);
-  store.setItem(jkey,next);s.failSet=()=>true;assert.equal(store.markDurable(jkey,next),false);assert.equal(s.getItem(jkey),legacy);
+  assert.equal(store.getItem(jkey),legacy);
+  store.removeItem(jkey);assert.equal(s.getItem(jkey),legacy,'removeItem never deletes a full journal');assert.equal(store.getItem(jkey),null);
+  s.failSet=(k,v)=>!cloud.isPointer(v)&&v!=='{"vsCloudJournalStale":1}';
+  const next=journal('admin-A',2,'next');assert.equal(store.setItem(jkey,next),false);
+  // The newer journal was derived from the legacy one read at startup; a reload must not resume the older head.
+  assert.equal(s.getItem(jkey),'{"vsCloudJournalStale":1}');assert.equal(store.getItem(jkey),next);assert.equal(cloud.journalStore(s).getItem(jkey),null);
+  s.failSet=()=>true;assert.equal(store.markDurable(jkey,next),false);assert.equal(cloud.journalStore(s).staleHead(jkey),true);
   s.failSet=null;assert.equal(store.markDurable(jkey,next),true);assert.ok(cloud.isPointer(s.getItem(jkey)));
   store.removeItem(jkey);assert.equal(s.getItem(jkey),null);
 });
@@ -331,10 +335,12 @@ test('local failure still attempts cloud and reports cloud, while local success 
   assert.equal(await d.api.put(d.key,deviceText),deviceText);assert.deepEqual(d.durable,[[d.key,deviceText,'device']]);
 });
 
-test('a session pointer write failure leaves the old hint, so a newer cloud commit fails closed',async()=>{
+test('a newer journal that cannot reach the session retires the old hint instead of leaving it to resume',async()=>{
   const s=session(),store=cloud.journalStore(s),oldText=journal('admin-A',1,'old'),newText=journal('admin-A',2,'new'),key=prefix('admin-A')+'tab-1';
-  store.setItem(jkey,oldText);assert.equal(store.markDurable(jkey,oldText),true);s.failSet=()=>true;
-  assert.equal(store.setItem(jkey,newText),false);assert.equal(store.markDurable(jkey,newText),false);assert.equal(store.matchesHint(oldText,store.readDurableHint(jkey)),true);
-  const h=setup({resumeHint:()=>({key,hint:store.readDurableHint(jkey)}),currentKey:()=>key});h.srv.rows.set(key,newText);h.disk.rows.set(key,newText);
-  await assert.rejects(h.api.list(prefix('admin-A')),/backup-hint-mismatch/);
+  store.setItem(jkey,oldText);assert.equal(store.markDurable(jkey,oldText),true);s.failSet=(k,v)=>v!=='{"vsCloudJournalStale":1}';
+  assert.equal(store.setItem(jkey,newText),false);assert.equal(store.markDurable(jkey,newText),false);
+  assert.equal(store.readDurableHint(jkey),null);assert.equal(cloud.journalStore(s).staleHead(jkey),true);
+  // With the marker the controller keeps the older durable head as recovery only (see cloud-first-sync tests).
+  const h=setup({resumeHint:()=>({key,hint:store.readDurableHint(jkey)}),currentKey:()=>key});h.srv.rows.set(key,oldText);h.disk.rows.set(key,oldText);
+  assert.deepEqual((await h.api.list(prefix('admin-A'))).map(row=>row.text),[oldText]);
 });

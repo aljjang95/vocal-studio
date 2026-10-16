@@ -310,6 +310,10 @@
       typeof pointer.digest==='string'&&/^[0-9a-f]{8}$/.test(pointer.digest)&&pointer.length===text.length&&pointer.digest===checksum(text);
   }
   function journalKey(key){return typeof key==='string'&&/^vsC_sync_v1:[^:]+$/.test(key);}
+  /* Written in place of an older resume head (pointer or full journal) when a newer journal does not fit the
+     session. A reload must not resume that older head as pending intent; the controller shows it as recovery. */
+  var STALE='{"vsCloudJournalStale":1}';
+  function isStale(raw){return raw===STALE;}
   function isPointer(raw){
     if(typeof raw!=='string'||raw.length>256||raw.charAt(0)!=='{')return false;
     try{var value=JSON.parse(raw);return isObject(value)&&value[POINTER]===1&&Number.isSafeInteger(value.length)&&value.length>=0&&
@@ -325,7 +329,7 @@
       if(hidden.has(key))return null;
       var raw=sessionGet(key);
       // A preserved legacy journal stays readable until a durable replacement is marked.
-      if(raw===null||raw===undefined||isPointer(raw))return null;
+      if(raw===null||raw===undefined||isPointer(raw)||isStale(raw))return null;
       if(journalKey(key)&&typeof codec.decode==='function'){
         var decoded;
         try{decoded=codec.decode(raw);}catch(error){throw error;}
@@ -339,12 +343,19 @@
       memory.set(key,value);hidden.delete(key);
       var stored=value;
       if(journalKey(key)){
+        var encoded=true;
         if(typeof codec.encode==='function'){
-          try{stored=codec.encode(value);if(typeof stored!=='string')return false;
-            if(typeof codec.decode==='function'&&codec.decode(stored)!==value)return false;
-          }catch(error){return false;}
+          try{stored=codec.encode(value);if(typeof stored!=='string'||(typeof codec.decode==='function'&&codec.decode(stored)!==value))encoded=false;}
+          catch(error){encoded=false;}
         }
-        try{session.setItem(key,stored);return sessionGet(key)===stored;}catch(error){return false;}
+        if(encoded){try{session.setItem(key,stored);if(sessionGet(key)===stored)return true;}catch(error){}}
+        // The newer journal lives only in memory now. The older head in this slot descends from it (startup
+        // read it from here), so replace it with a stale marker rather than leave it for a reload to replay.
+        // Overwrite first (the marker is smaller than any head); only if that fails, free the slot and retry.
+        try{session.setItem(key,STALE);if(sessionGet(key)===STALE)return false;}catch(error){}
+        try{session.removeItem(key);}catch(error){}
+        try{session.setItem(key,STALE);}catch(error){}
+        return false;
       }
       // Only the tiny instance id is mirrored to the session; reclaimed and backup rows stay memory-only.
       if(key.indexOf(INSTANCE_PREFIX)===0){try{session.setItem(key,value);return sessionGet(key)===value;}catch(error){return false;}}
@@ -366,6 +377,7 @@
       key=String(key);if(!journalKey(key))return null;
       var raw=sessionGet(key);return isPointer(raw)?raw:null;
     }
+    function staleHead(key){key=String(key);return journalKey(key)&&!memory.has(key)&&isStale(sessionGet(key));}
     function names(){
       var seen=new Set(),out=[];
       function add(key){if(!seen.has(key)){seen.add(key);if(getItem(key)!==null)out.push(key);}}
@@ -373,7 +385,7 @@
       try{if(session)for(var i=0;i<session.length;i++){var key=session.key(i);if(key!==null&&key!==undefined)add(key);}}catch(error){}
       return out;
     }
-    return {getItem:getItem,setItem:setItem,removeItem:removeItem,markDurable:markDurable,readDurableHint:readDurableHint,matchesHint:matchesHint,
+    return {getItem:getItem,setItem:setItem,removeItem:removeItem,markDurable:markDurable,readDurableHint:readDurableHint,matchesHint:matchesHint,staleHead:staleHead,
       key:function(index){var list=names();return index>=0&&index<list.length?list[index]:null;},
       get length(){return names().length;}};
   }

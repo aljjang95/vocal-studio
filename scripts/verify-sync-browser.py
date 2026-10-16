@@ -558,6 +558,29 @@ try:
         quota_page.evaluate("()=>{const prefix=_vsSync.key+':backup:';for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(k.indexOf('vsC_qa_fill_')===0||/^vsC_recovery_40000000000\\d{2}$/.test(k)||k===prefix+'closed-tab-00000000-0000-0000-0000-000000000000')localStorage.removeItem(k);}}")
         quota_context.close()
 
+        # Production phone failure (2026-10-16): "기기 저장 공간 확인 필요 · 서버 전송 중지" blocked the whole app.
+        # The server is canonical. With the journal backup API failing and IndexedDB unavailable, the app must
+        # still open the server copy, send an edit, and never show the storage-error pane.
+        nobackup_context=browser.new_context(viewport={'width':390,'height':844},is_mobile=True,storage_state=visual_storage_state)
+        nobackup_context.route('**/api/backups**',lambda route: route.fulfill(status=503,content_type='application/json',body='{"error":"synthetic-unavailable"}'))
+        nobackup_context.add_init_script("(()=>{try{Object.defineProperty(window,'indexedDB',{configurable:true,get(){return {open(){throw new DOMException('synthetic device storage full','QuotaExceededError');}};}});}catch(e){}})()")
+        nobackup_page=nobackup_context.new_page()
+        nobackup_page.on('pageerror',lambda exc: errors.append('no-backup: '+str(exc)))
+        nobackup_page.goto(ORIGIN+'/',wait_until='domcontentloaded')
+        wait_js(nobackup_page,"window._cfSession&&window._vsSync&&window._vsSync.ready&&['synced','recovery'].includes(_vsSync.mode)",20000)
+        nobackup_state=nobackup_page.evaluate("()=>({mode:_vsSync.mode,blocked:_vsSync.blocked,pane:!!document.querySelector('#v2InitialSyncState.is-error'),status:document.getElementById('topSyncStatus').textContent,time:weekOvr.w1&&weekOvr.w1.s1&&weekOvr.w1.s1.time})")
+        print('no-backup startup: '+json.dumps(nobackup_state,ensure_ascii=False))
+        check('unavailable journal backups still open the server copy',not nobackup_state['blocked'] and not nobackup_state['pane'] and nobackup_state['time']=='10:00' and '저장 공간' not in nobackup_state['status'])
+        nobackup_page.evaluate("()=>{weekOvr.w1.s1={time:'10:45'};saveAll();}")
+        wait_js(nobackup_page,"_vsSync.pending()===0&&_vsSync.backupFailed===true")
+        status,_,body=http('/api/export')
+        check('edit reaches the server while every journal backup fails',status==200 and json.loads(body)['state']['weekOvr']['w1']['s1']['time']=='10:45')
+        nobackup_page.evaluate("()=>{weekOvr.w1.s1={time:'10:00'};saveAll();}")
+        wait_js(nobackup_page,"_vsSync.pending()===0")
+        status,_,body=http('/api/export')
+        check('no-backup fixture restores server 10:00',status==200 and json.loads(body)['state']['weekOvr']['w1']['s1']['time']=='10:00')
+        nobackup_context.close()
+
         visual_context=browser.new_context(viewport={'width':1440,'height':900},storage_state=visual_storage_state)
         visual_page=visual_context.new_page()
         visual_page.on('pageerror',lambda exc: errors.append('visual-desktop: '+str(exc)))

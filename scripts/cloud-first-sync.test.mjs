@@ -90,11 +90,38 @@ test('an edit made while canonical acknowledgement is delayed survives cloud jou
   c.controller.disconnect();const reloaded=await w.client(c.session);assert.equal(reloaded.ui.students[0].memo,'second edit');
 });
 
-test('a cloud-only journal cannot be silently forgotten when backup listing is unavailable',async()=>{
-  const w=world(),c=await w.client();c.controller.disconnect();w.cloudDown=true;
-  const reloaded=await w.client(c.session);assert.equal(reloaded.controller.ready,false);
-  assert.equal(reloaded.mode,'storage-error');assert.equal(w.canonicalWrites,0);
-  assert.ok(w.cloud.size>0);assert.equal(w.backup.writes.length,0);
+test('an unavailable backup list opens the server copy under a fresh key and leaves the cloud journal untouched',async()=>{
+  const w=world(),c=await w.client();c.ui.students[0].memo='before reload';await c.controller.save();await settle();
+  const oldKey=c.controller.key+':backup:'+c.controller.instance,before=w.cloud.get(oldKey);assert.ok(before);
+  c.controller.disconnect();await settle();w.cloudDown=true;const deviceList=w.local.list;w.local.list=async()=>{throw Error('synthetic IndexedDB unavailable');};
+  const reloaded=await w.client(c.session);assert.equal(reloaded.controller.ready,true);assert.notEqual(reloaded.mode,'storage-error');
+  assert.equal(reloaded.ui.students[0].memo,'before reload');assert.notEqual(reloaded.controller.instance,'synthetic-tab');
+  assert.equal(reloaded.controller.backupsUnchecked,true);assert.equal(w.cloud.get(oldKey),before);assert.equal(w.backup.writes.length,0);
+  w.cloudDown=false;w.local.list=deviceList;await reloaded.controller.retry();await settle();assert.equal(reloaded.controller.backupsUnchecked,false);
+  assert.equal(w.cloud.get(oldKey),before,'a journal that could not be listed is never overwritten');
+});
+
+test('a pending edit is sent to the server even when every backup write fails',async()=>{
+  const w=world(),c=await w.client();w.cloudDown=true;w.local.put=async()=>{throw Error('device storage full');};
+  c.ui.students[0].memo='server first';await c.controller.save();await settle();
+  assert.equal(w.data.students[0].memo,'server first');assert.equal(c.controller.pending(),0);assert.equal(c.controller.ready,true);
+  assert.notEqual(c.mode,'storage-error');assert.equal(c.controller.backupFailed,true);
+});
+
+test('a stale resume pointer cannot replay an edit after its undo was committed while backups failed',async()=>{
+  const w=world(),c=await w.client(),put=w.local.put;
+  c.editing=true;c.ui.students[0].memo='A';await c.controller.save();await settle();
+  assert.equal(w.data.students[0].memo,'initial','an open form holds the send');
+  assert.equal(JSON.parse(c.session.getItem(c.controller.key)).vsCloudJournalPointer,1,'pointer names the pending A journal');
+  w.cloudDown=true;w.local.put=async()=>{throw Error('device storage full');};
+  c.editing=false;await c.controller.drain();await settle();assert.equal(w.data.students[0].memo,'A');
+  c.ui.students[0].memo='initial';await c.controller.save();await settle();
+  assert.equal(w.data.students[0].memo,'initial');assert.equal(c.controller.pending(),0);const writes=w.canonicalWrites;
+  c.controller.disconnect();w.cloudDown=false;w.local.put=put;
+  const reloaded=await w.client(c.session);await settle();
+  assert.equal(w.data.students[0].memo,'initial','the acknowledged undo stays on the server');assert.equal(w.canonicalWrites,writes);
+  assert.equal(reloaded.ui.students[0].memo,'initial');assert.equal(reloaded.controller.ready,true);
+  assert.ok(reloaded.controller.hasRecovery(),'the older journal stays visible as recovery evidence');
 });
 
 test('startup reports the server check after backup storage is verified, not a storage wait',async()=>{
