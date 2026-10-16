@@ -288,6 +288,9 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
      overwritten, and every one of them stays in cloud/device storage for a later recovery check. */
   Controller.prototype.skipBackups=function(){
     this.overflowBackups=new Map();this.otherRecovery=[];this.overflowActive=false;this.backupsUnchecked=true;
+    this.newInstance();
+  };
+  Controller.prototype.newInstance=function(){
     this.instance=String(Date.now())+'-'+Math.random().toString(36).slice(2);
     if(typeof crypto!=='undefined'&&crypto&&typeof crypto.randomUUID==='function')this.instance=crypto.randomUUID();
     try{this.a.store.setItem(this.instanceKey,this.instance);}catch(error){}
@@ -464,7 +467,16 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
         // The journal list is recovery evidence, not the data source. When it cannot be read the
         // server copy still opens; see skipBackups for why no unread journal can be overwritten.
         if(!ok){self.skipBackups();return self.start(epoch);}
-        var own=self.overflowBackups.get(self.key+':backup:'+self.instance),session=self.a.store.getItem(self.key);
+        var ownKey=self.key+':backup:'+self.instance,own=self.overflowBackups.get(ownKey);
+        if(own&&typeof self.a.store.staleHead==='function'&&self.a.store.staleHead(self.key)){
+          // A newer journal than this durable head was never checkpointed before the page closed; whatever it
+          // sent is already on the server. Replaying the older head could undo an acknowledged change, so it
+          // stays only as recovery evidence and this page continues under a fresh key.
+          var older=JSON.parse(own);
+          if((older.ack||older.resumeConflict||diff(older.base,older.local).length||older.recovery.length)&&self.otherRecovery.indexOf(ownKey)<0)self.otherRecovery.push(ownKey);
+          self.newInstance();own=null;
+        }
+        var session=self.a.store.getItem(self.key);
         self.overflowActive=!!own;
         if(own){
           if(!session){self.a.store.setItem(self.key,own);if(self.a.store.getItem(self.key)!==own)throw Error('journal-readback');}
