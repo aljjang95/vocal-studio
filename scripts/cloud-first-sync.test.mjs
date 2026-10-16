@@ -90,11 +90,22 @@ test('an edit made while canonical acknowledgement is delayed survives cloud jou
   c.controller.disconnect();const reloaded=await w.client(c.session);assert.equal(reloaded.ui.students[0].memo,'second edit');
 });
 
-test('a cloud-only journal cannot be silently forgotten when backup listing is unavailable',async()=>{
-  const w=world(),c=await w.client();c.controller.disconnect();w.cloudDown=true;
-  const reloaded=await w.client(c.session);assert.equal(reloaded.controller.ready,false);
-  assert.equal(reloaded.mode,'storage-error');assert.equal(w.canonicalWrites,0);
-  assert.ok(w.cloud.size>0);assert.equal(w.backup.writes.length,0);
+test('an unavailable backup list opens the server copy under a fresh key and leaves the cloud journal untouched',async()=>{
+  const w=world(),c=await w.client();c.ui.students[0].memo='before reload';await c.controller.save();await settle();
+  const oldKey=c.controller.key+':backup:'+c.controller.instance,before=w.cloud.get(oldKey);assert.ok(before);
+  c.controller.disconnect();w.cloudDown=true;
+  const reloaded=await w.client(c.session);assert.equal(reloaded.controller.ready,true);assert.notEqual(reloaded.mode,'storage-error');
+  assert.equal(reloaded.ui.students[0].memo,'before reload');assert.notEqual(reloaded.controller.instance,'synthetic-tab');
+  assert.equal(reloaded.controller.backupsUnchecked,true);assert.equal(w.cloud.get(oldKey),before);assert.equal(w.backup.writes.length,0);
+  w.cloudDown=false;await reloaded.controller.retry();await settle();assert.equal(reloaded.controller.backupsUnchecked,false);
+  assert.equal(w.cloud.get(oldKey),before,'a journal that could not be listed is never overwritten');
+});
+
+test('a pending edit is sent to the server even when every backup write fails',async()=>{
+  const w=world(),c=await w.client();w.cloudDown=true;w.local.put=async()=>{throw Error('device storage full');};
+  c.ui.students[0].memo='server first';await c.controller.save();await settle();
+  assert.equal(w.data.students[0].memo,'server first');assert.equal(c.controller.pending(),0);assert.equal(c.controller.ready,true);
+  assert.notEqual(c.mode,'storage-error');assert.equal(c.controller.backupFailed,true);
 });
 
 test('startup reports the server check after backup storage is verified, not a storage wait',async()=>{

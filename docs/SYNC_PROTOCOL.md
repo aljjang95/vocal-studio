@@ -42,6 +42,21 @@ Session Storage holds only the tab instance and a small pointer after durability
 
 Rollback must retain this cloud journal adapter, backup API, principal isolation, offline fallback, cache decoder and strict resume policy. A plaintext-only or session-journal-only release cannot safely consume the small pointers or resume cloud-only intent. Preserve immutable R2 history and all local recovery evidence; do not directly deploy an older incompatible Worker version.
 
+## Server-first ordering — 2026-10-16
+
+Production phones showed `기기 저장 공간 확인 필요 · 서버 전송 중지` and an empty "자료를 확인하지 못했습니다" pane while the canonical Durable Object was healthy. The cause was ordering: every startup and every edit first rewrote the full journal to IndexedDB and `/api/backups`, and any failure there (expired Access cookie on the backup request, unavailable IndexedDB, an unreadable row, a pointer mismatch, a readback mismatch) stopped both the first paint and server transmission. The backup was gating the canonical write it exists to protect.
+
+The canonical server is now first. This section supersedes the earlier statements that readiness and server transactions wait for archive durability.
+
+- An edit is staged in memory (and the session when it fits) and the server transaction starts at once. The journal backup runs behind it; durable writes still serialize, so an older journal never replaces a newer one. A failed backup sets `backupFailed`; the status adds "백업 실패: 서버 저장 전까지 앱을 닫지 마세요" only while unsent changes exist, and unload stays guarded while `pending()>0`. Once the server commit is acknowledged the server holds the intent.
+- A queued backup of unsent intent still lands after a same-owner disconnect or reconnect. A different principal never receives it because the backup store rechecks the owner prefix.
+- Startup lists journals for at most 12 seconds. If the list cannot be read, the controller switches to a fresh tab instance key and opens the server copy. No unread journal is overwritten: each stays byte for byte in R2/IndexedDB, and `recheckBackups` lists again after the first confirmed snapshot (and on retry) to surface closed-tab intent as recovery.
+- A clean journal (server copy only: no edits, ACK, recovery, device media or older key to replace) is not uploaded again on every app start.
+- A save made while a form is open is sent as soon as editing ends (300 ms idle check) instead of waiting for a later click or focus event.
+- `storage-error` now remains only for an unreadable session journal or a legacy Web Storage adapter, and its label no longer claims device capacity. A synced journal whose backup lives only on the device is shown as plain `synced`; `device-only` is reserved for recovery evidence that exists only on this device.
+
+`scripts/verify-sync-browser.py` reproduces the phone failure in a 390 px mobile context with `/api/backups` returning 503 and `indexedDB.open` throwing `QuotaExceededError`: the app must open server data, send an edit, and never show the storage-error pane.
+
 ## Media protocol
 
 Media uploads use same-origin `PUT /api/media/<pointer>`. Pointers are validated and immutable: an existing object returns conflict. The maximum body is 20 MiB. The Worker exposes authenticated GET/HEAD with byte ranges and 416 handling; this candidate has no media delete endpoint and no arbitrary URL proxy.
